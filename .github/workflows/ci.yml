@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --locked
+
+      - name: Lint
+        run: make lint
+
+      - name: Tests (SQLite)
+        run: make test
+
+      - name: Start Postgres and validator
+        run: make up
+
+      - name: Tests (Postgres)
+        run: make test-pg
+
+      - name: Migrations match tables
+        run: make db-check
+
+      # Regression gate: structured path must stay at 100%.
+      - name: Structured eval
+        run: make eval-quick
+
+      - name: Service logs
+        if: failure()
+        run: docker compose logs --tail 200
