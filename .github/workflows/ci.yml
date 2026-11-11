@@ -38,6 +38,9 @@ jobs:
       - name: Tests (Postgres)
         run: make test-pg
 
+      - name: Real samples through the validator
+        run: make test-integration
+
       - name: Migrations match tables
         run: make db-check
 

@@ -22,8 +22,8 @@ Since 2025 every German business must be able to receive e-invoices; issuing bec
 
 ## Features
 - [ ] Ingest: email inbox (IMAP), folder watch, upload UI, API
-- [ ] Format detection: XRechnung (UBL/CII), ZUGFeRD/Factur-X (PDF/A-3 with embedded XML), plain PDF, scan
-- [ ] Structured path: parse + validate (KoSIT validator / Mustang) — no LLM needed
+- [x] Format detection: XRechnung (UBL/CII), ZUGFeRD/Factur-X (PDF/A-3 with embedded XML), plain PDF, scan
+- [x] Structured path: parse + validate (KoSIT validator / Mustang) — no LLM needed _(KoSIT only so far: ZUGFeRD profiles outside EN 16931 and PDF/A-3 conformance are not validated)_
 - [ ] Unstructured path: OCR + vision LLM → schema-constrained extraction (EN 16931 fields)
 - [ ] Matching agent: invoice ↔ PO ↔ delivery note ↔ bank transaction (3-way match + fuzzy)
 - [ ] Checks: VAT rate/ID plausibility, totals, duplicates, IBAN changes (fraud signal), price/quantity deviations
@@ -48,7 +48,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 - Not tax advice; archiving rules (GoBD) are out of scope for v1 and documented as such
 
 ## Roadmap
-- [ ] v0.1 structured path: parse + validate XRechnung/ZUGFeRD
+- [x] v0.1 structured path: parse + validate XRechnung/ZUGFeRD
 - [ ] v0.2 PDF/scan extraction + review UI
 - [ ] v0.3 matching agent + checks
 - [ ] v0.4 connectors (export, mock ERP, Playwright fallback)

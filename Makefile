@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg eval-quick eval-full
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full
 
 install:
 	uv sync
@@ -30,6 +30,10 @@ db-check: migrate
 test-pg:
 	docker compose exec -T postgres psql -U einvoice -d einvoice -qc "DROP DATABASE IF EXISTS einvoice_test" -c "CREATE DATABASE einvoice_test"
 	TEST_DATABASE_URL=postgresql+psycopg://einvoice:einvoice@127.0.0.1:5433/einvoice_test uv run pytest
+
+# Real sample files through the running validator (make up).
+test-integration:
+	uv run pytest -m integration
 
 # Structured-path eval against the running validator (make up). Fails unless
 # field accuracy and validation correctness are both 100%.

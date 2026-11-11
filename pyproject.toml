@@ -33,7 +33,8 @@ packages = ["app", "eval"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --strict-markers"
+addopts = "-q --strict-markers -m 'not integration'"
+markers = ["integration: needs the validator sidecar (make up); run with make test-integration"]
 
 [tool.ruff]
 line-length = 100
