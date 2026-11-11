@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rep:report xmlns:rep="http://www.xoev.de/de/validator/varl/1" xmlns:s="http://www.xoev.de/de/validator/framework/1/scenarios" varlVersion="1.0.0" valid="true">
+  <rep:engine><rep:name>KoSIT Validator 1.6.3</rep:name></rep:engine>
+  <rep:scenarioMatched>
+    <s:scenario><s:name>EN16931 XRechnung (UBL Invoice)</s:name></s:scenario>
+    <rep:validationStepResult id="val-xsd" valid="true"/>
+    <rep:validationStepResult id="val-sch.1" valid="true"/>
+    <rep:validationStepResult id="val-sch.2" valid="true">
+      <rep:message id="val-sch.2.1" level="information" xpathLocation="/Q{urn:oasis:names:specification:ubl:schema:xsd:Invoice-2}Invoice[1]" code="BR-DE-TMP-32">[BR-DE-TMP-32] Eine Rechnung sollte zur Angabe des Liefer-/Leistungsdatums BT-72 enthalten.</rep:message>
+    </rep:validationStepResult>
+  </rep:scenarioMatched>
+  <rep:assessment><rep:accept><rep:explanation/></rep:accept></rep:assessment>
+</rep:report>
