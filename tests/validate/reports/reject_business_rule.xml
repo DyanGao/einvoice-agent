@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rep:report xmlns:rep="http://www.xoev.de/de/validator/varl/1" xmlns:s="http://www.xoev.de/de/validator/framework/1/scenarios" varlVersion="1.0.0" valid="false">
+  <rep:scenarioMatched>
+    <s:scenario><s:name>EN16931 XRechnung (UBL Invoice)</s:name></s:scenario>
+    <rep:validationStepResult id="val-xsd" valid="true"/>
+    <rep:validationStepResult id="val-sch.2" valid="false">
+      <rep:message id="val-sch.2.1" level="error" xpathLocation="/Q{urn:oasis:names:specification:ubl:schema:xsd:Invoice-2}Invoice[1]" code="BR-DE-15">[BR-DE-15] Das Element "Buyer reference" (BT-10) muss übermittelt werden.</rep:message>
+      <rep:message id="val-sch.2.2" level="information" xpathLocation="/Q{urn:oasis:names:specification:ubl:schema:xsd:Invoice-2}Invoice[1]" code="BR-DE-TMP-32">[BR-DE-TMP-32] Hinweis.</rep:message>
+    </rep:validationStepResult>
+  </rep:scenarioMatched>
+  <rep:assessment><rep:reject><rep:explanation/></rep:reject></rep:assessment>
+</rep:report>

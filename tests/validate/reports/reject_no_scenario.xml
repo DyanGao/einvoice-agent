@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rep:report xmlns:rep="http://www.xoev.de/de/validator/varl/1" varlVersion="1.0.0" valid="false">
+  <rep:noScenarioMatched>
+    <rep:validationStepResult id="val-xml" valid="true"/>
+  </rep:noScenarioMatched>
+  <rep:assessment><rep:reject><rep:explanation/></rep:reject></rep:assessment>
+</rep:report>
