@@ -57,7 +57,7 @@ def test_dates_are_parsed():
 
 def test_optional_fields_default_to_none():
     invoice = Invoice.model_validate(invoice_data())
-    assert (invoice.due_date, invoice.po_ref, invoice.payment_iban) == (None, None, None)
+    assert (invoice.due_date, invoice.po_ref, invoice.payment_ibans) == (None, None, ())
 
 
 def test_inconsistent_totals_are_still_representable():

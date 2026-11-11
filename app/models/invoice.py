@@ -61,7 +61,9 @@ class Invoice(_Model):
 
     seller: Party
     buyer: Party
-    payment_iban: str | None = None  # BT-84
+    # BT-84. A document may name several accounts (BG-17 repeats); all are kept
+    # because any unknown one is a fraud signal.
+    payment_ibans: tuple[str, ...] = ()
 
     lines: tuple[Line, ...]
     vat_breakdown: tuple[VatBreakdown, ...] = ()
