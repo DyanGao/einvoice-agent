@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker
 
 install:
 	uv sync
@@ -81,3 +81,12 @@ eval-scans-baseline: ocr-data
 	uv run python -m eval.run eval/out/scans --system baseline
 	uv run python -m eval.score eval/out/scans --system baseline --split dev
 	uv run python -m eval.score eval/out/scans --system baseline --split test
+
+# HTTP API on localhost only (no authentication yet).
+api:
+	uv run uvicorn --factory app.api.main:create_app_from_env --host 127.0.0.1 --port 8000
+
+# Background worker; reads REDIS_URL like the API does. SimpleWorker runs jobs
+# in-process (no fork), which also works on macOS.
+worker:
+	uv run python -m app.worker

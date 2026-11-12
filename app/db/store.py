@@ -3,8 +3,17 @@ import hashlib
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.tables import AuditEventRow, DocumentRow, InvoiceRow, ValidationRow
-from app.pipeline import Outcome
+from app.db.review import ReviewState
+from app.db.tables import (
+    AuditEventRow,
+    DocumentRow,
+    DraftRow,
+    InvoiceRow,
+    ValidationRow,
+    invoice_columns,
+)
+from app.models import DocumentFormat
+from app.pipeline import DocumentStatus, Outcome
 
 SYSTEM_ACTOR = "system"
 
@@ -21,18 +30,28 @@ def record_duplicate(session: Session, document: DocumentRow, filename: str | No
     )
 
 
-def store_outcome(
-    session: Session, data: bytes, filename: str | None, outcome: Outcome
-) -> DocumentRow:
+def create_received(session: Session, data: bytes, filename: str | None) -> DocumentRow:
+    """Store an incoming document before anything is known about it."""
     document = DocumentRow(
         sha256=hashlib.sha256(data).hexdigest(),
         filename=filename,
-        format=outcome.format.value,
-        status=outcome.status.value,
-        error=outcome.error,
+        format=DocumentFormat.UNKNOWN.value,
+        status=DocumentStatus.RECEIVED.value,
+        review_state=ReviewState.PENDING.value,
         content=data,
     )
     document.audit_events.append(_event("received", filename=filename, bytes=len(data)))
+    session.add(document)
+    session.flush()
+    return document
+
+
+def apply_outcome(session: Session, document: DocumentRow, outcome: Outcome) -> None:
+    """Record what processing found out about a received document."""
+    document.format = outcome.format.value
+    document.status = outcome.status.value
+    document.error = outcome.error
+    document.review_state = ReviewState.after_processing(outcome.status).value
     document.audit_events.append(_event("format_detected", format=outcome.format.value))
 
     if outcome.validation is not None:
@@ -52,23 +71,26 @@ def store_outcome(
         )
 
     if outcome.invoice is not None:
-        invoice = outcome.invoice
-        document.invoice = InvoiceRow(
-            number=invoice.number,
-            issue_date=invoice.issue_date,
-            seller_name=invoice.seller.name,
-            seller_vat_id=invoice.seller.vat_id,
-            currency=invoice.currency,
-            gross_total=invoice.gross_total,
-            data=invoice.model_dump(mode="json"),
-        )
-        document.audit_events.append(_event("parsed", number=invoice.number))
+        document.invoice = InvoiceRow(**invoice_columns(outcome.invoice))
+        document.audit_events.append(_event("parsed", number=outcome.invoice.number))
+
+    if outcome.draft is not None:
+        machine_output = outcome.draft.model_dump(mode="json")
+        document.draft = DraftRow(original=machine_output, data=machine_output)
+        if outcome.invoice is None:
+            document.audit_events.append(_event("extracted", number=outcome.draft.number))
 
     document.audit_events.append(
         _event("status_set", status=outcome.status.value, error=outcome.error)
     )
-    session.add(document)
     session.flush()
+
+
+def store_outcome(
+    session: Session, data: bytes, filename: str | None, outcome: Outcome
+) -> DocumentRow:
+    document = create_received(session, data, filename)
+    apply_outcome(session, document, outcome)
     return document
 
 
