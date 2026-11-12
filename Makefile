@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline
 
 install:
 	uv sync
@@ -46,3 +46,10 @@ eval-full:
 	uv run python -m eval.generators.structured --count 200 --out eval/out/structured
 	uv run python -m eval.run eval/out/structured
 	uv run python -m eval.score eval/out/structured --gate
+
+# Rule-based baseline on the synthetic text PDFs (no services needed).
+eval-pdf-baseline:
+	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
+	uv run python -m eval.run eval/out/pdf --system baseline
+	uv run python -m eval.score eval/out/pdf --system baseline --split dev
+	uv run python -m eval.score eval/out/pdf --system baseline --split test

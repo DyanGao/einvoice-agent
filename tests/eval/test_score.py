@@ -118,3 +118,36 @@ def test_failures_name_the_document_and_the_wrong_fields():
     pred["invoice"]["number"] = "other"
     (failure,) = score([GOLD], [pred]).failures
     assert (failure["id"], failure["wrong_fields"]) == (GOLD["id"], ["number"])
+
+
+def pdf_gold(split: str = "dev") -> dict:
+    return {**GOLD, "format": "pdf_text", "split": split, "expected_valid": None}
+
+
+def test_document_without_expected_verdict_is_not_scored_on_validation():
+    bucket = score([pdf_gold()], [{"id": GOLD["id"], "invoice": GOLD["invoice"]}]).by_format[
+        "pdf_text"
+    ]
+    assert (bucket.validation_expected, bucket.validation_correctness) == (0, None)
+
+
+def test_partial_prediction_counts_missing_fields_as_wrong():
+    partial = {"number": GOLD["invoice"]["number"]}
+    report = score([pdf_gold()], [{"id": GOLD["id"], "invoice": partial}])
+    bucket = report.by_format["pdf_text"]
+    assert 0 < bucket.field_accuracy < 0.5
+    assert "number" not in report.failures[0]["wrong_fields"]
+
+
+def test_split_filter_scores_only_that_split():
+    golds = [pdf_gold("dev"), {**pdf_gold("test"), "id": "other"}]
+    report = score(golds, [], split="test")
+    assert report.by_format["pdf_text"].documents == 1
+
+
+def test_wrong_fields_are_counted_per_field_with_positions_folded():
+    pred = prediction()
+    for line in pred["invoice"]["lines"]:
+        line["description"] = "other"
+    report = score([GOLD], [pred])
+    assert report.wrong_by_field == {"lines.*.description": len(GOLD["invoice"]["lines"])}
