@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline
 
 install:
 	uv sync
@@ -46,3 +46,38 @@ eval-full:
 	uv run python -m eval.generators.structured --count 200 --out eval/out/structured
 	uv run python -m eval.run eval/out/structured
 	uv run python -m eval.score eval/out/structured --gate
+
+# Rule-based baseline on the synthetic text PDFs (no services needed).
+eval-pdf-baseline:
+	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
+	uv run python -m eval.run eval/out/pdf --system baseline
+	uv run python -m eval.score eval/out/pdf --system baseline --split dev
+	uv run python -m eval.score eval/out/pdf --system baseline --split test
+
+# Vision-model extractor on the same PDFs, answered from stored recordings.
+eval-pdf-llm:
+	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
+	uv run python -m eval.run eval/out/pdf --system llm --llm-mode replay
+	uv run python -m eval.score eval/out/pdf --system llm --split dev
+	uv run python -m eval.score eval/out/pdf --system llm --split test
+
+# Calls the model for every PDF without a recording. COSTS MONEY; needs credentials.
+eval-pdf-llm-record:
+	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
+	uv run python -m eval.run eval/out/pdf --system llm --llm-mode record
+
+# Tesseract language models (German + English), pinned, into a local folder so
+# every machine and CI recognise text with the same data.
+TESSDATA_URL = https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0
+ocr-data:
+	mkdir -p .tessdata
+	for lang in deu eng; do \
+		[ -f .tessdata/$$lang.traineddata ] || curl -fsSL -o .tessdata/$$lang.traineddata $(TESSDATA_URL)/$$lang.traineddata; \
+	done
+
+# Rule-based baseline on degraded scans (needs tesseract and `make ocr-data`).
+eval-scans-baseline: ocr-data
+	uv run python -m eval.generators.scans --count 100 --out eval/out/scans
+	uv run python -m eval.run eval/out/scans --system baseline
+	uv run python -m eval.score eval/out/scans --system baseline --split dev
+	uv run python -m eval.score eval/out/scans --system baseline --split test

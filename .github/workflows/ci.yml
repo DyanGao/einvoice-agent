@@ -26,6 +26,12 @@ jobs:
       - name: Install
         run: uv sync --locked
 
+      - name: Install OCR
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr
+          make ocr-data
+
       - name: Lint
         run: make lint
 
