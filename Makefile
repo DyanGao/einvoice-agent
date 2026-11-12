@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record
 
 install:
 	uv sync
@@ -53,3 +53,15 @@ eval-pdf-baseline:
 	uv run python -m eval.run eval/out/pdf --system baseline
 	uv run python -m eval.score eval/out/pdf --system baseline --split dev
 	uv run python -m eval.score eval/out/pdf --system baseline --split test
+
+# Vision-model extractor on the same PDFs, answered from stored recordings.
+eval-pdf-llm:
+	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
+	uv run python -m eval.run eval/out/pdf --system llm --llm-mode replay
+	uv run python -m eval.score eval/out/pdf --system llm --split dev
+	uv run python -m eval.score eval/out/pdf --system llm --split test
+
+# Calls the model for every PDF without a recording. COSTS MONEY; needs credentials.
+eval-pdf-llm-record:
+	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
+	uv run python -m eval.run eval/out/pdf --system llm --llm-mode record
