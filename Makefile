@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline
 
 install:
 	uv sync
@@ -65,3 +65,19 @@ eval-pdf-llm:
 eval-pdf-llm-record:
 	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
 	uv run python -m eval.run eval/out/pdf --system llm --llm-mode record
+
+# Tesseract language models (German + English), pinned, into a local folder so
+# every machine and CI recognise text with the same data.
+TESSDATA_URL = https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0
+ocr-data:
+	mkdir -p .tessdata
+	for lang in deu eng; do \
+		[ -f .tessdata/$$lang.traineddata ] || curl -fsSL -o .tessdata/$$lang.traineddata $(TESSDATA_URL)/$$lang.traineddata; \
+	done
+
+# Rule-based baseline on degraded scans (needs tesseract and `make ocr-data`).
+eval-scans-baseline: ocr-data
+	uv run python -m eval.generators.scans --count 100 --out eval/out/scans
+	uv run python -m eval.run eval/out/scans --system baseline
+	uv run python -m eval.score eval/out/scans --system baseline --split dev
+	uv run python -m eval.score eval/out/scans --system baseline --split test

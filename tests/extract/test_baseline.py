@@ -152,3 +152,32 @@ def test_baseline_reads_the_dev_layouts_it_was_written_for():
         )
         wrong, compared = wrong + len(errors), compared + total
     assert 1 - wrong / compared >= 0.98
+
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+
+
+def test_image_is_read_through_ocr_and_marked_as_image():
+    from app.models import DocumentFormat
+
+    draft = BaselineExtractor(ocr=lambda data: TEXT).extract(PNG)
+    assert (draft.number, draft.source_format) == ("RE-2026-00042", DocumentFormat.IMAGE)
+
+
+def test_text_pdf_is_not_sent_through_ocr():
+    from tests.detect.pdf_factory import make_pdf
+
+    def fail(data):
+        raise AssertionError("OCR must not run for a text PDF")
+
+    pdf = make_pdf(text="Rechnung Nr. 1 Gesamtbetrag 119,00 EUR")
+    BaselineExtractor(ocr=fail).extract(pdf)
+
+
+def test_image_that_ocr_cannot_open_gives_an_empty_draft():
+    from app.extract.ocr import OcrError
+
+    def broken(data):
+        raise OcrError("unreadable image")
+
+    assert BaselineExtractor(ocr=broken).extract(PNG).number is None

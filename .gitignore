@@ -27,6 +27,9 @@ node_modules/
 .next/
 out/
 
+# Tesseract language data (make ocr-data)
+.tessdata/
+
 # Eval outputs (regenerated)
 eval/out/
 predictions*.jsonl

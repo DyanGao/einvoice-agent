@@ -6,10 +6,13 @@ English labels, a few date and number formats, and one heuristic per field.
 """
 
 import re
+from collections.abc import Callable
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
+from app.detect import detect
 from app.extract.draft import InvoiceDraft, LineDraft, PartyDraft, VatBreakdownDraft
+from app.extract.ocr import OcrError, ocr_text
 from app.extract.pdf_text import layout_text
 from app.models import DocumentFormat
 
@@ -282,5 +285,18 @@ def extract_from_text(text: str) -> InvoiceDraft:
 
 
 class BaselineExtractor:
+    """Text PDFs are read directly; images and scanned PDFs go through OCR first."""
+
+    def __init__(self, ocr: Callable[[bytes], str] = ocr_text) -> None:
+        self._ocr = ocr
+
     def extract(self, data: bytes) -> InvoiceDraft:
-        return extract_from_text(layout_text(data))
+        fmt = detect(data)
+        if fmt is DocumentFormat.IMAGE:
+            try:
+                text = self._ocr(data)
+            except OcrError:
+                text = ""
+        else:
+            text = layout_text(data)
+        return extract_from_text(text).model_copy(update={"source_format": fmt})
