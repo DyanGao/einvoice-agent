@@ -43,3 +43,8 @@ playwright-report/
 .idea/
 .vscode/
 .claude/
+
+# Review UI
+ui/e2e/.tmp/
+ui/next-env.d.ts
+ui/tsconfig.tsbuildinfo

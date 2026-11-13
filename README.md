@@ -27,7 +27,7 @@ Since 2025 every German business must be able to receive e-invoices; issuing bec
 - [ ] Unstructured path: OCR + vision LLM → schema-constrained extraction (EN 16931 fields)
 - [ ] Matching agent: invoice ↔ PO ↔ delivery note ↔ bank transaction (3-way match + fuzzy)
 - [ ] Checks: VAT rate/ID plausibility, totals, duplicates, IBAN changes (fraud signal), price/quantity deviations
-- [ ] Human-in-the-loop review UI for low-confidence fields and exceptions
+- [ ] Human-in-the-loop review UI for low-confidence fields and exceptions _(built: upload, queue, correct, approve, history; low-confidence marking waits for confidence scores, exceptions for the checks)_
 - [ ] Output connectors: CSV/DATEV-style export, REST webhook, mock ERP via API, Playwright fallback for UI-only systems
 - [ ] Audit trail per document (source, extracted values, who approved)
 
@@ -37,6 +37,15 @@ docker compose up -d          # api, worker, postgres, ui, mock-erp, validator
 make seed                     # synthetic suppliers, POs, bank transactions
 make demo                     # processes sample_invoices/
 open http://localhost:3000
+```
+
+Until the app is containerised, the review UI runs from source:
+
+```bash
+make up && make migrate       # postgres, redis, validator
+make api                      # http://127.0.0.1:8000, no authentication: localhost only
+make worker
+make ui-install && make ui    # http://localhost:3000
 ```
 
 ## Architecture

@@ -1,0 +1,25 @@
+{
+  "name": "einvoice-review-ui",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H localhost -p 3000",
+    "build": "next build",
+    "start": "next start -H localhost -p 3000",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "~5.9.0"
+  },
+  "packageManager": "pnpm@10.29.3"
+}

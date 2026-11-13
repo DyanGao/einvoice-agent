@@ -1,0 +1,620 @@
+/* Ledger paper, fountain-pen ink, a blue office stamp and a yellow text marker. */
+:root {
+  --paper: #eef1ec;
+  --sheet: #fbfcfa;
+  --ink: #1b2a2f;
+  --muted: #56666a;
+  --rule: #c5cec6;
+  --stamp: #2b4bd6;
+  --marker: #ffe45c;
+  --red-pen: #b3261e;
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.5rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--step-0);
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--stamp);
+  text-underline-offset: 0.15em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--stamp);
+  outline-offset: 2px;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: var(--step-2);
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: var(--step-0);
+}
+
+p {
+  margin: 0;
+}
+
+.number {
+  text-align: right;
+}
+
+/* Masthead */
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 3.25rem;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--sheet);
+}
+
+.masthead-title {
+  flex: none;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.reviewer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--step--1);
+  white-space: nowrap;
+}
+
+.reviewer input {
+  width: 11rem;
+  min-width: 5rem;
+}
+
+/* Inputs: a line to write on, like a form */
+input,
+textarea {
+  width: 100%;
+  padding: 0.3rem 0.4rem;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+  border-bottom-color: var(--ink);
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: 0;
+  border-bottom: 2px solid var(--stamp);
+  padding-bottom: calc(0.3rem - 1px);
+  background: #fff;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+fieldset:disabled input,
+fieldset:disabled textarea {
+  border-bottom-style: dotted;
+  color: var(--ink);
+  -webkit-text-fill-color: var(--ink);
+  opacity: 1;
+}
+
+/* Buttons */
+.button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  background: var(--sheet);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #fff;
+}
+
+.button:disabled {
+  border-color: var(--rule);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.button-primary {
+  border-color: var(--stamp);
+  background: var(--stamp);
+  color: #fff;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: #2240bd;
+}
+
+.button-primary:disabled {
+  background: transparent;
+}
+
+.button-quiet {
+  padding: 0.2rem 0.5rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--stamp);
+  font-size: var(--step--1);
+}
+
+fieldset:disabled .button-quiet {
+  display: none;
+}
+
+/* Queue */
+.queue {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px dashed var(--muted);
+  border-radius: 3px;
+  background: var(--sheet);
+}
+
+.dropzone p {
+  margin-top: 0.3rem;
+  color: var(--muted);
+}
+
+.dropzone-active {
+  border-color: var(--stamp);
+  border-style: solid;
+  background: #fff;
+}
+
+.notes {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  padding: 0.25rem 0;
+}
+
+.note-failed {
+  color: var(--red-pen);
+}
+
+.tabs {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.tabs button {
+  margin-bottom: -1px;
+  padding: 0.5rem 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tabs button[aria-pressed="true"] {
+  border-bottom-color: var(--ink);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.count {
+  margin-left: 0.25rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  padding: 0.5rem 0.6rem;
+  color: var(--muted);
+  font-size: var(--step--1);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.documents td {
+  padding: 0.6rem;
+  border-top: 1px solid var(--rule);
+  vertical-align: baseline;
+}
+
+.documents tbody tr:hover {
+  background: var(--sheet);
+}
+
+.state {
+  white-space: nowrap;
+}
+
+.state-pending {
+  padding: 0.05rem 0.3rem;
+  background: var(--marker);
+}
+
+.state-approved {
+  color: var(--stamp);
+  font-weight: 600;
+}
+
+.state-not_required {
+  color: var(--muted);
+}
+
+.empty {
+  padding: 2.5rem 0;
+  color: var(--muted);
+}
+
+.problem {
+  margin: 1rem 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--red-pen);
+  background: var(--sheet);
+  color: var(--red-pen);
+}
+
+/* Review: the document on the left, what was read from it on the right */
+.review {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  height: calc(100vh - 3.25rem);
+}
+
+.review-missing {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.document-pane {
+  display: flex;
+  min-height: 0;
+  border-right: 1px solid var(--rule);
+  background: #d9dfd8;
+}
+
+.document-pane iframe {
+  flex: 1;
+  width: 100%;
+  border: 0;
+}
+
+.document-pane img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: top;
+}
+
+.no-preview {
+  max-width: 26rem;
+  margin: auto;
+  padding: 2rem;
+  color: var(--muted);
+}
+
+.no-preview a {
+  display: inline-block;
+  margin-top: 0.75rem;
+}
+
+.fields-pane {
+  min-height: 0;
+  overflow-y: auto;
+  /* No bottom padding here: it would leave a gap under the sticky action bar. */
+  padding: 1.25rem 1.75rem 0;
+  background: var(--sheet);
+}
+
+.fields-pane > :last-child {
+  padding-bottom: 4rem;
+}
+
+.review-head {
+  position: relative;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 0.6rem;
+  font-size: var(--step--1);
+}
+
+.review-meta {
+  max-width: 34rem;
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+/* The one loud thing on the page: an approval looks like the stamp it replaces. */
+.stamp {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.45rem 0.9rem;
+  border: 2px solid var(--stamp);
+  border-radius: 4px;
+  color: var(--stamp);
+  font-size: var(--step--1);
+  line-height: 1.3;
+  transform: rotate(-4deg);
+  animation: stamp-down 180ms ease-out;
+}
+
+.stamp strong {
+  font-size: var(--step-1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@keyframes stamp-down {
+  from {
+    opacity: 0;
+    transform: rotate(-4deg) scale(1.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp {
+    animation: none;
+  }
+}
+
+.notice {
+  margin-top: 1rem;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--muted);
+  background: var(--paper);
+}
+
+.notice-problem {
+  border-left-color: var(--red-pen);
+}
+
+.group {
+  margin-top: 1.75rem;
+}
+
+.group h2 {
+  margin-bottom: 0.6rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.9rem 1.5rem;
+}
+
+.field label {
+  display: block;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.hint {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: var(--step--1);
+  overflow-wrap: anywhere;
+}
+
+.hint-unsure {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.hint-missing {
+  color: var(--red-pen);
+}
+
+/* Uncertain values are run over with the marker, as on paper. */
+[data-unsure] input,
+[data-unsure] textarea {
+  background: linear-gradient(100deg, transparent 0.2rem, var(--marker) 0.5rem, var(--marker) calc(100% - 0.5rem), transparent calc(100% - 0.2rem));
+}
+
+[data-missing] input,
+[data-missing] textarea {
+  border-bottom-color: var(--red-pen);
+  border-bottom-style: solid;
+}
+
+.rows th,
+.rows td {
+  padding: 0.15rem 0.3rem;
+}
+
+/* Cells keep a readable width; the table scrolls sideways when the pane is narrow. */
+.rows input {
+  min-width: 10rem;
+}
+
+.rows input.number {
+  min-width: 5.5rem;
+}
+
+.rows td:first-child input {
+  min-width: 3rem;
+  width: 3rem;
+}
+
+.empty-rows {
+  color: var(--muted);
+}
+
+.violations {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.violation {
+  padding: 0.4rem 0 0.4rem 0.7rem;
+  border-left: 3px solid var(--muted);
+}
+
+.violation + .violation {
+  margin-top: 0.4rem;
+}
+
+.violation-error {
+  border-left-color: var(--red-pen);
+}
+
+.actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: 2rem;
+  padding: 0.9rem 0;
+  border-top: 2px solid var(--ink);
+  background: var(--sheet);
+}
+
+.action-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.blocked {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.audit {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audit li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--rule);
+}
+
+.audit-what {
+  overflow-wrap: anywhere;
+}
+
+.audit-who {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+@media (max-width: 60rem) {
+  .review {
+    display: block;
+    height: auto;
+  }
+
+  .document-pane {
+    height: 60vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .fields-pane {
+    padding: 1.25rem 1rem 0;
+  }
+
+  .stamp {
+    position: static;
+    align-self: flex-start;
+    width: fit-content;
+    margin-top: 0.75rem;
+  }
+
+  .dropzone {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .audit li {
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+}

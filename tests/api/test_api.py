@@ -137,6 +137,15 @@ def test_html_upload_is_never_served_as_html(client):
     assert response.headers["content-type"] == "application/octet-stream"
 
 
+def test_detail_says_a_pdf_can_be_displayed(client):
+    assert client.get(f"/documents/{uploaded(client)}").json()["content_type"] == "application/pdf"
+
+
+def test_detail_says_xml_cannot_be_displayed(client):
+    detail = client.get(f"/documents/{uploaded(client, XML, 'r.xml')}").json()
+    assert detail["content_type"] is None
+
+
 def test_correction_needs_a_reviewer_name(client):
     response = client.patch(
         f"/documents/{uploaded(client)}/fields", json={"changes": {"number": "X"}}

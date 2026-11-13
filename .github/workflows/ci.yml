@@ -54,6 +54,26 @@ jobs:
       - name: Structured eval
         run: make eval-quick
 
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: ui/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: Review UI builds
+        run: |
+          make ui-install
+          make ui-build
+
+      - name: Review UI in a browser
+        run: |
+          pnpm --dir ui exec playwright install --with-deps chromium
+          make ui-test
+
       - name: Service logs
         if: failure()
         run: docker compose logs --tail 200
