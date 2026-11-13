@@ -1,0 +1,82 @@
+{
+ "input_tokens": 5629,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "141417.64",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE181466751",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "141417.64",
+  "issue_date": "2026-03-11",
+  "line_net_total": "125190.39",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "2448.60",
+    "quantity": "4.78",
+    "unit_price": "512.26",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "62991.09",
+    "quantity": "33.27",
+    "unit_price": "1893.33",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "2952.53",
+    "quantity": "33.54",
+    "unit_price": "88.03",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "4",
+    "net": "53351.76",
+    "quantity": "24",
+    "unit_price": "2222.99",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "5",
+    "net": "3446.41",
+    "quantity": "17",
+    "unit_price": "202.73",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "125190.39",
+  "number": "RE-2026-18644",
+  "payment_ibans": [
+   "DE51000937997049945956"
+  ],
+  "po_ref": "PO-718801",
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE633687392",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "11817.87",
+    "taxable_amount": "62199.30"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "4409.38",
+    "taxable_amount": "62991.09"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 782
+}

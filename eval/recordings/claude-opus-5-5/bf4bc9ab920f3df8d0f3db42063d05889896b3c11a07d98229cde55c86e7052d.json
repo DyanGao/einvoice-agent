@@ -1,0 +1,74 @@
+{
+ "input_tokens": 5592,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "169178.18",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE079699660",
+  "currency": "EUR",
+  "due_date": "2026-11-02",
+  "gross_total": "169178.18",
+  "issue_date": "2026-10-19",
+  "line_net_total": "148761.23",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "59914.24",
+    "quantity": "32",
+    "unit_price": "1872.32",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "2",
+    "net": "23449.59",
+    "quantity": "29.65",
+    "unit_price": "790.88",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "3",
+    "net": "17158.60",
+    "quantity": "10.14",
+    "unit_price": "1692.17",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "4",
+    "net": "48238.80",
+    "quantity": "20",
+    "unit_price": "2411.94",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "148761.23",
+  "number": "RE-2026-44582",
+  "payment_ibans": [
+   "DE15000668756141822786"
+  ],
+  "po_ref": "PO-565712",
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE018979771",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "15839.13",
+    "taxable_amount": "83363.83"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "4577.82",
+    "taxable_amount": "65397.40"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 577
+}

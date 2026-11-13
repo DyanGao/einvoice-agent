@@ -1,0 +1,68 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "85942.31",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-03-31",
+  "gross_total": "85942.31",
+  "issue_date": "2026-03-01",
+  "line_net_total": "72220.43",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "5424.30",
+    "quantity": "9",
+    "unit_price": "602.70",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "6975.40",
+    "quantity": "4",
+    "unit_price": "1743.85",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "3",
+    "net": "10716.53",
+    "quantity": "8.37",
+    "unit_price": "1280.35",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "4",
+    "net": "49104.20",
+    "quantity": "20",
+    "unit_price": "2455.21",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "72220.43",
+  "number": "RE-2026-40746",
+  "payment_ibans": [
+   "DE29000891529123908052"
+  ],
+  "po_ref": "PO-310605",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE249258016",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "13721.88",
+    "taxable_amount": "72220.43"
+   }
+  ],
+  "vat_total": "13721.88"
+ },
+ "output_tokens": 596
+}

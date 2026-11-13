@@ -54,17 +54,23 @@ eval-pdf-baseline:
 	uv run python -m eval.score eval/out/pdf --system baseline --split dev
 	uv run python -m eval.score eval/out/pdf --system baseline --split test
 
-# Vision-model extractor on the same PDFs, answered from stored recordings.
+# Vision-model extractor on the same PDFs, answered from stored recordings
+# (free, no credentials). "llm" is the model alone, "llm-rules" the model
+# followed by the completion rules, which is what the application runs.
 eval-pdf-llm:
 	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
 	uv run python -m eval.run eval/out/pdf --system llm --llm-mode replay
+	uv run python -m eval.run eval/out/pdf --system llm-rules --llm-mode replay
 	uv run python -m eval.score eval/out/pdf --system llm --split dev
 	uv run python -m eval.score eval/out/pdf --system llm --split test
+	uv run python -m eval.score eval/out/pdf --system llm-rules --split dev
+	uv run python -m eval.score eval/out/pdf --system llm-rules --split test
 
-# Calls the model for every PDF without a recording. COSTS MONEY; needs credentials.
+# Calls the model for every PDF without a recording. COSTS MONEY (about 0.03 USD
+# per PDF in November 2026); reads ANTHROPIC_API_KEY from .env.
 eval-pdf-llm-record:
 	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
-	uv run python -m eval.run eval/out/pdf --system llm --llm-mode record
+	uv run --env-file .env python -m eval.run eval/out/pdf --system llm --llm-mode record
 
 # Tesseract language models (German + English), pinned, into a local folder so
 # every machine and CI recognise text with the same data.

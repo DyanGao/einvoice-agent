@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5481,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "1755.68",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-02-06",
+  "gross_total": "1755.68",
+  "issue_date": "2026-01-30",
+  "line_net_total": "1640.82",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "1640.82",
+    "quantity": "2",
+    "unit_price": "820.41",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "1640.82",
+  "number": "RE-2026-45294",
+  "payment_ibans": [
+   "DE37000096353468616758"
+  ],
+  "po_ref": null,
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE865699277",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "114.86",
+    "taxable_amount": "1640.82"
+   }
+  ],
+  "vat_total": "114.86"
+ },
+ "output_tokens": 348
+}

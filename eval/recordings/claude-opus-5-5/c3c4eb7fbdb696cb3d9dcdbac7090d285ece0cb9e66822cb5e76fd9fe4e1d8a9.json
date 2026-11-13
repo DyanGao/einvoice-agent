@@ -1,0 +1,66 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "55715.37",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE066229138",
+  "currency": null,
+  "due_date": "2026-09-11",
+  "gross_total": "55715.37",
+  "issue_date": "2026-08-12",
+  "line_net_total": "47398.27",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "36950.95",
+    "quantity": "15.03",
+    "unit_price": "2458.48",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "5738.06",
+    "quantity": "25.25",
+    "unit_price": "227.25",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "4709.26",
+    "quantity": "14.96",
+    "unit_price": "314.79",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "47398.27",
+  "number": "RE-2026-48769",
+  "payment_ibans": [
+   "DE12000568516747258396"
+  ],
+  "po_ref": "PO-110369",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE181507930",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "7915.44",
+    "taxable_amount": "41660.21"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "401.66",
+    "taxable_amount": "5738.06"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 542
+}

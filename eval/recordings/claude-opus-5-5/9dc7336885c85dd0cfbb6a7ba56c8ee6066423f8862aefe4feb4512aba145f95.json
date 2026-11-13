@@ -1,0 +1,90 @@
+{
+ "input_tokens": 5645,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "120704.42",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE737776625",
+  "currency": "EUR",
+  "due_date": "2026-10-29",
+  "gross_total": "120704.42",
+  "issue_date": "2026-10-15",
+  "line_net_total": "102822.39",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "36461.44",
+    "quantity": "16",
+    "unit_price": "2278.84",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "2259.42",
+    "quantity": "3",
+    "unit_price": "753.14",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "3",
+    "net": "14116.46",
+    "quantity": "34",
+    "unit_price": "415.19",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "4",
+    "net": "28169.08",
+    "quantity": "31",
+    "unit_price": "908.68",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "5",
+    "net": "13785.20",
+    "quantity": "11",
+    "unit_price": "1253.20",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "6",
+    "net": "8030.79",
+    "quantity": "8.41",
+    "unit_price": "954.91",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "102822.39",
+  "number": "RE-2026-72365",
+  "payment_ibans": [
+   "DE41000244417111434001"
+  ],
+  "po_ref": null,
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE714331467",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "16917.07",
+    "taxable_amount": "89037.19"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "964.96",
+    "taxable_amount": "13785.20"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 690
+}

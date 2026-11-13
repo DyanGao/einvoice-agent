@@ -5,7 +5,9 @@
     python -m eval.run eval/out/pdf --system llm --llm-mode replay
 
 Systems: "structured" is the validator + parser path, "baseline" the
-rule-based extractor, "llm" the vision-model extractor.
+rule-based extractor, "llm" the vision-model extractor on its own, and
+"llm-rules" the same model answers followed by the completion rules
+(app/extract/complete.py) — what the application actually runs.
 
 The llm system answers from stored recordings by default (free and
 deterministic). --llm-mode record calls the model for every request that has
@@ -25,6 +27,7 @@ import httpx
 from app.extract import (
     AnthropicLlm,
     BaselineExtractor,
+    CompletingExtractor,
     ExtractionError,
     Extractor,
     LlmExtractor,
@@ -40,6 +43,7 @@ from eval.generators.structured import GOLD_FILE
 STRUCTURED = "structured"
 BASELINE = "baseline"
 LLM = "llm"
+LLM_RULES = "llm-rules"
 DEFAULT_RECORDINGS = Path("eval/recordings")
 
 
@@ -100,17 +104,21 @@ def run(set_dir: Path, system: str, predict: Callable[[bytes], dict]) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("set_dir", type=Path)
-    parser.add_argument("--system", choices=(STRUCTURED, BASELINE, LLM), default=STRUCTURED)
+    parser.add_argument(
+        "--system", choices=(STRUCTURED, BASELINE, LLM, LLM_RULES), default=STRUCTURED
+    )
     parser.add_argument("--llm-mode", choices=("replay", "record"), default="replay")
     parser.add_argument("--recordings", type=Path, default=DEFAULT_RECORDINGS)
     args = parser.parse_args()
     if args.system == BASELINE:
         predict = partial(predict_with_extractor, extractor=BaselineExtractor())
-    elif args.system == LLM:
+    elif args.system in (LLM, LLM_RULES):
         settings = Settings.from_env()
         extractor = build_llm_extractor(
             args.llm_mode, args.recordings, settings.extractor_model, settings.extractor_effort
         )
+        if args.system == LLM_RULES:
+            extractor = CompletingExtractor(extractor)
         predict = partial(predict_with_extractor, extractor=extractor)
     else:
         settings = Settings.from_env()

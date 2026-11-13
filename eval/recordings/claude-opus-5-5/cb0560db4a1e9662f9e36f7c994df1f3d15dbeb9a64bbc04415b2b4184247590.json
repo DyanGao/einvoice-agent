@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5449,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "5996.92",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-07-30",
+  "gross_total": "5996.92",
+  "issue_date": "2026-07-16",
+  "line_net_total": "5604.60",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "5604.60",
+    "quantity": "7.34",
+    "unit_price": "763.57",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "5604.60",
+  "number": "RE-2026-70700",
+  "payment_ibans": [
+   "DE41000397211633699106"
+  ],
+  "po_ref": null,
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE841913308",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "392.32",
+    "taxable_amount": "5604.60"
+   }
+  ],
+  "vat_total": "392.32"
+ },
+ "output_tokens": 493
+}

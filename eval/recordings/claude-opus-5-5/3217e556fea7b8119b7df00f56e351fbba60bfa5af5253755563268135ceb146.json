@@ -1,0 +1,90 @@
+{
+ "input_tokens": 5644,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "116644.79",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-10-16",
+  "gross_total": "116644.79",
+  "issue_date": "2026-09-16",
+  "line_net_total": "103187.57",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "4068.48",
+    "quantity": "26",
+    "unit_price": "156.48",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "142.65",
+    "quantity": "0.35",
+    "unit_price": "407.56",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "3",
+    "net": "46794.66",
+    "quantity": "22",
+    "unit_price": "2127.03",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "4",
+    "net": "24248.51",
+    "quantity": "11",
+    "unit_price": "2204.41",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "5",
+    "net": "4442.19",
+    "quantity": "32.91",
+    "unit_price": "134.98",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "6",
+    "net": "23491.08",
+    "quantity": "12",
+    "unit_price": "1957.59",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "103187.57",
+  "number": "RE-2026-29676",
+  "payment_ibans": [
+   "DE45000557462699376235"
+  ],
+  "po_ref": null,
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE228892248",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "9870.64",
+    "taxable_amount": "51950.72"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "3586.58",
+    "taxable_amount": "51236.85"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 845
+}

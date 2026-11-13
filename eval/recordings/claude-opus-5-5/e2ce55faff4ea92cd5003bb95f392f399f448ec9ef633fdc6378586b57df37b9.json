@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5518,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "53791.30",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE169159717",
+  "currency": "EUR",
+  "due_date": "2026-11-19",
+  "gross_total": "53791.30",
+  "issue_date": "2026-10-20",
+  "line_net_total": "45202.77",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "12300.21",
+    "quantity": "9",
+    "unit_price": "1366.69",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "32902.56",
+    "quantity": "24",
+    "unit_price": "1370.94",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "45202.77",
+  "number": "RE-2026-54793",
+  "payment_ibans": [
+   "DE41000469995089796931"
+  ],
+  "po_ref": "PO-802022",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE726899461",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "8588.53",
+    "taxable_amount": "45202.77"
+   }
+  ],
+  "vat_total": "8588.53"
+ },
+ "output_tokens": 427
+}

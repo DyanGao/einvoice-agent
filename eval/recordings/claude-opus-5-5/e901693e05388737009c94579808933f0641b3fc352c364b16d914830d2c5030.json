@@ -1,0 +1,76 @@
+{
+ "input_tokens": 5580,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "153555.32",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": null,
+  "gross_total": "153555.32",
+  "issue_date": "2026-10-13",
+  "line_net_total": "129038.08",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "30057.58",
+    "quantity": "14",
+    "unit_price": "2146.97",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "48075.94",
+    "quantity": "22",
+    "unit_price": "2185.27",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "3",
+    "net": "27676.73",
+    "quantity": "19",
+    "unit_price": "1456.67",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "4",
+    "net": "4586.82",
+    "quantity": "21",
+    "unit_price": "218.42",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "5",
+    "net": "18641.01",
+    "quantity": "20.47",
+    "unit_price": "910.65",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "129038.08",
+  "number": "RE-2026-54948",
+  "payment_ibans": [
+   "DE93000548358097731716"
+  ],
+  "po_ref": "PO-462900",
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE076870386",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "24517.24",
+    "taxable_amount": "129038.08"
+   }
+  ],
+  "vat_total": "24517.24"
+ },
+ "output_tokens": 578
+}

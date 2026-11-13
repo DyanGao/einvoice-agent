@@ -1,0 +1,90 @@
+{
+ "input_tokens": 5661,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "127428.36",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "127428.36",
+  "issue_date": "2026-05-07",
+  "line_net_total": "107627.14",
+  "lines": [
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "1",
+    "net": "13486.72",
+    "quantity": "16",
+    "unit_price": "842.92",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "4208.08",
+    "quantity": "8",
+    "unit_price": "526.01",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "3",
+    "net": "48679.50",
+    "quantity": "23",
+    "unit_price": "2116.50",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "4",
+    "net": "4729.64",
+    "quantity": "6.14",
+    "unit_price": "770.30",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "5",
+    "net": "31123.75",
+    "quantity": "35",
+    "unit_price": "889.25",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "6",
+    "net": "5399.45",
+    "quantity": "35",
+    "unit_price": "154.27",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "107627.14",
+  "number": "RE-2026-00662",
+  "payment_ibans": [
+   "DE42000794362109152327"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE165861664",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "19423.26",
+    "taxable_amount": "102227.69"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "377.96",
+    "taxable_amount": "5399.45"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 804
+}

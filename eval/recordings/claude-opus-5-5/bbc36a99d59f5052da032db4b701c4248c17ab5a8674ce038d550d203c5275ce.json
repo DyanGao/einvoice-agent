@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5477,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "60135.39",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE941899476",
+  "currency": "EUR",
+  "due_date": "2026-02-16",
+  "gross_total": "60135.39",
+  "issue_date": "2026-01-17",
+  "line_net_total": "50533.94",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "12587.09",
+    "quantity": "30.01",
+    "unit_price": "419.43",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "2",
+    "net": "37946.85",
+    "quantity": "21.79",
+    "unit_price": "1741.48",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "50533.94",
+  "number": "RE-2026-21485",
+  "payment_ibans": [
+   "DE72000977768405093875"
+  ],
+  "po_ref": "PO-833560",
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE370635041",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "9601.45",
+    "taxable_amount": "50533.94"
+   }
+  ],
+  "vat_total": "9601.45"
+ },
+ "output_tokens": 405
+}

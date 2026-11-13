@@ -1,0 +1,82 @@
+{
+ "input_tokens": 6014,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "137630.23",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-09-29",
+  "gross_total": "137630.23",
+  "issue_date": "2026-08-30",
+  "line_net_total": "116752.28",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "10874.88",
+    "quantity": "9",
+    "unit_price": "1208.32",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "35254.72",
+    "quantity": "16",
+    "unit_price": "2203.42",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "3",
+    "net": "23100.25",
+    "quantity": "25",
+    "unit_price": "924.01",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "4",
+    "net": "11437.84",
+    "quantity": "8",
+    "unit_price": "1429.73",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "5",
+    "net": "36084.59",
+    "quantity": "22.21",
+    "unit_price": "1624.70",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "116752.28",
+  "number": "RE-2026-60946",
+  "payment_ibans": [
+   "DE36000353899349839029"
+  ],
+  "po_ref": "PO-801831",
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE586068836",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "20116.71",
+    "taxable_amount": "105877.40"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "761.24",
+    "taxable_amount": "10874.88"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 646
+}

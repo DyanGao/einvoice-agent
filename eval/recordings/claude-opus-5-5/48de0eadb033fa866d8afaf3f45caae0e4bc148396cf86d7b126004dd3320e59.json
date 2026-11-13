@@ -1,0 +1,90 @@
+{
+ "input_tokens": 5678,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "162502.57",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE672491560",
+  "currency": "EUR",
+  "due_date": "2026-07-01",
+  "gross_total": "162502.57",
+  "issue_date": "2026-06-24",
+  "line_net_total": "136907.84",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "3481.32",
+    "quantity": "13.43",
+    "unit_price": "259.22",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "11669.98",
+    "quantity": "14",
+    "unit_price": "833.57",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "15950.08",
+    "quantity": "6.91",
+    "unit_price": "2308.26",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "4",
+    "net": "29443.22",
+    "quantity": "23",
+    "unit_price": "1280.14",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "5",
+    "net": "58078.16",
+    "quantity": "28",
+    "unit_price": "2074.22",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "6",
+    "net": "18285.08",
+    "quantity": "11",
+    "unit_price": "1662.28",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "136907.84",
+  "number": "RE-2026-89675",
+  "payment_ibans": [
+   "DE97000703232105293499"
+  ],
+  "po_ref": "PO-258295",
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE630661628",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "25351.04",
+    "taxable_amount": "133426.52"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "243.69",
+    "taxable_amount": "3481.32"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 703
+}

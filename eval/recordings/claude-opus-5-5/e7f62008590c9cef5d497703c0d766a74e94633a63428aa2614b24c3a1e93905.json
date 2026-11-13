@@ -1,0 +1,45 @@
+{
+ "input_tokens": 5513,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "53455.47",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE785048888",
+  "currency": null,
+  "due_date": null,
+  "gross_total": "53455.47",
+  "issue_date": "2026-10-12",
+  "line_net_total": "44920.56",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "44920.56",
+    "quantity": "38",
+    "unit_price": "1182.12",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "44920.56",
+  "number": "RE-2026-09427",
+  "payment_ibans": [
+   "DE40000788086249269332",
+   "DE49000144398032837881"
+  ],
+  "po_ref": "PO-209328",
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE496874361",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "8534.91",
+    "taxable_amount": "44920.56"
+   }
+  ],
+  "vat_total": "8534.91"
+ },
+ "output_tokens": 365
+}

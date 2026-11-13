@@ -4,6 +4,7 @@ import anthropic
 
 from app.extract.base import Extractor
 from app.extract.baseline import BaselineExtractor
+from app.extract.complete import CompletingExtractor
 from app.extract.draft import InvoiceDraft
 from app.extract.llm import AnthropicLlm, ExtractionError
 from app.extract.llm_extractor import LlmExtractor
@@ -37,10 +38,12 @@ def build_extractor(settings: Settings) -> Extractor | None:
         return BaselineExtractor()
     if settings.extractor == "llm":
         return LazyExtractor(
-            lambda: LlmExtractor(
-                AnthropicLlm(anthropic.Anthropic()),
-                model=settings.extractor_model,
-                effort=settings.extractor_effort,
+            lambda: CompletingExtractor(
+                LlmExtractor(
+                    AnthropicLlm(anthropic.Anthropic()),
+                    model=settings.extractor_model,
+                    effort=settings.extractor_effort,
+                )
             )
         )
     raise ValueError(f"EXTRACTOR must be llm, baseline or none, not {settings.extractor!r}")

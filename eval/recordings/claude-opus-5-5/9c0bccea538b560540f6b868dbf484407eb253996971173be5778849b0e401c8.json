@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5563,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "47100.22",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-07-07",
+  "gross_total": "47100.22",
+  "issue_date": "2026-06-30",
+  "line_net_total": "44018.90",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "22926.02",
+    "quantity": "13",
+    "unit_price": "1763.54",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "21092.88",
+    "quantity": "24",
+    "unit_price": "878.87",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "44018.90",
+  "number": "RE-2026-04919",
+  "payment_ibans": [
+   "DE20000187727562579315"
+  ],
+  "po_ref": "PO-537539",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE527071602",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "3081.32",
+    "taxable_amount": "44018.90"
+   }
+  ],
+  "vat_total": "3081.32"
+ },
+ "output_tokens": 419
+}

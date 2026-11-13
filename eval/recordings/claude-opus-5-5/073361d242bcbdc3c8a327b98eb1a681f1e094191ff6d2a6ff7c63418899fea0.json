@@ -1,0 +1,66 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "65910.84",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "65910.84",
+  "issue_date": "2026-02-08",
+  "line_net_total": "59121.59",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "2256.72",
+    "quantity": "8",
+    "unit_price": "282.09",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "2",
+    "net": "19832.81",
+    "quantity": "19.78",
+    "unit_price": "1002.67",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "3",
+    "net": "37032.06",
+    "quantity": "39",
+    "unit_price": "949.54",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "59121.59",
+  "number": "RE-2026-82616",
+  "payment_ibans": [
+   "DE64000908034874724936"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE025761236",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "4197.01",
+    "taxable_amount": "22089.53"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "2592.24",
+    "taxable_amount": "37032.06"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 718
+}

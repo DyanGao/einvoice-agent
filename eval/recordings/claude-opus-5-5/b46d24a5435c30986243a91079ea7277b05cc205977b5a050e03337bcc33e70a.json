@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5536,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "72806.64",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE760003294",
+  "currency": "EUR",
+  "due_date": "2026-07-20",
+  "gross_total": "72806.64",
+  "issue_date": "2026-07-06",
+  "line_net_total": "61182.05",
+  "lines": [
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "1",
+    "net": "5557.74",
+    "quantity": "6",
+    "unit_price": "926.29",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "55624.31",
+    "quantity": "31.35",
+    "unit_price": "1774.30",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "61182.05",
+  "number": "RE-2026-39112",
+  "payment_ibans": [
+   "DE34000452498606549131"
+  ],
+  "po_ref": null,
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE236468651",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "11624.59",
+    "taxable_amount": "61182.05"
+   }
+  ],
+  "vat_total": "11624.59"
+ },
+ "output_tokens": 419
+}
