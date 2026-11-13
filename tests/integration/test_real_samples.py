@@ -56,3 +56,17 @@ def test_removing_the_buyer_reference_is_rejected_with_br_de_15(validator):
         DocumentStatus.INVALID,
         ["BR-DE-15"],
     )
+
+
+@pytest.mark.parametrize("render", ["ubl", "cii"])
+def test_invoices_of_the_matching_world_are_valid_xrechnung(validator, render):
+    """The world's invoices have to pass as real e-invoices, or everything
+    built on them would be measured on documents that never go the auto path."""
+    from eval.generators.canonical import XRECHNUNG
+    from eval.generators.world import build_world
+    from eval.generators.xrechnung import render_cii, render_ubl
+
+    renderer = render_ubl if render == "ubl" else render_cii
+    for entry in build_world().invoices[:15]:
+        outcome = process_structured(renderer(entry.invoice, XRECHNUNG), validator)
+        assert outcome.status is DocumentStatus.VALID, (entry.id, outcome.validation)

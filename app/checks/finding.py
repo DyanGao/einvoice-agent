@@ -23,6 +23,9 @@ class FindingType(StrEnum):
     PO_NOT_FOUND = "po_not_found"
     PRICE_DEVIATION = "price_deviation"
     QUANTITY_DEVIATION = "quantity_deviation"
+    # The supplier, payment account and order could not be compared with the
+    # ERP's data, so those checks did not run.
+    MASTER_DATA_NOT_CHECKED = "master_data_not_checked"
 
 
 class Severity(StrEnum):

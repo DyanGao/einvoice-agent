@@ -31,6 +31,11 @@ def test_health(client):
     assert client.get("/health").json() == {"status": "ok"}
 
 
+def test_the_bare_address_leads_to_the_api_page_instead_of_not_found(client):
+    response = client.get("/", follow_redirects=False)
+    assert (response.status_code, response.headers["location"]) == (307, "/docs")
+
+
 def test_supplier_is_found_by_vat_id_with_its_ibans(client, world):
     supplier = world.suppliers[0]
     (found,) = client.get("/suppliers", params={"vat_id": supplier.company.vat_id}).json()[

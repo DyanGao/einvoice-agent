@@ -7,7 +7,7 @@ from datetime import date
 from decimal import Decimal
 
 from app.checks import arithmetic
-from app.checks.context import CheckContext, KnownInvoice
+from app.checks.context import CheckContext, KnownInvoice, MasterData
 from app.checks.finding import Finding, FindingType, Severity
 from app.extract.draft import InvoiceDraft
 
@@ -229,9 +229,31 @@ def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
 # --- supplier and purchase order -------------------------------------------
 
 
+def master_data(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
+    """Says so when supplier, payment account and order were not checked. An
+    ERP that should have answered and did not sends the invoice to a person:
+    a changed bank account must not slip through because a service was down."""
+    if context.master_data is MasterData.AVAILABLE:
+        return []
+    down = context.master_data is MasterData.UNAVAILABLE
+    reason = (
+        f"the ERP did not answer ({context.master_data_problem})" if down else "no ERP is connected"
+    )
+    return [
+        Finding(
+            type=FindingType.MASTER_DATA_NOT_CHECKED,
+            severity=Severity.REVIEW if down else Severity.INFO,
+            message=f"supplier, payment account and purchase order were not checked: {reason}",
+            detail={"reason": context.master_data.value},
+        )
+    ]
+
+
 def supplier_and_iban(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
     """Payment details that differ from what is on file are the classic
     invoice fraud; they always go to a person."""
+    if context.master_data is not MasterData.AVAILABLE:
+        return []
     supplier = context.supplier
     if supplier is None:
         return [
@@ -268,6 +290,8 @@ def _share_above(actual: Decimal, ordered: Decimal) -> Decimal | None:
 
 
 def purchase_order(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
+    if context.master_data is not MasterData.AVAILABLE:
+        return []
     settings = context.settings
     order = context.purchase_order
     if order is None:
@@ -333,6 +357,7 @@ ALL_CHECKS: tuple[Check, ...] = (
     vat_ids,
     document_type,
     duplicates,
+    master_data,
     supplier_and_iban,
     purchase_order,
 )

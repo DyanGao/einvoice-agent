@@ -46,6 +46,9 @@ class DocumentRow(Base):
     audit_events: Mapped[list["AuditEventRow"]] = relationship(
         back_populates="document", order_by="AuditEventRow.seq"
     )
+    findings: Mapped[list["FindingRow"]] = relationship(
+        back_populates="document", order_by="FindingRow.position", cascade="all, delete-orphan"
+    )
 
 
 class InvoiceRow(Base):
@@ -110,6 +113,24 @@ class AuditEventRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     document: Mapped[DocumentRow] = relationship(back_populates="audit_events")
+
+
+class FindingRow(Base):
+    """What the checks found on the document's current draft. Replaced as a
+    whole every time the checks run; the audit trail keeps the history."""
+
+    __tablename__ = "findings"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), index=True)
+    position: Mapped[int]
+    type: Mapped[str] = mapped_column(String(40), index=True)
+    severity: Mapped[str] = mapped_column(String(10))
+    message: Mapped[str]
+    fields: Mapped[list[str]] = mapped_column(Json)
+    detail: Mapped[dict[str, Any]] = mapped_column(Json)
+
+    document: Mapped[DocumentRow] = relationship(back_populates="findings")
 
 
 def invoice_columns(invoice: Invoice) -> dict:

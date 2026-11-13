@@ -44,3 +44,22 @@ export function money(amount: string | null, currency: string | null): string {
   if (amount === null) return "";
   return currency ? `${amount} ${currency}` : amount;
 }
+
+const FINDING: Record<string, string> = {
+  totals_mismatch: "Totals do not add up",
+  vat_rate_implausible: "Unusual VAT rate",
+  vat_id_invalid: "Invalid VAT ID",
+  credit_note: "Credit note",
+  unusual_document_type: "Not an ordinary invoice",
+  duplicate: "Duplicate",
+  near_duplicate: "Possible duplicate",
+  unknown_supplier: "Unknown supplier",
+  iban_changed: "Bank account not on file",
+  missing_po: "No purchase order",
+  po_not_found: "Purchase order not found",
+  price_deviation: "Price above order",
+  quantity_deviation: "Quantity above order",
+  master_data_not_checked: "Not checked against the ERP",
+};
+
+export const findingLabel = (type: string) => FINDING[type] ?? type.replaceAll("_", " ");

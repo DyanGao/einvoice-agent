@@ -18,6 +18,7 @@ from app.db.tables import (
     Base,
     DocumentRow,
     DraftRow,
+    FindingRow,
     InvoiceRow,
     ValidationRow,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "Base",
     "DocumentRow",
     "DraftRow",
+    "FindingRow",
     "InvoiceRow",
     "NotReviewable",
     "ReviewError",

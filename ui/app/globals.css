@@ -308,6 +308,13 @@ th {
   font-weight: 600;
 }
 
+.finding-count {
+  margin-left: 0.5rem;
+  color: var(--red-pen);
+  font-size: var(--step--1);
+  white-space: nowrap;
+}
+
 .state-not_required {
   color: var(--muted);
 }
