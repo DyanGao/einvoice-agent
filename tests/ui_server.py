@@ -1,8 +1,8 @@
 """API server for the browser tests of the review UI (ui/e2e).
 
 Everything is in memory and in one process: SQLite, a queue that processes at
-once, the rule-based extractor and a validator stub. No Docker services, no
-model calls. It also writes the sample invoice the browser test uploads.
+once, the rule-based extractor, a validator stub and an ERP stub. No Docker services,
+no model calls. It also writes the sample invoice the browser test uploads.
 
     uv run python -m tests.ui_server --port 8010 --sample ui/e2e/.tmp/rechnung.pdf
 """
@@ -19,9 +19,14 @@ from sqlalchemy.pool import StaticPool
 
 from app import db
 from app.api.main import create_app
+from app.checks import PoLine, PurchaseOrder, Supplier
+from app.checks.service import Checker
 from app.extract import BaselineExtractor
 from app.settings import Settings
-from tests.support import PDF, XML, inline_queue
+from eval.generators.canonical import XRECHNUNG
+from eval.generators.world import PO_EXACT, build_world
+from eval.generators.xrechnung import render_ubl
+from tests.support import PDF, FakeErp, inline_queue
 
 # The rule-based extractor reports no confidence. The browser test needs one
 # uncertain field to check that the UI marks it.
@@ -51,9 +56,26 @@ def main() -> None:
     parser.add_argument("--ui-origin", default="http://localhost:3010")
     args = parser.parse_args()
 
+    # The e-invoice comes from the matching world, and the ERP below knows its
+    # supplier and order, so it is clean. The PDF's supplier is unknown to it.
+    world = build_world()
+    entry = next(entry for entry in world.invoices if entry.po_ref_kind == PO_EXACT)
+    supplier = next(s for s in world.suppliers if s.id == entry.supplier_id)
+    order = next(o for o in world.orders if o.number == entry.po_number)
+    erp = FakeErp(
+        [Supplier(supplier.id, supplier.company.name, supplier.company.vat_id, supplier.ibans)],
+        [
+            PurchaseOrder(
+                order.number,
+                tuple(PoLine(x.description, x.quantity, x.unit_price) for x in order.lines),
+            )
+        ],
+    )
+    checker = Checker(erp)
+
     args.sample.parent.mkdir(parents=True, exist_ok=True)
     args.sample.write_bytes(PDF)
-    args.sample.with_suffix(".xml").write_bytes(XML)
+    args.sample.with_suffix(".xml").write_bytes(render_ubl(entry.invoice, XRECHNUNG))
 
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -65,8 +87,10 @@ def main() -> None:
         feedback_dir=Path(tempfile.mkdtemp(prefix="einvoice-ui-test-")),
         ui_origin=args.ui_origin,
     )
-    queue = inline_queue(session_factory, extractor=UncertainExtractor())
-    uvicorn.run(create_app(session_factory, queue, settings), host="127.0.0.1", port=args.port)
+    queue = inline_queue(session_factory, extractor=UncertainExtractor(), checker=checker)
+    uvicorn.run(
+        create_app(session_factory, queue, settings, checker), host="127.0.0.1", port=args.port
+    )
 
 
 if __name__ == "__main__":

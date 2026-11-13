@@ -43,7 +43,9 @@ Until the app is containerised, the review UI runs from source:
 
 ```bash
 make up && make migrate       # postgres, redis, validator
+make seed && make erp         # optional: mock ERP on http://127.0.0.1:8100
 make api                      # http://127.0.0.1:8000, no authentication: localhost only
+                              # with ERP_URL=http://127.0.0.1:8100 for supplier and order checks
 make worker
 make ui-install && make ui    # http://localhost:3000
 ```

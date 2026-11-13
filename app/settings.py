@@ -24,6 +24,9 @@ class Settings:
     feedback_dir: Path
     ui_origin: str
     max_upload_bytes: int
+    # Base URL of the ERP's read API; None = no ERP connected.
+    erp_url: str | None = None
+    erp_timeout_seconds: float = 5.0
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -41,4 +44,6 @@ class Settings:
             feedback_dir=Path(os.environ.get("FEEDBACK_DIR", "data/private/feedback")),
             ui_origin=os.environ.get("UI_ORIGIN", "http://localhost:3000"),
             max_upload_bytes=int(os.environ.get("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024))),
+            erp_url=os.environ.get("ERP_URL") or None,
+            erp_timeout_seconds=float(os.environ.get("ERP_TIMEOUT_SECONDS", "5")),
         )

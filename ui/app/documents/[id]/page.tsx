@@ -25,7 +25,7 @@ import {
   type FormState,
   type Kind,
 } from "@/lib/form";
-import { formatLabel, statusLabel, when } from "@/lib/labels";
+import { findingLabel, formatLabel, statusLabel, when } from "@/lib/labels";
 
 const REFRESH_MS = 3000;
 
@@ -45,6 +45,8 @@ function marksFor(detail: Detail, path: string) {
   const current = valueAt(detail.fields, path);
   const derived = (detail.fields?.derived_fields as string[] | undefined) ?? [];
   return {
+    // What the checks say about this field, if anything.
+    findings: detail.findings.filter((finding) => finding.fields.includes(path)),
     // Still the value a rule filled in, not one the reviewer has since typed.
     derived: derived.includes(path) && JSON.stringify(original) === JSON.stringify(current),
     missing: detail.missing.includes(path),
@@ -66,6 +68,11 @@ function Hints({ marks }: { marks: ReturnType<typeof marksFor> }) {
         <span className="hint hint-unsure">Filled in by a rule, not read from the document</span>
       )}
       {marks.missing && <span className="hint hint-missing">Needed for approval</span>}
+      {marks.findings.map((finding, index) => (
+        <span key={index} className="hint hint-missing">
+          {findingLabel(finding.type)}
+        </span>
+      ))}
       {marks.was !== null && (
         <span className="hint">
           {marks.was === NOTHING ? "Nothing was read here" : `Read as ${marks.was}`}
@@ -73,6 +80,13 @@ function Hints({ marks }: { marks: ReturnType<typeof marksFor> }) {
       )}
     </>
   );
+}
+
+/** A table cell has no room for hints; they go into its tooltip. */
+function cellTitle(marks: ReturnType<typeof marksFor>): string | undefined {
+  const notes = marks.findings.map((finding) => finding.message);
+  if (marks.was !== null) notes.push(`Read as ${marks.was}`);
+  return notes.length > 0 ? notes.join("\n") : undefined;
 }
 
 function inputProps(kind: Kind) {
@@ -246,6 +260,24 @@ export default function ReviewPage() {
           </p>
         )}
 
+        {detail.findings.length > 0 && (
+          <section className="group">
+            <h2>Checks</h2>
+            <ul className="violations">
+              {detail.findings.map((finding, index) => (
+                <li
+                  key={index}
+                  className={
+                    finding.severity === "review" ? "violation violation-error" : "violation"
+                  }
+                >
+                  <strong>{findingLabel(finding.type)}</strong> {finding.message}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {detail.validation && detail.validation.violations.length > 0 && (
           <section className="group">
             <h2>Validator findings</h2>
@@ -277,7 +309,7 @@ export default function ReviewPage() {
                         key={field.path}
                         className="field"
                         data-unsure={marks.confidence !== null || undefined}
-                        data-missing={marks.missing || undefined}
+                        data-missing={marks.missing || marks.findings.length > 0 || undefined}
                       >
                         <label htmlFor={`f-${field.path}`}>{field.label}</label>
                         <input
@@ -300,7 +332,7 @@ export default function ReviewPage() {
               <div
                 className="field"
                 data-unsure={ibanMarks.confidence !== null || undefined}
-                data-missing={ibanMarks.missing || undefined}
+                data-missing={ibanMarks.missing || ibanMarks.findings.length > 0 || undefined}
               >
                 <label htmlFor="f-payment_ibans">Payment IBANs, one per line</label>
                 <textarea
@@ -342,8 +374,10 @@ export default function ReviewPage() {
                                   <td
                                     key={column.key}
                                     data-unsure={marks.confidence !== null || undefined}
-                                    data-missing={marks.missing || undefined}
-                                    title={marks.was !== null ? `Read as ${marks.was}` : undefined}
+                                    data-missing={
+                                      marks.missing || marks.findings.length > 0 || undefined
+                                    }
+                                    title={cellTitle(marks)}
                                   >
                                     <input
                                       aria-label={labelFor(path)}

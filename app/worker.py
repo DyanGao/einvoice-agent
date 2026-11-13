@@ -8,6 +8,7 @@ from rq import Queue, SimpleWorker
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.checks.service import build_checker
 from app.extract.factory import build_extractor
 from app.jobs import run_document_job
 from app.queue import QUEUE_NAME
@@ -25,12 +26,13 @@ def _context() -> tuple:
         sessionmaker(create_engine(settings.database_url)),
         KositValidator(client),
         build_extractor(settings),
+        build_checker(settings.erp_url, settings.erp_timeout_seconds),
     )
 
 
 def process_document_job(document_id: str) -> str:
-    session_factory, validator, extractor = _context()
-    return run_document_job(session_factory, document_id, validator, extractor)
+    session_factory, validator, extractor, checker = _context()
+    return run_document_job(session_factory, document_id, validator, extractor, checker)
 
 
 def main() -> None:

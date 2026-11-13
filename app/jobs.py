@@ -5,6 +5,7 @@ import logging
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import db
+from app.checks.service import Checker
 from app.extract.base import Extractor
 from app.pipeline import DocumentStatus, Validator, process_document
 
@@ -16,11 +17,13 @@ def run_document_job(
     document_id: str,
     validator: Validator,
     extractor: Extractor | None,
+    checker: Checker | None = None,
 ) -> str:
     """Process a received document and store the outcome. Returns its status.
 
     Safe to run twice: a document that is no longer `received` is left alone.
     The slow part (validator, model) runs outside any database transaction.
+    With a checker, the business-rule checks run on the result right away.
     """
     with session_factory() as session:
         document = session.get(db.DocumentRow, document_id)
@@ -38,5 +41,7 @@ def run_document_job(
             # Another worker finished it while this one was processing.
             return document.status
         db.apply_outcome(session, document, outcome)
+        if checker is not None:
+            checker.check(session, document)
         logger.info("document %s: %s", document_id, outcome.status.value)
         return outcome.status.value

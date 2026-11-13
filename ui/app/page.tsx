@@ -179,6 +179,12 @@ export default function QueuePage() {
                     <span className={`state state-${document.review_state}`}>
                       {reviewLabel(document.review_state)}
                     </span>
+                    {document.findings_to_review > 0 && (
+                      <span className="finding-count">
+                        {document.findings_to_review}{" "}
+                        {document.findings_to_review === 1 ? "finding" : "findings"}
+                      </span>
+                    )}
                   </td>
                   <td>{when(document.created_at)}</td>
                 </tr>

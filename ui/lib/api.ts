@@ -9,6 +9,7 @@ export type Summary = {
   status: string;
   review_state: ReviewState;
   created_at: string;
+  findings_to_review: number;
   number: string | null;
   seller_name: string | null;
   gross_total: string | null;
@@ -22,6 +23,15 @@ export type Violation = {
   severity: string;
   message: string;
   location: string | null;
+};
+
+/** Something a business-rule check found on the invoice. */
+export type Finding = {
+  type: string;
+  severity: "review" | "info";
+  message: string;
+  fields: string[];
+  detail: Record<string, unknown>;
 };
 
 export type AuditEvent = {
@@ -39,6 +49,7 @@ export type Detail = Summary & {
   original: Fields | null;
   missing: string[];
   validation: { valid: boolean; scenario: string | null; violations: Violation[] } | null;
+  findings: Finding[];
   audit: AuditEvent[];
 };
 

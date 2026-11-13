@@ -17,6 +17,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import db
+from app.checks import Severity
+from app.checks.service import Checker, build_checker
 from app.extract.draft import InvoiceDraft
 from app.ingest import ingest
 from app.models import DocumentFormat
@@ -55,6 +57,10 @@ def _summary(document: db.DocumentRow) -> dict:
         "status": document.status,
         "review_state": document.review_state,
         "created_at": document.created_at.isoformat(),
+        # How many findings of the checks need a person.
+        "findings_to_review": sum(
+            finding.severity == Severity.REVIEW.value for finding in document.findings
+        ),
         "number": fields.get("number"),
         "seller_name": (fields.get("seller") or {}).get("name"),
         "gross_total": fields.get("gross_total"),
@@ -84,6 +90,16 @@ def _detail(document: db.DocumentRow) -> dict:
             "scenario": validation.scenario,
             "violations": validation.violations,
         },
+        "findings": [
+            {
+                "type": finding.type,
+                "severity": finding.severity,
+                "message": finding.message,
+                "fields": finding.fields,
+                "detail": finding.detail,
+            }
+            for finding in document.findings
+        ],
         "audit": [
             {
                 "seq": event.seq,
@@ -119,8 +135,13 @@ def _write_feedback_case(settings: Settings, document: db.DocumentRow) -> None:
 
 
 def create_app(
-    session_factory: sessionmaker[Session], queue: JobQueue, settings: Settings
+    session_factory: sessionmaker[Session],
+    queue: JobQueue,
+    settings: Settings,
+    checker: Checker | None = None,
 ) -> FastAPI:
+    """`checker` re-runs the business-rule checks after a correction, so the
+    findings always describe the draft as it stands. None: no checks."""
     app = FastAPI(title="einvoice-agent")
     app.add_middleware(
         CORSMiddleware,
@@ -207,6 +228,8 @@ def create_app(
             raise HTTPException(409, str(exc)) from exc
         except db.ReviewError as exc:
             raise HTTPException(422, str(exc)) from exc
+        if checker is not None and changed:
+            checker.check(active, row)
         return {"changed": changed, **_detail(row)}
 
     @app.post("/documents/{document_id}/approve")
@@ -231,5 +254,8 @@ def create_app_from_env() -> FastAPI:
 
     settings = Settings.from_env()
     return create_app(
-        sessionmaker(create_engine(settings.database_url)), RqQueue(settings.redis_url), settings
+        sessionmaker(create_engine(settings.database_url)),
+        RqQueue(settings.redis_url),
+        settings,
+        build_checker(settings.erp_url, settings.erp_timeout_seconds),
     )

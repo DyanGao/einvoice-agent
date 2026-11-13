@@ -177,6 +177,8 @@ _NOISE_COUNTERPARTIES = (
     ("Lohn und Gehalt", "Gehalt"),
     ("Versicherung Allgemein AG", "Beitrag Betriebshaftpflicht"),
 )
+# XRechnung requires a buyer reference (rule BR-DE-15); ours asks suppliers to quote this one.
+BUYER_REFERENCE = "04011000-12345-03"
 BUYER = Company(
     name="Nordlicht Handel GmbH",
     vat_id="DE123456788",
@@ -317,7 +319,7 @@ def _canonical(
         due_date=issued + timedelta(days=rng.choice((14, 30))),
         type_code="380",
         currency="EUR",
-        buyer_reference=None,
+        buyer_reference=BUYER_REFERENCE,
         po_ref=po_ref,
         seller=supplier.company,
         buyer=BUYER,

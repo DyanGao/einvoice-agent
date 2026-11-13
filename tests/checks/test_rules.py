@@ -8,6 +8,7 @@ from app.checks import (
     CheckSettings,
     FindingType,
     KnownInvoice,
+    MasterData,
     PoLine,
     PurchaseOrder,
     Severity,
@@ -33,6 +34,10 @@ VAT_ID = "DE123456788"  # check digit valid; not a real company's number
 SUPPLIER = Supplier(id="S1", name="Muster GmbH", vat_id=VAT_ID, ibans=(IBAN,))
 ORDER = PurchaseOrder(number="PO-1", lines=(PoLine("Papier", Decimal("2"), Decimal("50.00")),))
 NO_CONTEXT = CheckContext()
+NO_ERP = CheckContext(master_data=MasterData.NOT_CONFIGURED)
+ERP_DOWN = CheckContext(
+    master_data=MasterData.UNAVAILABLE, master_data_problem="connection refused"
+)
 KNOWN = CheckContext(supplier=SUPPLIER, purchase_order=ORDER)
 
 
@@ -376,3 +381,28 @@ def test_line_that_is_not_on_the_order_is_not_compared_with_some_other_line():
     )  # fmt: skip
     extra = invoice(lines=(line(description="Versand", unit_price=Decimal("500.00")),))
     assert purchase_order(extra, CheckContext(purchase_order=order)) == []
+
+
+# --- no master data ---------------------------------------------------------
+
+
+def test_without_an_erp_supplier_and_order_are_not_judged_and_one_note_says_so():
+    (finding,) = run_checks(invoice(po_ref=None, payment_ibans=(OTHER_IBAN,)), NO_ERP)
+    assert (finding.type, finding.severity) == (
+        FindingType.MASTER_DATA_NOT_CHECKED,
+        Severity.INFO,
+    )
+
+
+def test_an_erp_that_does_not_answer_sends_the_invoice_to_a_person():
+    (finding,) = run_checks(invoice(), ERP_DOWN)
+    assert (finding.type, finding.severity, "connection refused" in finding.message) == (
+        FindingType.MASTER_DATA_NOT_CHECKED,
+        Severity.REVIEW,
+        True,
+    )
+
+
+def test_checks_that_need_no_erp_still_run_without_one():
+    findings = run_checks(invoice(gross_total=Decimal("129.00")), NO_ERP)
+    assert FindingType.TOTALS_MISMATCH in types(findings)

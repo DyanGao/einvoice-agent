@@ -8,6 +8,17 @@ database) and passes them in, so every check stays a function of its inputs.
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
+from enum import StrEnum
+
+
+class MasterData(StrEnum):
+    """Whether the ERP could be asked about the supplier and the order."""
+
+    AVAILABLE = "available"
+    # No ERP is connected to this installation.
+    NOT_CONFIGURED = "not_configured"
+    # An ERP is connected but did not answer.
+    UNAVAILABLE = "unavailable"
 
 
 @dataclass(frozen=True)
@@ -57,6 +68,11 @@ class CheckSettings:
 
 @dataclass(frozen=True)
 class CheckContext:
+    # Unless AVAILABLE, supplier and purchase_order say nothing: the checks
+    # that need them do not run and one finding says so.
+    master_data: MasterData = MasterData.AVAILABLE
+    # Why the ERP did not answer, for the finding.
+    master_data_problem: str | None = None
     # None: no supplier with this VAT ID or name is known.
     supplier: Supplier | None = None
     # None: the invoice names no order, or the order it names does not exist.
