@@ -34,6 +34,17 @@ export type Finding = {
   detail: Record<string, unknown>;
 };
 
+/** What the invoice was matched to in the ERP. */
+export type Match = {
+  supplier_id: string | null;
+  po_number: string | null;
+  po_basis: string;
+  delivery_id: string | null;
+  payments: { bank_transaction_id: string; amount: string }[];
+  payment_basis: string;
+  explanation: string[];
+};
+
 export type AuditEvent = {
   seq: number;
   event: string;
@@ -49,6 +60,7 @@ export type Detail = Summary & {
   original: Fields | null;
   missing: string[];
   validation: { valid: boolean; scenario: string | null; violations: Violation[] } | null;
+  match: Match | null;
   findings: Finding[];
   audit: AuditEvent[];
 };
@@ -119,6 +131,10 @@ export function correctFields(
     headers: { "Content-Type": "application/json", "X-Reviewer": reviewer },
     body: JSON.stringify({ changes }),
   });
+}
+
+export function recheckDocument(id: string): Promise<Detail> {
+  return request(`/documents/${encodeURIComponent(id)}/recheck`, { method: "POST" });
 }
 
 export function approveDocument(id: string, reviewer: string): Promise<Detail> {

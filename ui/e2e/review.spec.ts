@@ -88,6 +88,15 @@ test("a valid e-invoice needs no review and has no page to show", async ({ page 
   await page.getByRole("button", { name: /All documents/ }).click();
   await page.getByRole("row", { name: /No review needed/ }).getByRole("link").click();
   await expect(page.getByText("needs no review")).toBeVisible();
+  // It was matched in the ERP: an order quoted exactly, and the transfer that paid it.
+  const matching = page.getByRole("region", { name: "Matching" });
+  await expect(matching.getByText(/PO-\d{6}/).first()).toBeVisible();
+  await expect(matching.getByText("quoted exactly").first()).toBeVisible();
+  await expect(matching.getByText(/TX-\d{6}/).first()).toBeVisible();
+  // Asking again gives the same answer and is recorded.
+  const checksBefore = await page.getByText("Checked", { exact: true }).count();
+  await matching.getByRole("button", { name: "Match and check again" }).click();
+  await expect(page.getByText("Checked", { exact: true })).toHaveCount(checksBefore + 1);
   await expect(page.getByRole("link", { name: "Download the original file" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
 });

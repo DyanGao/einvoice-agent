@@ -60,6 +60,17 @@ const FINDING: Record<string, string> = {
   price_deviation: "Price above order",
   quantity_deviation: "Quantity above order",
   master_data_not_checked: "Not checked against the ERP",
+  po_not_quoted: "Order found, not quoted correctly",
 };
 
 export const findingLabel = (type: string) => FINDING[type] ?? type.replaceAll("_", " ");
+
+const BASIS: Record<string, string> = {
+  exact_reference: "quoted exactly",
+  similar_reference: "quoted with a slip",
+  content: "found by content",
+  ambiguous: "several fit, none chosen",
+  none: "not found",
+};
+
+export const basisLabel = (basis: string) => BASIS[basis] ?? basis;

@@ -10,6 +10,7 @@ import {
   contentUrl,
   correctFields,
   getDocument,
+  recheckDocument,
   type AuditEvent,
   type Detail,
   type Violation,
@@ -25,7 +26,7 @@ import {
   type FormState,
   type Kind,
 } from "@/lib/form";
-import { findingLabel, formatLabel, statusLabel, when } from "@/lib/labels";
+import { basisLabel, findingLabel, formatLabel, statusLabel, when } from "@/lib/labels";
 
 const REFRESH_MS = 3000;
 
@@ -275,6 +276,45 @@ export default function ReviewPage() {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {detail.match && (
+          <section className="group" aria-label="Matching">
+            <h2>Matched in the ERP</h2>
+            <dl className="match">
+              <dt>Purchase order</dt>
+              <dd>
+                {detail.match.po_number ?? "None"}{" "}
+                <span className="basis">{basisLabel(detail.match.po_basis)}</span>
+              </dd>
+              <dt>Delivery</dt>
+              <dd>{detail.match.delivery_id ?? "None"}</dd>
+              <dt>Payments</dt>
+              <dd>
+                {detail.match.payments.length === 0
+                  ? "None"
+                  : detail.match.payments
+                      .map((payment) => `${payment.bank_transaction_id} (${payment.amount})`)
+                      .join(", ")}{" "}
+                <span className="basis">{basisLabel(detail.match.payment_basis)}</span>
+              </dd>
+            </dl>
+            <ul className="match-why">
+              {detail.match.explanation.map((line, index) => (
+                <li key={index}>{line}</li>
+              ))}
+            </ul>
+            {!approved && (
+              <button
+                type="button"
+                className="button button-quiet"
+                disabled={busy}
+                onClick={() => void run(() => recheckDocument(id))}
+              >
+                Match and check again
+              </button>
+            )}
           </section>
         )}
 

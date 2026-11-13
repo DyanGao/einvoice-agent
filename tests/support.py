@@ -35,11 +35,10 @@ def inline_queue(session_factory, validator=None, extractor=None, checker=None) 
 
 
 class FakeErp:
-    """An ERP that knows what it is told, or does not answer at all."""
+    """An ERP that knows nobody, or does not answer at all. Tests that need
+    real master data use the mock ERP in memory (eval.match.erp_for)."""
 
-    def __init__(self, suppliers=(), orders=(), down: bool = False) -> None:
-        self.suppliers = list(suppliers)
-        self.orders = {order.number: order for order in orders}
+    def __init__(self, down: bool = False) -> None:
         self.down = down
 
     def _answer(self) -> None:
@@ -48,18 +47,15 @@ class FakeErp:
 
     def find_supplier(self, vat_id, name):
         self._answer()
-        return next(
-            (
-                supplier
-                for supplier in self.suppliers
-                if (vat_id and supplier.vat_id == vat_id) or supplier.name == name
-            ),
-            None,
-        )
+        return None
 
-    def get_purchase_order(self, number):
+    def orders_of(self, supplier_id):
         self._answer()
-        return self.orders.get(number)
+        return []
+
+    def transactions_to(self, ibans):
+        self._answer()
+        return []
 
 
 class RecordingQueue:

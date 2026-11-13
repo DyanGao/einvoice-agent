@@ -1,4 +1,9 @@
-from app.matching.matcher import MatchingData, match_by_exact_keys, match_invoice
+from app.matching.matcher import (
+    MatchingData,
+    match_by_exact_keys,
+    match_candidates,
+    match_invoice,
+)
 from app.matching.model import (
     BankTransaction,
     Basis,
@@ -23,5 +28,6 @@ __all__ = [
     "Payment",
     "PeerInvoice",
     "match_by_exact_keys",
+    "match_candidates",
     "match_invoice",
 ]

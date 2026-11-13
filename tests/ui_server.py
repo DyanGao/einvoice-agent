@@ -1,7 +1,7 @@
 """API server for the browser tests of the review UI (ui/e2e).
 
 Everything is in memory and in one process: SQLite, a queue that processes at
-once, the rule-based extractor, a validator stub and an ERP stub. No Docker services,
+once, the rule-based extractor, a validator stub and the mock ERP. No Docker services,
 no model calls. It also writes the sample invoice the browser test uploads.
 
     uv run python -m tests.ui_server --port 8010 --sample ui/e2e/.tmp/rechnung.pdf
@@ -19,14 +19,14 @@ from sqlalchemy.pool import StaticPool
 
 from app import db
 from app.api.main import create_app
-from app.checks import PoLine, PurchaseOrder, Supplier
 from app.checks.service import Checker
 from app.extract import BaselineExtractor
 from app.settings import Settings
 from eval.generators.canonical import XRECHNUNG
-from eval.generators.world import PO_EXACT, build_world
+from eval.generators.world import PAID_ONCE, PO_EXACT, build_world
 from eval.generators.xrechnung import render_ubl
-from tests.support import PDF, FakeErp, inline_queue
+from eval.match import erp_for
+from tests.support import PDF, inline_queue
 
 # The rule-based extractor reports no confidence. The browser test needs one
 # uncertain field to check that the UI marks it.
@@ -56,22 +56,15 @@ def main() -> None:
     parser.add_argument("--ui-origin", default="http://localhost:3010")
     args = parser.parse_args()
 
-    # The e-invoice comes from the matching world, and the ERP below knows its
-    # supplier and order, so it is clean. The PDF's supplier is unknown to it.
+    # The e-invoice comes from the matching world and the ERP below holds that
+    # world, so it is clean and fully matched. The PDF's supplier is unknown to it.
     world = build_world()
-    entry = next(entry for entry in world.invoices if entry.po_ref_kind == PO_EXACT)
-    supplier = next(s for s in world.suppliers if s.id == entry.supplier_id)
-    order = next(o for o in world.orders if o.number == entry.po_number)
-    erp = FakeErp(
-        [Supplier(supplier.id, supplier.company.name, supplier.company.vat_id, supplier.ibans)],
-        [
-            PurchaseOrder(
-                order.number,
-                tuple(PoLine(x.description, x.quantity, x.unit_price) for x in order.lines),
-            )
-        ],
+    entry = next(
+        entry
+        for entry in world.invoices
+        if entry.po_ref_kind == PO_EXACT and entry.payment_kind == PAID_ONCE
     )
-    checker = Checker(erp)
+    checker = Checker(erp_for(world))
 
     args.sample.parent.mkdir(parents=True, exist_ok=True)
     args.sample.write_bytes(PDF)

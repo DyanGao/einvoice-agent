@@ -91,6 +91,18 @@ def _detail(document: db.DocumentRow) -> dict:
             "scenario": validation.scenario,
             "violations": validation.violations,
         },
+        # What the invoice was matched to in the ERP; None if the ERP was not asked.
+        "match": None
+        if document.match is None
+        else {
+            "supplier_id": document.match.supplier_id,
+            "po_number": document.match.po_number,
+            "po_basis": document.match.po_basis,
+            "delivery_id": document.match.delivery_id,
+            "payments": document.match.payments,
+            "payment_basis": document.match.payment_basis,
+            "explanation": document.match.explanation,
+        },
         "findings": [
             {
                 "type": finding.type,
@@ -237,6 +249,20 @@ def create_app(
         if checker is not None and changed:
             checker.check(active, row)
         return {"changed": changed, **_detail(row)}
+
+    @app.post("/documents/{document_id}/recheck")
+    def recheck(row: Doc, active: Db) -> dict:
+        """Match and check again. What is in the ERP and on file changes after
+        an invoice was processed: its payment arrives, the other invoices of a
+        combined transfer come in, a supplier's master data is corrected."""
+        if checker is None:
+            raise HTTPException(409, "no checks are configured for this installation")
+        if row.review_state == db.ReviewState.APPROVED.value:
+            raise HTTPException(409, "document is already approved")
+        if row.draft is None:
+            raise HTTPException(409, "nothing was read from this document, so nothing to check")
+        checker.check(active, row)
+        return _detail(row)
 
     @app.post("/documents/{document_id}/approve")
     def approve(row: Doc, active: Db, who: Reviewer) -> dict:

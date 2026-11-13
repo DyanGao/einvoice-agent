@@ -21,6 +21,8 @@ class FindingType(StrEnum):
     IBAN_CHANGED = "iban_changed"
     MISSING_PO = "missing_po"
     PO_NOT_FOUND = "po_not_found"
+    # The order was found although the invoice does not quote it correctly.
+    PO_NOT_QUOTED = "po_not_quoted"
     PRICE_DEVIATION = "price_deviation"
     QUANTITY_DEVIATION = "quantity_deviation"
     # The supplier, payment account and order could not be compared with the

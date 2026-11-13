@@ -295,12 +295,18 @@ def purchase_order(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
     settings = context.settings
     order = context.purchase_order
     if order is None:
-        if draft.po_ref is not None:
+        if draft.po_ref is not None or context.purchase_order_problem is not None:
+            named = (
+                f"purchase order {draft.po_ref} named on the invoice does not exist"
+                if draft.po_ref is not None
+                else "the invoice names no purchase order"
+            )
+            problem = context.purchase_order_problem
             return [
                 Finding(
                     type=FindingType.PO_NOT_FOUND,
                     severity=Severity.REVIEW,
-                    message=f"purchase order {draft.po_ref} named on the invoice does not exist",
+                    message=f"{named}; {problem}" if problem else named,
                     fields=("po_ref",),
                     detail={"po_ref": draft.po_ref},
                 )
@@ -316,6 +322,16 @@ def purchase_order(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
 
     ordered = {_key(line.description): line for line in order.lines}
     findings = []
+    if context.purchase_order_note is not None:
+        findings.append(
+            Finding(
+                type=FindingType.PO_NOT_QUOTED,
+                severity=Severity.INFO,
+                message=context.purchase_order_note,
+                fields=("po_ref",),
+                detail={"po_ref": draft.po_ref, "order": order.number},
+            )
+        )
     for index, line in enumerate(draft.lines):
         match = ordered.get(_key(line.description))
         if match is None and len(order.lines) == len(draft.lines):
