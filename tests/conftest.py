@@ -46,7 +46,13 @@ def session_factory():
     """SQLite in memory by default; set TEST_DATABASE_URL to run on Postgres
     (an empty database that these tests may create and drop tables in)."""
     url = os.environ.get("TEST_DATABASE_URL")
-    engine = create_engine(url) if url else create_engine("sqlite://", poolclass=StaticPool)
+    if url:
+        engine = create_engine(url)
+    else:
+        # The API tests reach the database from the test client's thread.
+        engine = create_engine(
+            "sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False}
+        )
     Base.metadata.create_all(engine)
     yield sessionmaker(engine)
     Base.metadata.drop_all(engine)

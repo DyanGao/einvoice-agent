@@ -1,11 +1,14 @@
 """einvoice command line.
 
-einvoice process FILE...     detect, validate, parse and store documents
+einvoice process FILE...     detect, validate, parse and store structured invoices now
+einvoice watch DIR           queue every new file that appears in a folder
+einvoice requeue             queue documents that were stored but never processed
 """
 
 import argparse
 import json
 import sys
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -14,7 +17,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import db
+from app.ingest import requeue_received, scan_folder
 from app.pipeline import DocumentStatus, Outcome, Validator, process_structured
+from app.queue import JobQueue, RqQueue
 from app.settings import Settings
 from app.validate import KositValidator
 
@@ -24,15 +29,29 @@ def main(
     *,
     validator: Validator | None = None,
     session_factory: sessionmaker[Session] | None = None,
+    queue: JobQueue | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="einvoice")
     commands = parser.add_subparsers(dest="command", required=True)
     process = commands.add_parser("process", help="process structured e-invoices")
     process.add_argument("paths", nargs="+", type=Path)
     process.add_argument("--no-store", action="store_true", help="do not write to the database")
+    watch = commands.add_parser("watch", help="queue new files from a folder")
+    watch.add_argument("folder", type=Path)
+    watch.add_argument("--interval", type=float, default=5.0, help="seconds between scans")
+    watch.add_argument("--once", action="store_true", help="scan once and exit")
+    commands.add_parser("requeue", help="queue stored documents that were never processed")
     args = parser.parse_args(argv)
 
     settings = Settings.from_env()
+    if args.command in ("watch", "requeue"):
+        session_factory = session_factory or sessionmaker(create_engine(settings.database_url))
+        queue = queue or RqQueue(settings.redis_url)
+        if args.command == "requeue":
+            print(f"queued {requeue_received(session_factory, queue)} documents")
+            return 0
+        return _watch(args, session_factory, queue, settings)
+
     if validator is None:
         validator = KositValidator(
             httpx.Client(
@@ -48,6 +67,23 @@ def main(
         all_valid = all_valid and report["status"] == DocumentStatus.VALID.value
         print(json.dumps(report, ensure_ascii=False))
     return 0 if all_valid else 1
+
+
+def _watch(
+    args: argparse.Namespace,
+    session_factory: sessionmaker[Session],
+    queue: JobQueue,
+    settings: Settings,
+) -> int:
+    if not args.folder.is_dir():
+        print(f"not a folder: {args.folder}", file=sys.stderr)
+        return 2
+    while True:
+        for item in scan_folder(args.folder, session_factory, queue, settings.max_upload_bytes):
+            print(json.dumps({"document_id": item.document_id, "status": item.status}))
+        if args.once:
+            return 0
+        time.sleep(args.interval)
 
 
 def _process_file(

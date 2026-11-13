@@ -9,6 +9,8 @@ from sqlalchemy import JSON, DateTime, ForeignKey, LargeBinary, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from app.models import Invoice
+
 Json = JSON().with_variant(JSONB(), "postgresql")
 
 
@@ -34,9 +36,12 @@ class DocumentRow(Base):
     status: Mapped[str] = mapped_column(String(20), index=True)
     error: Mapped[str | None]
     content: Mapped[bytes] = mapped_column(LargeBinary)
+    # pending | approved | not_required (see app.db.review.ReviewState)
+    review_state: Mapped[str] = mapped_column(String(20), index=True, default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     invoice: Mapped["InvoiceRow | None"] = relationship(back_populates="document")
+    draft: Mapped["DraftRow | None"] = relationship(back_populates="document")
     validation: Mapped["ValidationRow | None"] = relationship(back_populates="document")
     audit_events: Mapped[list["AuditEventRow"]] = relationship(
         back_populates="document", order_by="AuditEventRow.seq"
@@ -60,6 +65,23 @@ class InvoiceRow(Base):
     data: Mapped[dict[str, Any]] = mapped_column(Json)
 
     document: Mapped[DocumentRow] = relationship(back_populates="invoice")
+
+
+class DraftRow(Base):
+    """The invoice as it stands in review. `original` is what the machine
+    produced and never changes; `data` includes the reviewer's corrections."""
+
+    __tablename__ = "drafts"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True)
+    original: Mapped[dict[str, Any]] = mapped_column(Json)
+    data: Mapped[dict[str, Any]] = mapped_column(Json)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
+
+    document: Mapped[DocumentRow] = relationship(back_populates="draft")
 
 
 class ValidationRow(Base):
@@ -88,3 +110,15 @@ class AuditEventRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     document: Mapped[DocumentRow] = relationship(back_populates="audit_events")
+
+
+def invoice_columns(invoice: Invoice) -> dict:
+    return {
+        "number": invoice.number,
+        "issue_date": invoice.issue_date,
+        "seller_name": invoice.seller.name,
+        "seller_vat_id": invoice.seller.vat_id,
+        "currency": invoice.currency,
+        "gross_total": invoice.gross_total,
+        "data": invoice.model_dump(mode="json"),
+    }
