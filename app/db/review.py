@@ -17,7 +17,7 @@ from app.models import Invoice
 from app.pipeline import DocumentStatus
 
 # Not part of the invoice itself; reviewers cannot edit these.
-READ_ONLY_FIELDS = {"source_format", "field_confidence"}
+READ_ONLY_FIELDS = {"source_format", "field_confidence", "derived_fields"}
 
 
 class ReviewState(StrEnum):

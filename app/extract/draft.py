@@ -59,7 +59,10 @@ class InvoiceDraft(_Draft):
     amount_due: Amount | None = None
     source_format: DocumentFormat | None = None
     field_confidence: dict[str, float] = Field(default_factory=dict)
+    # Dotted paths of fields that were filled in by a rule instead of being
+    # read from the document (see complete.py).
+    derived_fields: tuple[str, ...] = ()
 
     def to_invoice(self) -> Invoice:
         """Raises pydantic.ValidationError while mandatory fields are missing."""
-        return Invoice.model_validate(self.model_dump())
+        return Invoice.model_validate(self.model_dump(exclude={"derived_fields"}))

@@ -37,6 +37,8 @@ test("upload, correct, approve: every step is in the history", async ({ page }) 
   await page.getByPlaceholder("Your name").fill("anna");
   await expect(page.getByText("35% sure")).toBeVisible();
   await expect(page.locator("[data-unsure]").getByLabel("Due date")).toBeVisible();
+  // A value no one read from the page is labelled as such.
+  await expect(page.getByText("Filled in by a rule, not read from the document")).toBeVisible();
 
   // A mandatory field that is emptied blocks approval and is named.
   const gross = page.getByLabel("Gross total");

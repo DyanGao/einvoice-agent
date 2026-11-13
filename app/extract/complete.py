@@ -6,7 +6,8 @@ from the rest: several VAT rates without a VAT total, amounts without a
 currency. Those gaps are closed here, in code, where the rule is visible and
 testable — not by asking the model to do arithmetic.
 
-A printed value is never replaced.
+A printed value is never replaced, and every field filled in here is named in
+the draft's derived_fields so that nobody takes it for a value that was read.
 """
 
 from decimal import Decimal
@@ -26,7 +27,10 @@ def complete(draft: InvoiceDraft) -> InvoiceDraft:
         updates["vat_total"] = sum(tax_amounts, Decimal(0))
     if draft.currency is None:
         updates["currency"] = DEFAULT_CURRENCY
-    return draft.model_copy(update=updates) if updates else draft
+    if not updates:
+        return draft
+    derived = (*draft.derived_fields, *updates)
+    return draft.model_copy(update={**updates, "derived_fields": derived})
 
 
 class CompletingExtractor:

@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration
 
 install:
 	uv sync
@@ -71,6 +71,16 @@ eval-pdf-llm:
 eval-pdf-llm-record:
 	uv run python -m eval.generators.pdf --count 150 --out eval/out/pdf
 	uv run --env-file .env python -m eval.run eval/out/pdf --system llm --llm-mode record
+
+# Confidence calibration (needs the predictions of eval-pdf-llm and the scan
+# set with its recordings, which only replay on the machine that made them).
+# `calibrate` rewrites app/extract/calibration.json from the dev split;
+# `eval-calibration` checks it on the held-out split.
+calibrate:
+	uv run python -m eval.calibrate fit eval/out/pdf eval/out/scans
+
+eval-calibration:
+	uv run python -m eval.calibrate report eval/out/pdf eval/out/scans
 
 # Tesseract language models (German + English), pinned, into a local folder so
 # every machine and CI recognise text with the same data.
