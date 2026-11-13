@@ -68,6 +68,8 @@ def _detail(document: db.DocumentRow) -> dict:
     return {
         **_summary(document),
         "error": document.error,
+        # None: the browser must not display this content, only download it.
+        "content_type": _media_type(document),
         "fields": None if draft is None else draft.data,
         "original": None if draft is None else draft.original,
         "missing": (

@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test
 
 install:
 	uv sync
@@ -90,3 +90,19 @@ api:
 # in-process (no fork), which also works on macOS.
 worker:
 	uv run python -m app.worker
+
+# Review UI (Next.js, in ui/). `make ui` expects the API from `make api`.
+ui-install:
+	pnpm --dir ui install --frozen-lockfile
+
+ui:
+	pnpm --dir ui dev
+
+# Type-checks and builds the production bundle.
+ui-build:
+	pnpm --dir ui build
+
+# Browser tests. They start their own in-memory API (tests/ui_server.py) and
+# need a browser once: pnpm --dir ui exec playwright install chromium
+ui-test:
+	pnpm --dir ui test:e2e
