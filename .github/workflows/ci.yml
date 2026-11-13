@@ -60,6 +60,11 @@ jobs:
       - name: PDF extraction eval (replay)
         run: make eval-pdf-llm
 
+      # Regression gate: at least 95 % of held-out world invoices matched
+      # to the right order, delivery and payments.
+      - name: Matching eval
+        run: make eval-matching
+
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: ui/package.json
