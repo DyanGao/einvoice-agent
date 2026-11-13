@@ -10,6 +10,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from sqlalchemy import func, or_, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, selectinload
@@ -89,6 +90,11 @@ def create_app(engine: Engine) -> FastAPI:
             yield active
 
     Db = Annotated[Session, Depends(session)]
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        """Someone opened the bare address in a browser: show them the API page."""
+        return RedirectResponse("/docs")
 
     @app.get("/health")
     def health() -> dict:

@@ -12,6 +12,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -169,6 +170,11 @@ def create_app(
     Db = Annotated[Session, Depends(session)]
     Doc = Annotated[db.DocumentRow, Depends(document)]
     Reviewer = Annotated[str, Depends(reviewer)]
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        """Someone opened the bare address in a browser: show them the API page."""
+        return RedirectResponse("/docs")
 
     @app.get("/health")
     def health() -> dict:
