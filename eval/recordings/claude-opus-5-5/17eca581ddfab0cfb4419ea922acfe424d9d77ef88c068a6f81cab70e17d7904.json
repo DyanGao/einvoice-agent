@@ -1,0 +1,58 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "135983.93",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE655432307",
+  "currency": "EUR",
+  "due_date": "2026-06-06",
+  "gross_total": "135983.93",
+  "issue_date": "2026-05-30",
+  "line_net_total": "119464.13",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "67977.56",
+    "quantity": "34",
+    "unit_price": "1999.34",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "2",
+    "net": "51486.57",
+    "quantity": "33.45",
+    "unit_price": "1539.21",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "119464.13",
+  "number": "RE-2026-04957",
+  "payment_ibans": [
+   "DE77000026453703591945"
+  ],
+  "po_ref": "PO-479902",
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE252554417",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "12915.74",
+    "taxable_amount": "67977.56"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "3604.06",
+    "taxable_amount": "51486.57"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 454
+}

@@ -1,0 +1,58 @@
+{
+ "input_tokens": 5516,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "56298.02",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": null,
+  "gross_total": "56298.02",
+  "issue_date": "2026-10-13",
+  "line_net_total": "52226.02",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "48757.86",
+    "quantity": "37",
+    "unit_price": "1317.78",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "3468.16",
+    "quantity": "8",
+    "unit_price": "433.52",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "52226.02",
+  "number": "RE-2026-49579",
+  "payment_ibans": [
+   "DE90000166678238956955"
+  ],
+  "po_ref": "PO-678441",
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE421238464",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "658.95",
+    "taxable_amount": "3468.16"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "3413.05",
+    "taxable_amount": "48757.86"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 448
+}

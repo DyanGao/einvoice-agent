@@ -1,0 +1,66 @@
+{
+ "input_tokens": 6014,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "70648.04",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-03-26",
+  "gross_total": "70648.04",
+  "issue_date": "2026-03-19",
+  "line_net_total": "64297.53",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "18200.00",
+    "quantity": "28",
+    "unit_price": "650.00",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "15414.00",
+    "quantity": "40",
+    "unit_price": "385.35",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "30683.53",
+    "quantity": "17.23",
+    "unit_price": "1780.82",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "64297.53",
+  "number": "RE-2026-64482",
+  "payment_ibans": [
+   "DE89000615593813391395"
+  ],
+  "po_ref": "PO-199708",
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE909864112",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "2928.66",
+    "taxable_amount": "15414.00"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "3421.85",
+    "taxable_amount": "48883.53"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 499
+}

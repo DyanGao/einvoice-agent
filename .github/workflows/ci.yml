@@ -54,6 +54,12 @@ jobs:
       - name: Structured eval
         run: make eval-quick
 
+      # Model extraction on the synthetic PDFs, answered from committed
+      # recordings: no credentials, no cost. Fails if a PDF, the prompt or the
+      # schema changed without recording again.
+      - name: PDF extraction eval (replay)
+        run: make eval-pdf-llm
+
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: ui/package.json

@@ -1,0 +1,68 @@
+{
+ "input_tokens": 5611,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "76248.44",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE892317768",
+  "currency": "EUR",
+  "due_date": "2026-08-08",
+  "gross_total": "76248.44",
+  "issue_date": "2026-07-25",
+  "line_net_total": "71260.22",
+  "lines": [
+   {
+    "description": "Anfahrt",
+    "line_id": "1",
+    "net": "22278.88",
+    "quantity": "20.80",
+    "unit_price": "1071.10",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "10471.92",
+    "quantity": "24",
+    "unit_price": "436.33",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "3",
+    "net": "22487.76",
+    "quantity": "27",
+    "unit_price": "832.88",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "4",
+    "net": "16021.66",
+    "quantity": "7.53",
+    "unit_price": "2127.71",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "71260.22",
+  "number": "RE-2026-27449",
+  "payment_ibans": [
+   "DE14000020678145395834"
+  ],
+  "po_ref": "PO-867462",
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE857415119",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "4988.22",
+    "taxable_amount": "71260.22"
+   }
+  ],
+  "vat_total": "4988.22"
+ },
+ "output_tokens": 549
+}

@@ -1,0 +1,84 @@
+{
+ "input_tokens": 5622,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "234888.72",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-08-04",
+  "gross_total": "234888.72",
+  "issue_date": "2026-07-05",
+  "line_net_total": "197385.48",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "3444.54",
+    "quantity": "6",
+    "unit_price": "574.09",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "16362.71",
+    "quantity": "7.73",
+    "unit_price": "2116.78",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "3",
+    "net": "73099.29",
+    "quantity": "33",
+    "unit_price": "2215.13",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "4",
+    "net": "14011.06",
+    "quantity": "17",
+    "unit_price": "824.18",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "5",
+    "net": "64068.18",
+    "quantity": "33",
+    "unit_price": "1941.46",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "6",
+    "net": "26399.70",
+    "quantity": "15",
+    "unit_price": "1759.98",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "197385.48",
+  "number": "RE-2026-03066",
+  "payment_ibans": [
+   "DE77000197326005417797"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE824846498",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "37503.24",
+    "taxable_amount": "197385.48"
+   }
+  ],
+  "vat_total": "37503.24"
+ },
+ "output_tokens": 819
+}

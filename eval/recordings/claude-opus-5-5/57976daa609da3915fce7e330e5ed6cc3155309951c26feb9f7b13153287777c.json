@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5539,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "48058.44",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE451933869",
+  "currency": "EUR",
+  "due_date": "2026-03-25",
+  "gross_total": "48058.44",
+  "issue_date": "2026-03-18",
+  "line_net_total": "40385.24",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "2396.42",
+    "quantity": "5.99",
+    "unit_price": "400.07",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "37988.82",
+    "quantity": "18",
+    "unit_price": "2110.49",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "40385.24",
+  "number": "RE-2026-13604",
+  "payment_ibans": [
+   "DE84000771946495070257"
+  ],
+  "po_ref": "PO-795062",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE846451306",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "7673.20",
+    "taxable_amount": "40385.24"
+   }
+  ],
+  "vat_total": "7673.20"
+ },
+ "output_tokens": 426
+}

@@ -1,5 +1,6 @@
 from app.extract.base import Extractor
 from app.extract.baseline import BaselineExtractor
+from app.extract.complete import CompletingExtractor, complete
 from app.extract.draft import InvoiceDraft, LineDraft, PartyDraft, VatBreakdownDraft
 from app.extract.llm import (
     AnthropicLlm,
@@ -17,6 +18,7 @@ __all__ = [
     "DEFAULT_MODEL",
     "AnthropicLlm",
     "BaselineExtractor",
+    "CompletingExtractor",
     "ExtractionError",
     "Extractor",
     "InvoiceDraft",
@@ -30,4 +32,5 @@ __all__ = [
     "RecordingLlm",
     "ReplayLlm",
     "VatBreakdownDraft",
+    "complete",
 ]

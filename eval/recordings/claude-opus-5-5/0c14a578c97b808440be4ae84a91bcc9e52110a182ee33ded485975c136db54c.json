@@ -1,0 +1,90 @@
+{
+ "input_tokens": 6014,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "267473.50",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-07-21",
+  "gross_total": "267473.50",
+  "issue_date": "2026-06-21",
+  "line_net_total": "229994.99",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "51837.83",
+    "quantity": "39.71",
+    "unit_price": "1305.41",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "4196.46",
+    "quantity": "3",
+    "unit_price": "1398.82",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "3",
+    "net": "77605.12",
+    "quantity": "38",
+    "unit_price": "2042.24",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "4",
+    "net": "44108.40",
+    "quantity": "28",
+    "unit_price": "1575.30",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "5",
+    "net": "26120.00",
+    "quantity": "40",
+    "unit_price": "653.00",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "6",
+    "net": "26127.18",
+    "quantity": "10.54",
+    "unit_price": "2478.86",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "229994.99",
+  "number": "RE-2026-29054",
+  "payment_ibans": [
+   "DE54000607353897844129"
+  ],
+  "po_ref": null,
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE459518470",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "33849.86",
+    "taxable_amount": "178157.16"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "3628.65",
+    "taxable_amount": "51837.83"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 695
+}

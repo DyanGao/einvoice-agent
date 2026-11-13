@@ -1,0 +1,74 @@
+{
+ "input_tokens": 5638,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "137774.29",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE542408192",
+  "currency": "EUR",
+  "due_date": "2026-07-22",
+  "gross_total": "137774.29",
+  "issue_date": "2026-06-22",
+  "line_net_total": "116557.66",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "6149.36",
+    "quantity": "28",
+    "unit_price": "219.62",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "45426.20",
+    "quantity": "20",
+    "unit_price": "2271.31",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "7744.40",
+    "quantity": "9.97",
+    "unit_price": "776.77",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "4",
+    "net": "57237.70",
+    "quantity": "26",
+    "unit_price": "2201.45",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "116557.66",
+  "number": "RE-2026-11142",
+  "payment_ibans": [
+   "DE13000824758903746074"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE849553335",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "20674.52",
+    "taxable_amount": "108813.26"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "542.11",
+    "taxable_amount": "7744.40"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 731
+}

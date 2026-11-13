@@ -1,0 +1,66 @@
+{
+ "input_tokens": 5503,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "78087.30",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": "2026-11-10",
+  "gross_total": "78087.30",
+  "issue_date": "2026-10-27",
+  "line_net_total": "66091.03",
+  "lines": [
+   {
+    "description": "Anfahrt",
+    "line_id": "1",
+    "net": "4675.17",
+    "quantity": "2.54",
+    "unit_price": "1840.62",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "2",
+    "net": "48241.33",
+    "quantity": "19.97",
+    "unit_price": "2415.69",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "3",
+    "net": "13174.53",
+    "quantity": "5.67",
+    "unit_price": "2323.55",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "66091.03",
+  "number": "RE-2026-35475",
+  "payment_ibans": [
+   "DE08000607230625647739"
+  ],
+  "po_ref": null,
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE654011053",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "11669.01",
+    "taxable_amount": "61415.86"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "327.26",
+    "taxable_amount": "4675.17"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 490
+}
