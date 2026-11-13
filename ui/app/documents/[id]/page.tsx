@@ -12,6 +12,7 @@ import {
   getDocument,
   type AuditEvent,
   type Detail,
+  type Violation,
 } from "@/lib/api";
 import {
   changesFrom,
@@ -28,8 +29,10 @@ import { formatLabel, statusLabel, when } from "@/lib/labels";
 
 const REFRESH_MS = 3000;
 
+const NOTHING = "nothing";
+
 function shown(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "nothing";
+  if (value === null || value === undefined || value === "") return NOTHING;
   return Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
 }
 
@@ -57,7 +60,11 @@ function Hints({ marks }: { marks: ReturnType<typeof marksFor> }) {
         <span className="hint hint-unsure">{Math.round(marks.confidence * 100)}% sure</span>
       )}
       {marks.missing && <span className="hint hint-missing">Needed for approval</span>}
-      {marks.was !== null && <span className="hint">Read as {marks.was}</span>}
+      {marks.was !== null && (
+        <span className="hint">
+          {marks.was === NOTHING ? "Nothing was read here" : `Read as ${marks.was}`}
+        </span>
+      )}
     </>
   );
 }
@@ -66,6 +73,14 @@ function inputProps(kind: Kind) {
   if (kind === "date") return { type: "date" } as const;
   if (kind === "amount") return { type: "text", inputMode: "decimal" } as const;
   return { type: "text" } as const;
+}
+
+/** The validator repeats the rule in its message ("[BR-DE-15] Das Element …"); show it once. */
+function withoutRulePrefix(violation: Violation): string {
+  const prefix = `[${violation.rule_id}]`;
+  return violation.message.startsWith(prefix)
+    ? violation.message.slice(prefix.length).trimStart()
+    : violation.message;
 }
 
 function auditText(event: AuditEvent): string {
@@ -231,7 +246,7 @@ export default function ReviewPage() {
             <ul className="violations">
               {detail.validation.violations.map((violation, index) => (
                 <li key={index} className={`violation violation-${violation.severity}`}>
-                  <strong>{violation.rule_id}</strong> {violation.message}
+                  <strong>{violation.rule_id}</strong> {withoutRulePrefix(violation)}
                 </li>
               ))}
             </ul>
