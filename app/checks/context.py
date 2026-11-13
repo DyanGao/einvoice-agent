@@ -1,0 +1,65 @@
+"""What the checks need to know beyond the invoice itself.
+
+The checks do not look anything up. Whoever calls them resolves the supplier,
+the purchase order and the invoices already on file (from the ERP, the
+database) and passes them in, so every check stays a function of its inputs.
+"""
+
+from dataclasses import dataclass, field
+from datetime import date
+from decimal import Decimal
+
+
+@dataclass(frozen=True)
+class Supplier:
+    """Master data of a supplier we already do business with."""
+
+    id: str
+    name: str
+    vat_id: str | None = None
+    ibans: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PoLine:
+    description: str
+    quantity: Decimal
+    unit_price: Decimal
+
+
+@dataclass(frozen=True)
+class PurchaseOrder:
+    number: str
+    lines: tuple[PoLine, ...]
+
+
+@dataclass(frozen=True)
+class KnownInvoice:
+    """An invoice already on file, as far as duplicate detection needs it."""
+
+    document_id: str
+    seller_name: str | None
+    seller_vat_id: str | None
+    number: str | None
+    issue_date: date | None
+    gross_total: Decimal | None
+
+
+@dataclass(frozen=True)
+class CheckSettings:
+    # Unit price above the ordered price by more than this share is reported.
+    price_tolerance: Decimal = Decimal("0.02")
+    # Billed quantity above the ordered quantity by more than this share.
+    quantity_tolerance: Decimal = Decimal("0")
+    # Whether an invoice without a purchase order has to be looked at.
+    po_required: bool = True
+
+
+@dataclass(frozen=True)
+class CheckContext:
+    # None: no supplier with this VAT ID or name is known.
+    supplier: Supplier | None = None
+    # None: the invoice names no order, or the order it names does not exist.
+    purchase_order: PurchaseOrder | None = None
+    known_invoices: tuple[KnownInvoice, ...] = ()
+    settings: CheckSettings = field(default_factory=CheckSettings)
