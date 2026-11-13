@@ -24,6 +24,7 @@ from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from pathlib import Path
 
+from app.checks import arithmetic
 from app.detect import detect
 from app.extract.base import Extractor
 from app.extract.draft import InvoiceDraft
@@ -34,8 +35,6 @@ from app.models import DocumentFormat
 logger = logging.getLogger(__name__)
 
 DEFAULT_CALIBRATION = Path(__file__).with_name("calibration.json")
-# Printed amounts are rounded to cents, so products may be off by one.
-TOLERANCE = Decimal("0.01")
 # A value that was assumed rather than read or computed (see complete.py). This
 # is a policy, not a measurement: on synthetic data the assumption is always
 # right, which says nothing about real invoices.
@@ -92,10 +91,6 @@ def _verdict(holds: bool) -> Check:
     return Check.PASSED if holds else Check.FAILED
 
 
-def _close(a: Decimal, b: Decimal) -> bool:
-    return abs(a - b) <= TOLERANCE
-
-
 def _checks(draft: InvoiceDraft) -> dict[str, Check]:
     checks: dict[str, Check] = {}
 
@@ -107,31 +102,10 @@ def _checks(draft: InvoiceDraft) -> dict[str, Check]:
     if draft.issue_date is not None and draft.due_date is not None:
         checks["due_date"] = _verdict(draft.due_date >= draft.issue_date)
 
-    for index, line in enumerate(draft.lines):
-        if None not in (line.quantity, line.unit_price, line.net):
-            verdict = _verdict(_close(line.quantity * line.unit_price, line.net))
-            for cell in ("quantity", "unit_price", "net"):
-                checks[f"lines.{index}.{cell}"] = verdict
-    nets = [line.net for line in draft.lines]
-    if draft.line_net_total is not None and nets and None not in nets:
-        checks["line_net_total"] = _verdict(_close(sum(nets, Decimal(0)), draft.line_net_total))
-
-    for index, group in enumerate(draft.vat_breakdown):
-        if None not in (group.rate, group.taxable_amount, group.tax_amount):
-            expected = group.taxable_amount * group.rate / 100
-            verdict = _verdict(_close(expected, group.tax_amount))
-            for cell in ("rate", "taxable_amount", "tax_amount"):
-                checks[f"vat_breakdown.{index}.{cell}"] = verdict
-    bases = [group.taxable_amount for group in draft.vat_breakdown]
-    taxes = [group.tax_amount for group in draft.vat_breakdown]
-    if draft.net_total is not None and bases and None not in bases:
-        checks["net_total"] = _verdict(_close(sum(bases, Decimal(0)), draft.net_total))
-    if draft.vat_total is not None and taxes and None not in taxes:
-        checks["vat_total"] = _verdict(_close(sum(taxes, Decimal(0)), draft.vat_total))
-    if None not in (draft.net_total, draft.vat_total, draft.gross_total):
-        checks["gross_total"] = _verdict(
-            _close(draft.net_total + draft.vat_total, draft.gross_total)
-        )
+    # The invoice's own arithmetic: every field a rule covers shares its verdict.
+    for result in arithmetic.evaluate(draft):
+        for path in result.fields:
+            checks[path] = _verdict(result.holds)
     return checks
 
 
