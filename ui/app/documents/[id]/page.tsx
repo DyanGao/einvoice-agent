@@ -43,7 +43,10 @@ function marksFor(detail: Detail, path: string) {
   ];
   const original = valueAt(detail.original, path);
   const current = valueAt(detail.fields, path);
+  const derived = (detail.fields?.derived_fields as string[] | undefined) ?? [];
   return {
+    // Still the value a rule filled in, not one the reviewer has since typed.
+    derived: derived.includes(path) && JSON.stringify(original) === JSON.stringify(current),
     missing: detail.missing.includes(path),
     confidence: confidence !== undefined && confidence < LOW_CONFIDENCE ? confidence : null,
     was:
@@ -58,6 +61,9 @@ function Hints({ marks }: { marks: ReturnType<typeof marksFor> }) {
     <>
       {marks.confidence !== null && (
         <span className="hint hint-unsure">{Math.round(marks.confidence * 100)}% sure</span>
+      )}
+      {marks.derived && (
+        <span className="hint hint-unsure">Filled in by a rule, not read from the document</span>
       )}
       {marks.missing && <span className="hint hint-missing">Needed for approval</span>}
       {marks.was !== null && (

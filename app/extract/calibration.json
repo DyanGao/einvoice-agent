@@ -1,0 +1,66 @@
+{
+ "version": "2026-11-13.1",
+ "fitted_on": {
+  "split": "dev",
+  "fields": 7849,
+  "correct": 7848
+ },
+ "buckets": {
+  "image/failed/not_found": {
+   "n": 1,
+   "correct": 0,
+   "probability": 0.3333
+  },
+  "image/none/found": {
+   "n": 1179,
+   "correct": 1179,
+   "probability": 0.9992
+  },
+  "image/none/not_found": {
+   "n": 103,
+   "correct": 103,
+   "probability": 0.9905
+  },
+  "image/none/unknown": {
+   "n": 190,
+   "correct": 190,
+   "probability": 0.9948
+  },
+  "image/passed/found": {
+   "n": 1508,
+   "correct": 1508,
+   "probability": 0.9993
+  },
+  "image/passed/not_found": {
+   "n": 56,
+   "correct": 56,
+   "probability": 0.9828
+  },
+  "image/passed/unknown": {
+   "n": 38,
+   "correct": 38,
+   "probability": 0.975
+  },
+  "pdf_text/none/found": {
+   "n": 1998,
+   "correct": 1998,
+   "probability": 0.9995
+  },
+  "pdf_text/none/unknown": {
+   "n": 287,
+   "correct": 287,
+   "probability": 0.9965
+  },
+  "pdf_text/passed/found": {
+   "n": 2430,
+   "correct": 2430,
+   "probability": 0.9996
+  },
+  "pdf_text/passed/unknown": {
+   "n": 59,
+   "correct": 59,
+   "probability": 0.9836
+  }
+ },
+ "fallback": 0.5
+}

@@ -52,3 +52,12 @@ class OneDraft:
 def test_completing_extractor_applies_the_rules_to_what_the_inner_extractor_read():
     draft = CompletingExtractor(OneDraft()).extract(b"%PDF-")
     assert (draft.vat_total, draft.currency) == (Decimal("19.00"), "EUR")
+
+
+def test_filled_in_fields_are_named_so_nobody_takes_them_for_read_values():
+    draft = complete(InvoiceDraft(vat_breakdown=(group("19.00"),)))
+    assert draft.derived_fields == ("vat_total", "currency")
+
+
+def test_read_values_are_not_named_as_filled_in():
+    assert complete(InvoiceDraft(currency="EUR", vat_total=Decimal("1.00"))).derived_fields == ()

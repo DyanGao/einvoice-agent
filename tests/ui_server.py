@@ -26,6 +26,8 @@ from tests.support import PDF, XML, inline_queue
 # The rule-based extractor reports no confidence. The browser test needs one
 # uncertain field to check that the UI marks it.
 UNCERTAIN_FIELD = "due_date"
+# ... and one field that a rule filled in, to check that the UI says so.
+DERIVED_FIELD = "currency"
 
 
 class UncertainExtractor:
@@ -34,7 +36,12 @@ class UncertainExtractor:
 
     def extract(self, data: bytes):
         draft = self._inner.extract(data)
-        return draft.model_copy(update={"field_confidence": {UNCERTAIN_FIELD: 0.35}})
+        return draft.model_copy(
+            update={
+                "field_confidence": {UNCERTAIN_FIELD: 0.35},
+                "derived_fields": (DERIVED_FIELD,),
+            }
+        )
 
 
 def main() -> None:
