@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp
 
 install:
 	uv sync
@@ -122,3 +122,13 @@ ui-build:
 # need a browser once: pnpm --dir ui exec playwright install chromium
 ui-test:
 	pnpm --dir ui test:e2e
+
+# Mock ERP: fills its database (SQLite under data/mock_erp/) with the synthetic
+# matching world and writes the ground truth for the eval to eval/out/world.
+# Replaces whatever the mock ERP held before.
+seed:
+	uv run python -m mock_erp.seed
+
+# Read API of the mock ERP on localhost only (no authentication).
+erp:
+	uv run uvicorn --factory mock_erp.main:create_app_from_env --host 127.0.0.1 --port 8100
