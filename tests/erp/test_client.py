@@ -94,3 +94,58 @@ def test_answer_that_is_not_json_is_reported():
     )
     with pytest.raises(ErpUnavailable):
         client.find_supplier("DE123456788", None)
+
+
+def test_orders_of_a_supplier_come_with_their_deliveries(erp, world):
+    supplier_id = world.deliveries[0].po_number and next(
+        o.supplier_id for o in world.orders if o.number == world.deliveries[0].po_number
+    )
+    found = {order.number: order for order in erp.orders_of(supplier_id)}
+    assert set(found) == {o.number for o in world.orders if o.supplier_id == supplier_id}
+    expected = sorted(d.id for d in world.deliveries if d.po_number in found)
+    assert sorted(d.id for order in found.values() for d in order.deliveries) == expected
+
+
+def test_order_lines_and_delivery_quantities_are_decimals(erp, world):
+    delivery = world.deliveries[0]
+    order = next(o for o in world.orders if o.number == delivery.po_number)
+    found = next(o for o in erp.orders_of(order.supplier_id) if o.number == order.number)
+    assert [(line.position, line.quantity, line.unit_price) for line in found.lines] == [
+        (line.position, line.quantity, line.unit_price) for line in order.lines
+    ]
+    found_delivery = next(d for d in found.deliveries if d.id == delivery.id)
+    assert [(line.po_position, line.quantity) for line in found_delivery.lines] == [
+        (line.po_position, line.quantity) for line in delivery.lines
+    ]
+
+
+def test_transactions_to_a_suppliers_accounts(erp, world):
+    supplier = world.suppliers[0]
+    expected = sorted(
+        (tx.id, tx.amount)
+        for tx in world.bank_transactions
+        if tx.counterparty_iban in supplier.ibans
+    )
+    found = erp.transactions_to(supplier.ibans)
+    assert sorted((tx.id, tx.amount) for tx in found) == expected
+
+
+def test_lists_longer_than_one_page_are_read_completely(erp, world, monkeypatch):
+    from app.erp import client
+
+    monkeypatch.setattr(client, "PAGE", 2)
+    supplier = max(
+        world.suppliers,
+        key=lambda s: sum(tx.counterparty_iban in s.ibans for tx in world.bank_transactions),
+    )
+    expected = sum(tx.counterparty_iban in supplier.ibans for tx in world.bank_transactions)
+    assert expected > 4
+    assert len(erp.transactions_to(supplier.ibans)) == expected
+
+
+@pytest.mark.parametrize("status", [None, 500], ids=["unreachable", "error"])
+def test_candidate_lookups_report_an_erp_that_does_not_answer(status):
+    with pytest.raises(ErpUnavailable):
+        failing(status).orders_of("S001")
+    with pytest.raises(ErpUnavailable):
+        failing(status).transactions_to(["DE89370400440532013000"])

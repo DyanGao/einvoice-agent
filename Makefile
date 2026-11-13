@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching
 
 install:
 	uv sync
@@ -132,3 +132,10 @@ seed:
 # Read API of the mock ERP on localhost only (no authentication).
 erp:
 	uv run uvicorn --factory mock_erp.main:create_app_from_env --host 127.0.0.1 --port 8100
+
+# Matching against the synthetic world's ground truth: exact-key baseline, then
+# the rule-based matcher on the held-out split. No services, no model. Fails
+# if fewer than 95 % of the held-out invoices are matched fully correctly.
+eval-matching:
+	uv run python -m eval.match --system baseline --split test
+	uv run python -m eval.match --split test --gate 0.95
