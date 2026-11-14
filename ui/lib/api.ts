@@ -45,6 +45,16 @@ export type Reason = {
 /** Whether the invoice may be booked without a person, and why not. */
 export type Decision = { route: "auto" | "review"; reasons: Reason[]; version: string };
 
+/** The invoice on its way to a downstream system. */
+export type Delivery = {
+  connector: string;
+  status: "pending" | "delivered" | "failed";
+  attempts: number;
+  external_ref: string | null;
+  last_error: string | null;
+  delivered_at: string | null;
+};
+
 /** What the invoice was matched to in the ERP. */
 export type Match = {
   supplier_id: string | null;
@@ -73,6 +83,7 @@ export type Detail = Summary & {
   validation: { valid: boolean; scenario: string | null; violations: Violation[] } | null;
   match: Match | null;
   decision: Decision | null;
+  deliveries: Delivery[];
   findings: Finding[];
   audit: AuditEvent[];
 };

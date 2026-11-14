@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver
 
 install:
 	uv sync
@@ -111,6 +111,11 @@ worker:
 # matches the open invoices of the suppliers they went to (needs ERP_URL).
 watch:
 	uv run python -m app.watch
+
+# Books every approved or auto-decided invoice in the ERP, exactly once,
+# every DELIVERY_SECONDS (needs ERP_URL; the mock ERP: make erp).
+deliver:
+	uv run python -m app.deliver
 
 # Review UI (Next.js, in ui/). `make ui` expects the API from `make api`.
 ui-install:
