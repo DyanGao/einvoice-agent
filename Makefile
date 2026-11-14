@@ -114,7 +114,8 @@ watch:
 
 # Books every approved or auto-decided invoice, exactly once, every
 # DELIVERY_SECONDS: in the ERP (ERP_URL; the mock ERP: make erp) and in the
-# DATEV-style CSV booking lists (EXPORT_DIR), whichever are set.
+# DATEV-style CSV booking lists (EXPORT_DIR) and a signed webhook
+# (WEBHOOK_URL + WEBHOOK_SECRET), whichever are set.
 deliver:
 	uv run python -m app.deliver
 
