@@ -1,4 +1,4 @@
-"""Matching and checking a stored document.
+"""Matching, checking and deciding on a stored document.
 
 This is where the lookups happen that the rules themselves do not make: the
 supplier, its orders and the transfers to it from the ERP, the other invoices
@@ -9,7 +9,7 @@ letter. Match and findings replace the document's previous ones.
 
 import logging
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 
 from sqlalchemy import select
@@ -23,10 +23,18 @@ from app.checks.context import (
     PoLine,
     PurchaseOrder,
 )
-from app.checks.finding import Finding, Severity
+from app.checks.finding import Finding
 from app.checks.rules import run_checks
 from app.db.review import ReviewState
-from app.db.tables import AuditEventRow, DocumentRow, DraftRow, FindingRow, MatchRow
+from app.db.tables import (
+    AuditEventRow,
+    DecisionRow,
+    DocumentRow,
+    DraftRow,
+    FindingRow,
+    MatchRow,
+)
+from app.decide import Decision, DecisionSettings, Route, decide
 from app.erp.client import ErpUnavailable
 from app.extract.draft import InvoiceDraft
 from app.matching import Basis, Match, MatchingData, PeerInvoice, match_candidates
@@ -128,6 +136,28 @@ def _store_match(session: Session, document: DocumentRow, match: Match | None) -
     )
 
 
+def _store_decision(document: DocumentRow, decision: Decision) -> None:
+    """Replace the document's decision (one per document, like the match)."""
+    reasons = [
+        {
+            "cause": reason.cause.value,
+            "message": reason.message,
+            "fields": list(reason.fields),
+            "findings": list(reason.findings),
+        }
+        for reason in decision.reasons
+    ]
+    if document.decision is None:
+        document.decision = DecisionRow(
+            route=decision.route.value, reasons=reasons, version=decision.version
+        )
+    else:
+        document.decision.route = decision.route.value
+        document.decision.reasons = reasons
+        document.decision.version = decision.version
+        document.decision.decided_at = datetime.now(UTC)
+
+
 @dataclass
 class Checker:
     """Matches documents to the ERP's data and checks them, or checks what
@@ -135,6 +165,7 @@ class Checker:
 
     erp: MatchingData | None = None
     settings: CheckSettings = field(default_factory=CheckSettings)
+    decisions: DecisionSettings = field(default_factory=DecisionSettings.load)
 
     def context(
         self, session: Session, document: DocumentRow, draft: InvoiceDraft
@@ -203,11 +234,13 @@ class Checker:
         )
 
     def check(self, session: Session, document: DocumentRow) -> list[Finding]:
-        """Run the checks on the document's current draft and store the result.
+        """Match and check the document's current draft, decide whether it
+        may be booked without a person (app/decide), and store all three.
 
-        A finding that needs a person puts the document into review, even a
-        structured invoice the validator accepted. An approved document is
-        left alone: its findings are what the reviewer saw.
+        The decision sets the review state: an extracted PDF read with
+        confidence can skip review, a structured invoice the validator
+        accepted can still need it. An approved document is left alone: its
+        findings are what the reviewer saw.
         """
         if document.draft is None or document.review_state == ReviewState.APPROVED.value:
             return []
@@ -226,25 +259,29 @@ class Checker:
             )
             for position, finding in enumerate(findings)
         ]
-        needs_person = any(finding.severity is Severity.REVIEW for finding in findings)
-        if needs_person:
-            document.review_state = ReviewState.PENDING.value
-        elif (
-            document.status == DocumentStatus.VALID.value
-            and document.draft.data == document.draft.original
-        ):
-            # A valid e-invoice, exactly as it arrived, with nothing left to
-            # look at. One that a reviewer changed stays in review until it is
-            # approved: a correction must not make a finding and the review
-            # disappear together.
-            document.review_state = ReviewState.NOT_REQUIRED.value
+        decision = decide(
+            draft,
+            status=DocumentStatus(document.status),
+            findings=findings,
+            match=match,
+            # A correction must not make a finding and the review disappear
+            # together: a changed draft waits for a person's approval.
+            corrected=document.draft.data != document.draft.original,
+            settings=self.decisions,
+        )
+        _store_decision(document, decision)
+        document.review_state = (
+            ReviewState.NOT_REQUIRED if decision.route is Route.AUTO else ReviewState.PENDING
+        ).value
         document.audit_events.append(
             AuditEventRow(
                 event="checked",
                 actor=CHECKS_ACTOR,
                 detail={
                     "findings": [finding.type.value for finding in findings],
-                    "needs_review": needs_person,
+                    "route": decision.route.value,
+                    "reasons": [reason.cause.value for reason in decision.reasons],
+                    "thresholds": decision.version,
                     "matched_order": None if match is None else match.po_number,
                     "matched_payments": None
                     if match is None

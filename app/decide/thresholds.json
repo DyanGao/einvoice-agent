@@ -1,0 +1,27 @@
+{
+ "version": "2026-11-14.1",
+ "min_field_confidence": 0.975,
+ "fitted_on": {
+  "sets": [
+   "pdf",
+   "scans"
+  ],
+  "system": "llm-rules",
+  "split": "dev",
+  "target_error": 0.01,
+  "calibration": "2026-11-13.1"
+ },
+ "dev": {
+  "threshold": 0.975,
+  "documents": 190,
+  "auto": 156,
+  "auto_rate": 0.8211,
+  "errors": 0,
+  "error_rate": 0.0,
+  "error_upper_95": 0.019
+ },
+ "reference_auto_rate": {
+  "pdf": 0.75,
+  "scans": 0.75
+ }
+}

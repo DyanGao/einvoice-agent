@@ -101,3 +101,21 @@ def test_a_case_never_meets_another_case_as_an_invoice_on_file(exceptions, outco
 def test_changed_accounts_and_duplicates_are_caught_on_the_held_out_half(outcomes, kind):
     held_out = [outcome for outcome in outcomes if outcome.case.split == "test"]
     assert score(held_out)["by_kind"][kind]["recall"] >= 0.95
+
+
+def test_no_invoice_with_a_planted_problem_is_booked_without_review(outcomes):
+    assert [o.case.id for o in outcomes if o.case.kind != CLEAN and o.route == "auto"] == []
+
+
+def test_clean_invoices_held_back_are_counted_by_reason(exceptions):
+    clean = case_of(exceptions, CLEAN)
+    result = score(
+        [
+            Outcome(clean, (), route="review", causes=("order_by_content",)),
+            Outcome(clean, (), route="auto"),
+        ]
+    )
+    assert (result["clean"]["booked_without_review"], result["clean"]["held_back"]) == (
+        1,
+        {"order_by_content": 1},
+    )

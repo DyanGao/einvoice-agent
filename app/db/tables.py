@@ -52,6 +52,9 @@ class DocumentRow(Base):
     findings: Mapped[list["FindingRow"]] = relationship(
         back_populates="document", order_by="FindingRow.position", cascade="all, delete-orphan"
     )
+    decision: Mapped["DecisionRow | None"] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
 
 
 class InvoiceRow(Base):
@@ -155,6 +158,24 @@ class MatchRow(Base):
     explanation: Mapped[list[str]] = mapped_column(Json)
 
     document: Mapped[DocumentRow] = relationship(back_populates="match")
+
+
+class DecisionRow(Base):
+    """Whether the document's current draft may be booked without a person,
+    and every reason it may not. Replaced every time the checks run."""
+
+    __tablename__ = "decisions"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True)
+    route: Mapped[str] = mapped_column(String(10))  # auto | review
+    # [{"cause": ..., "message": ..., "fields": [...], "findings": [...]}]
+    reasons: Mapped[list[dict[str, Any]]] = mapped_column(Json)
+    # Version of the thresholds the decision was made with.
+    version: Mapped[str] = mapped_column(String(50))
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    document: Mapped[DocumentRow] = relationship(back_populates="decision")
 
 
 def invoice_columns(invoice: Invoice) -> dict:

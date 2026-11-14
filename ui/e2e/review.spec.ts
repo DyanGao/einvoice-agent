@@ -37,6 +37,11 @@ test("upload, correct, approve: every step is in the history", async ({ page }) 
   await page.getByPlaceholder("Your name").fill("anna");
   await expect(page.getByText("35% sure")).toBeVisible();
   await expect(page.locator("[data-unsure]").getByLabel("Due date")).toBeVisible();
+  // Every reason it was not booked without a person is listed.
+  const why = page.getByRole("region", { name: "Why review" });
+  await expect(why.getByText("Read with low confidence")).toBeVisible();
+  await expect(why.getByText(/due_date/)).toBeVisible();
+  await expect(why.getByText("Checks need a person")).toBeVisible();
   // The checks ran: the ERP does not know this supplier, and the page says so.
   await expect(page.getByText("no supplier with this VAT ID or name is on file")).toBeVisible();
   await expect(page.getByText("Unknown supplier").first()).toBeVisible();
@@ -87,7 +92,8 @@ test("a valid e-invoice needs no review and has no page to show", async ({ page 
   await expect(page.getByText("Nothing is waiting for review.")).toBeVisible();
   await page.getByRole("button", { name: /All documents/ }).click();
   await page.getByRole("row", { name: /No review needed/ }).getByRole("link").click();
-  await expect(page.getByText("needs no review")).toBeVisible();
+  await expect(page.getByText("can be booked without review")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Why review" })).toHaveCount(0);
   // It was matched in the ERP: an order quoted exactly, and the transfer that paid it.
   const matching = page.getByRole("region", { name: "Matching" });
   await expect(matching.getByText(/PO-\d{6}/).first()).toBeVisible();

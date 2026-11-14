@@ -16,6 +16,7 @@ from app.db.store import (
 from app.db.tables import (
     AuditEventRow,
     Base,
+    DecisionRow,
     DocumentRow,
     DraftRow,
     FindingRow,
@@ -27,6 +28,7 @@ from app.db.tables import (
 __all__ = [
     "AuditEventRow",
     "Base",
+    "DecisionRow",
     "DocumentRow",
     "DraftRow",
     "FindingRow",

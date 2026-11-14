@@ -27,8 +27,9 @@ class ReviewState(StrEnum):
 
     @classmethod
     def after_processing(cls, status: DocumentStatus) -> "ReviewState":
-        """Until the decision engine exists (Stage 3) the rule is deliberately
-        blunt: only a structured invoice the validator accepted skips review."""
+        """Before the decision engine has looked at it (app/decide, run with
+        the checks), and wherever no checks are configured: only a structured
+        invoice the validator accepted skips review."""
         return cls.NOT_REQUIRED if status is DocumentStatus.VALID else cls.PENDING
 
 

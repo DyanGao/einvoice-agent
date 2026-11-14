@@ -66,6 +66,20 @@ const FINDING: Record<string, string> = {
 
 export const findingLabel = (type: string) => FINDING[type] ?? type.replaceAll("_", " ");
 
+const CAUSE: Record<string, string> = {
+  not_read: "Not validated or read",
+  missing_fields: "Fields missing",
+  assumed_value: "Value assumed",
+  low_confidence: "Read with low confidence",
+  findings: "Checks need a person",
+  not_compared: "Not compared with the ERP",
+  order_by_content: "Order not quoted",
+  not_delivered: "Nothing delivered",
+  corrected: "Changed by a reviewer",
+};
+
+export const causeLabel = (cause: string) => CAUSE[cause] ?? cause.replaceAll("_", " ");
+
 const BASIS: Record<string, string> = {
   exact_reference: "quoted exactly",
   similar_reference: "quoted with a slip",

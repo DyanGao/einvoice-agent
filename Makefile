@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf
 
 install:
 	uv sync
@@ -146,3 +146,19 @@ eval-matching:
 eval-exceptions:
 	uv run python -m eval.exceptions --split dev
 	uv run python -m eval.exceptions --split test --gate 0.95
+
+# The decision engine's confidence threshold (needs the predictions of
+# eval-pdf-llm and of the scan set, like calibrate). `decide-fit` rewrites
+# app/decide/thresholds.json from the dev split; `eval-decision` reports the
+# auto-rate vs. error curve on both splits, and the baseline extractor as a
+# stress test of the gate. `eval-decision-pdf` is what CI can replay: text
+# PDFs only; it warns when the auto-rate drops more than 5 points.
+decide-fit:
+	uv run python -m eval.sweep fit eval/out/pdf eval/out/scans
+
+eval-decision:
+	uv run python -m eval.sweep report eval/out/pdf eval/out/scans
+	uv run python -m eval.sweep report eval/out/pdf eval/out/scans --system baseline
+
+eval-decision-pdf:
+	uv run python -m eval.sweep report eval/out/pdf
