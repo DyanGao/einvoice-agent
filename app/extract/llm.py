@@ -128,7 +128,7 @@ class AnthropicLlm:
         )
 
 
-def _recording_path(directory: Path, request: LlmRequest) -> Path:
+def recording_path(directory: Path, request: LlmRequest) -> Path:
     return directory / f"{request.key()}.json"
 
 
@@ -139,7 +139,7 @@ class ReplayLlm:
         self._directory = directory
 
     def complete(self, request: LlmRequest) -> LlmResponse:
-        path = _recording_path(self._directory, request)
+        path = recording_path(self._directory, request)
         if not path.exists():
             raise MissingRecording(
                 f"no recording for this request in {self._directory} (key {request.key()[:12]}…); "
@@ -156,7 +156,7 @@ class RecordingLlm:
         self._directory = directory
 
     def complete(self, request: LlmRequest) -> LlmResponse:
-        path = _recording_path(self._directory, request)
+        path = recording_path(self._directory, request)
         if path.exists():  # already paid for; do not call again
             return LlmResponse(**json.loads(path.read_text(encoding="utf-8")))
         response = self._inner.complete(request)

@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check
 
 # The README demo in Docker: sample_invoices/ through processing, checks,
 # decision and delivery into a fresh mock ERP, in a database of its own. Needs
@@ -62,10 +62,22 @@ eval-quick:
 	uv run python -m eval.run eval/out/structured-quick
 	uv run python -m eval.score eval/out/structured-quick --gate
 
-eval-full:
+eval-structured:
 	uv run python -m eval.generators.structured --count 200 --out eval/out/structured
 	uv run python -m eval.run eval/out/structured
 	uv run python -m eval.score eval/out/structured --gate
+
+# Every eval, then the report: README results table and docs/eval-report.md.
+# Needs the validator (make up), tesseract with `make ocr-data`, and the scan
+# recordings, which replay only on the machine that made them (see
+# eval/generators/scans.py). Replays recorded model answers: no API key, no cost.
+eval-full: eval-structured eval-pdf-baseline eval-pdf-llm eval-scans-baseline eval-scans-llm \
+		eval-matching eval-exceptions eval-decision eval-probes eval-report
+
+# Collects what the evals left in eval/out into results.json and rewrites the
+# generated blocks of README.md and docs/eval-report.md.
+eval-report:
+	uv run python -m eval.report --write
 
 # Rule-based baseline on the synthetic text PDFs (no services needed).
 eval-pdf-baseline:
@@ -110,6 +122,14 @@ ocr-data:
 	for lang in deu eng; do \
 		[ -f .tessdata/$$lang.traineddata ] || curl -fsSL -o .tessdata/$$lang.traineddata $(TESSDATA_URL)/$$lang.traineddata; \
 	done
+
+# Vision-model extractor on the scans, from recordings (see eval-full for why
+# these replay only where they were recorded).
+eval-scans-llm:
+	uv run python -m eval.generators.scans --count 100 --out eval/out/scans
+	uv run python -m eval.run eval/out/scans --system llm --llm-mode replay
+	uv run python -m eval.run eval/out/scans --system llm-rules --llm-mode replay
+	uv run python -m eval.score eval/out/scans --system llm-rules --split test
 
 # Rule-based baseline on degraded scans (needs tesseract and `make ocr-data`).
 eval-scans-baseline: ocr-data
