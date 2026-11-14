@@ -76,7 +76,9 @@ class DecisionSettings:
     # A field read with less confidence than this sends the invoice to a person.
     min_field_confidence: float
     # Whether an order found by the lines and amount alone, without a
-    # reference on the invoice, is good enough to book on.
+    # reference on the invoice, is good enough to book on. No, by decision
+    # (2026-11-14): the matcher made no wrong link in the world, but a link
+    # nobody quoted is confirmed by a person before money follows it.
     auto_on_order_found_by_content: bool = False
     version: str = "unversioned"
 
