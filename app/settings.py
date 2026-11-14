@@ -33,6 +33,9 @@ class Settings:
     delivery_seconds: float = 10.0
     # Folder for the DATEV-style booking lists; None = no CSV export.
     export_dir: str | None = None
+    # Receiver of signed bookings, and the shared secret; None = no webhook.
+    webhook_url: str | None = None
+    webhook_secret: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -55,4 +58,6 @@ class Settings:
             bank_watch_seconds=float(os.environ.get("BANK_WATCH_SECONDS", "300")),
             delivery_seconds=float(os.environ.get("DELIVERY_SECONDS", "10")),
             export_dir=os.environ.get("EXPORT_DIR") or None,
+            webhook_url=os.environ.get("WEBHOOK_URL") or None,
+            webhook_secret=os.environ.get("WEBHOOK_SECRET") or None,
         )

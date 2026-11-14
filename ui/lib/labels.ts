@@ -83,6 +83,7 @@ export const causeLabel = (cause: string) => CAUSE[cause] ?? cause.replaceAll("_
 const CONNECTOR: Record<string, string> = {
   erp_api: "the ERP",
   csv_export: "the booking list",
+  webhook: "the webhook receiver",
 };
 
 export const connectorLabel = (connector: string) =>

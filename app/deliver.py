@@ -2,7 +2,8 @@
 
 Every DELIVERY_SECONDS it books what has been approved or decided `auto`
 and is not booked yet (app/delivery.py), in every system configured: the
-ERP's API (ERP_URL) and the DATEV-style booking lists (EXPORT_DIR).
+ERP's API (ERP_URL), the DATEV-style booking lists (EXPORT_DIR) and a
+signed webhook (WEBHOOK_URL, WEBHOOK_SECRET).
 Exactly once holds across restarts and crashes; run one loop per database
 all the same, so that two do not send the same booking at the same moment.
 """
@@ -16,7 +17,7 @@ import httpx
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.connectors import Connector, CsvExportConnector, ErpApiConnector
+from app.connectors import Connector, CsvExportConnector, ErpApiConnector, WebhookConnector
 from app.delivery import deliver_due
 from app.settings import Settings
 
@@ -31,6 +32,21 @@ def build_connectors(settings: Settings) -> list[Connector]:
         connectors.append(ErpApiConnector(client))
     if settings.export_dir is not None:
         connectors.append(CsvExportConnector(Path(settings.export_dir)))
+    if settings.webhook_url is not None:
+        if settings.webhook_secret is None:
+            raise SystemExit(
+                "WEBHOOK_URL is set but WEBHOOK_SECRET is not: bookings are only sent signed"
+            )
+        try:
+            connectors.append(
+                WebhookConnector(
+                    settings.webhook_url,
+                    settings.webhook_secret,
+                    timeout=settings.erp_timeout_seconds,
+                )
+            )
+        except ValueError as exc:
+            raise SystemExit(f"webhook not configured: {exc}") from exc
     return connectors
 
 
@@ -40,7 +56,7 @@ def main() -> None:
     settings = Settings.from_env()
     connectors = build_connectors(settings)
     if not connectors:
-        raise SystemExit("nothing to deliver to: set ERP_URL, EXPORT_DIR or both")
+        raise SystemExit("nothing to deliver to: set ERP_URL, EXPORT_DIR or WEBHOOK_URL")
     session_factory = sessionmaker(create_engine(settings.database_url))
     logger.info(
         "delivering to %s every %ss",

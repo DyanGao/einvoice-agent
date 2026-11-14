@@ -300,3 +300,32 @@ def test_approved_credit_note_is_not_booked_as_an_invoice(
             "failed",
             True,
         )
+
+
+def test_webhook_answering_503_is_retried_after_the_backoff_then_delivered(
+    session_factory, world, checker
+):
+    from tests.connectors.test_webhook import Receiver
+    from tests.connectors.test_webhook import connector as webhook_for
+
+    receiver = Receiver(503, 201)
+    webhook = webhook_for(receiver)
+    document_id = process(session_factory, entry_of(world, PO_EXACT), checker)
+    deliver_due(session_factory, [webhook], NOW)
+    deliver_due(session_factory, [webhook], NOW + timedelta(seconds=5))  # backoff not over
+    deliver_due(session_factory, [webhook], NOW + timedelta(minutes=5))
+    assert (len(receiver.received), deliveries(session_factory, document_id)) == (
+        2,
+        [("webhook", "delivered", 2, "wh-2")],
+    )
+
+
+def test_webhook_url_without_a_secret_stops_the_delivery_loop_from_starting(monkeypatch):
+    from app.deliver import build_connectors
+    from app.settings import Settings
+
+    monkeypatch.setenv("WEBHOOK_URL", "https://receiver.example/hook")
+    monkeypatch.delenv("WEBHOOK_SECRET", raising=False)
+    monkeypatch.delenv("ERP_URL", raising=False)
+    with pytest.raises(SystemExit, match="WEBHOOK_SECRET"):
+        build_connectors(Settings.from_env())
