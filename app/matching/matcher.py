@@ -298,8 +298,8 @@ def _match_payments(
                     2,
                     (Payment(transaction.id, gross),),
                     basis,
-                    f"transfer {transaction.id} of {transaction.amount} quotes this invoice and "
-                    "equals its total plus other invoices of the supplier",
+                    f"transfer {transaction.id} of {transaction.amount} equals this invoice's "
+                    "total plus other invoices of the supplier",
                 )
             )
     smaller = [(tx, basis) for tx, basis in candidates if tx.amount < gross]
@@ -348,19 +348,17 @@ def _match_payments(
 # --- the matcher ------------------------------------------------------------
 
 
-def match_invoice(
-    invoice: InvoiceDraft, data: MatchingData, peers: Sequence[PeerInvoice] = ()
+def match_candidates(
+    invoice: InvoiceDraft,
+    supplier: Supplier,
+    orders: list[Order],
+    transactions: list[BankTransaction],
+    peers: Sequence[PeerInvoice] = (),
 ) -> Match:
-    """`peers` are the supplier's other invoices on file."""
-    supplier = data.find_supplier(invoice.seller.vat_id, invoice.seller.name)
-    if supplier is None:
-        return Match(explanation=("the supplier is not on file, so nothing can be matched",))
-    po_number, delivery_id, po_basis, order_notes = _match_order(
-        invoice, data.orders_of(supplier.id)
-    )
-    payments, payment_basis, payment_notes = _match_payments(
-        invoice, data.transactions_to(supplier.ibans), peers
-    )
+    """The match, given the supplier's orders and the transfers to it.
+    `peers` are the supplier's other invoices on file."""
+    po_number, delivery_id, po_basis, order_notes = _match_order(invoice, orders)
+    payments, payment_basis, payment_notes = _match_payments(invoice, transactions, peers)
     return Match(
         supplier_id=supplier.id,
         po_number=po_number,
@@ -369,6 +367,22 @@ def match_invoice(
         payments=payments,
         payment_basis=payment_basis,
         explanation=(*order_notes, *payment_notes),
+    )
+
+
+def match_invoice(
+    invoice: InvoiceDraft, data: MatchingData, peers: Sequence[PeerInvoice] = ()
+) -> Match:
+    """Look up the supplier, its orders and the transfers to it, and match."""
+    supplier = data.find_supplier(invoice.seller.vat_id, invoice.seller.name)
+    if supplier is None:
+        return Match(explanation=("the supplier is not on file, so nothing can be matched",))
+    return match_candidates(
+        invoice,
+        supplier,
+        data.orders_of(supplier.id),
+        data.transactions_to(supplier.ibans),
+        peers,
     )
 
 

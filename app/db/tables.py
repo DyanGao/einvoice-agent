@@ -46,6 +46,9 @@ class DocumentRow(Base):
     audit_events: Mapped[list["AuditEventRow"]] = relationship(
         back_populates="document", order_by="AuditEventRow.seq"
     )
+    match: Mapped["MatchRow | None"] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
     findings: Mapped[list["FindingRow"]] = relationship(
         back_populates="document", order_by="FindingRow.position", cascade="all, delete-orphan"
     )
@@ -131,6 +134,27 @@ class FindingRow(Base):
     detail: Mapped[dict[str, Any]] = mapped_column(Json)
 
     document: Mapped[DocumentRow] = relationship(back_populates="findings")
+
+
+class MatchRow(Base):
+    """The order, delivery and payments found for the document's current
+    draft. Replaced every time matching runs."""
+
+    __tablename__ = "matches"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True)
+    supplier_id: Mapped[str | None] = mapped_column(String(50))
+    po_number: Mapped[str | None] = mapped_column(String(50))
+    po_basis: Mapped[str] = mapped_column(String(20))
+    delivery_id: Mapped[str | None] = mapped_column(String(50))
+    # [{"bank_transaction_id": ..., "amount": "12.34"}]: how much of which
+    # transfer pays this invoice.
+    payments: Mapped[list[dict[str, str]]] = mapped_column(Json)
+    payment_basis: Mapped[str] = mapped_column(String(20))
+    explanation: Mapped[list[str]] = mapped_column(Json)
+
+    document: Mapped[DocumentRow] = relationship(back_populates="match")
 
 
 def invoice_columns(invoice: Invoice) -> dict:

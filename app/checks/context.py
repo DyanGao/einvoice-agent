@@ -75,7 +75,13 @@ class CheckContext:
     master_data_problem: str | None = None
     # None: no supplier with this VAT ID or name is known.
     supplier: Supplier | None = None
-    # None: the invoice names no order, or the order it names does not exist.
+    # None: no order could be found for the invoice.
     purchase_order: PurchaseOrder | None = None
+    # Set when the order was found although the invoice does not quote its
+    # number correctly: how it was found, for the reviewer.
+    purchase_order_note: str | None = None
+    # Set when no order was chosen because several fit or a similar number
+    # could not be confirmed: why, for the reviewer.
+    purchase_order_problem: str | None = None
     known_invoices: tuple[KnownInvoice, ...] = ()
     settings: CheckSettings = field(default_factory=CheckSettings)

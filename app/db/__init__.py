@@ -20,6 +20,7 @@ from app.db.tables import (
     DraftRow,
     FindingRow,
     InvoiceRow,
+    MatchRow,
     ValidationRow,
 )
 
@@ -30,6 +31,7 @@ __all__ = [
     "DraftRow",
     "FindingRow",
     "InvoiceRow",
+    "MatchRow",
     "NotReviewable",
     "ReviewError",
     "ReviewState",
