@@ -103,6 +103,19 @@ def _detail(document: db.DocumentRow) -> dict:
             "payment_basis": document.match.payment_basis,
             "explanation": document.match.explanation,
         },
+        "deliveries": [
+            {
+                "connector": delivery.connector,
+                "status": delivery.status,
+                "attempts": delivery.attempts,
+                "external_ref": delivery.external_ref,
+                "last_error": delivery.last_error,
+                "delivered_at": None
+                if delivery.delivered_at is None
+                else delivery.delivered_at.isoformat(),
+            }
+            for delivery in document.deliveries
+        ],
         "decision": None
         if document.decision is None
         else {

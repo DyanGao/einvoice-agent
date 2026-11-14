@@ -80,6 +80,11 @@ const CAUSE: Record<string, string> = {
 
 export const causeLabel = (cause: string) => CAUSE[cause] ?? cause.replaceAll("_", " ");
 
+const CONNECTOR: Record<string, string> = { erp_api: "the ERP" };
+
+export const connectorLabel = (connector: string) =>
+  CONNECTOR[connector] ?? connector.replaceAll("_", " ");
+
 const BASIS: Record<string, string> = {
   exact_reference: "quoted exactly",
   similar_reference: "quoted with a slip",

@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, LargeBinary, Numeric, String
+from sqlalchemy import JSON, DateTime, ForeignKey, LargeBinary, Numeric, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -54,6 +54,9 @@ class DocumentRow(Base):
     )
     decision: Mapped["DecisionRow | None"] = relationship(
         back_populates="document", cascade="all, delete-orphan"
+    )
+    deliveries: Mapped[list["DeliveryRow"]] = relationship(
+        back_populates="document", order_by="DeliveryRow.connector"
     )
 
 
@@ -176,6 +179,32 @@ class DecisionRow(Base):
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     document: Mapped[DocumentRow] = relationship(back_populates="decision")
+
+
+class DeliveryRow(Base):
+    """One invoice on its way to one downstream system (app/delivery.py).
+    The booking is stored before the first attempt and sent unchanged on
+    every attempt, always with the same idempotency key."""
+
+    __tablename__ = "deliveries"
+    __table_args__ = (UniqueConstraint("document_id", "connector"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), index=True)
+    connector: Mapped[str] = mapped_column(String(30))
+    idempotency_key: Mapped[str] = mapped_column(String(100), unique=True)
+    # pending (to be tried, or retried at next_attempt_at) | delivered | failed
+    status: Mapped[str] = mapped_column(String(10), index=True)
+    booking: Mapped[dict[str, Any]] = mapped_column(Json)
+    attempts: Mapped[int] = mapped_column(default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # The downstream system's reference for the booking.
+    external_ref: Mapped[str | None] = mapped_column(String(100))
+    last_error: Mapped[str | None]
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    document: Mapped[DocumentRow] = relationship(back_populates="deliveries")
 
 
 class SeenBankTransactionRow(Base):

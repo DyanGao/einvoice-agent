@@ -12,6 +12,7 @@ import {
   getDocument,
   recheckDocument,
   type AuditEvent,
+  type Delivery,
   type Detail,
   type Violation,
 } from "@/lib/api";
@@ -26,7 +27,15 @@ import {
   type FormState,
   type Kind,
 } from "@/lib/form";
-import { basisLabel, causeLabel, findingLabel, formatLabel, statusLabel, when } from "@/lib/labels";
+import {
+  basisLabel,
+  causeLabel,
+  connectorLabel,
+  findingLabel,
+  formatLabel,
+  statusLabel,
+  when,
+} from "@/lib/labels";
 
 const REFRESH_MS = 3000;
 
@@ -102,6 +111,20 @@ function withoutRulePrefix(violation: Violation): string {
   return violation.message.startsWith(prefix)
     ? violation.message.slice(prefix.length).trimStart()
     : violation.message;
+}
+
+function deliveryText(delivery: Delivery): string {
+  const target = connectorLabel(delivery.connector);
+  if (delivery.status === "delivered") {
+    const at = delivery.delivered_at ? ` on ${when(delivery.delivered_at)}` : "";
+    return `Booked in ${target} as no. ${delivery.external_ref}${at}.`;
+  }
+  if (delivery.status === "failed") {
+    return `Not booked in ${target}: ${delivery.last_error ?? "the reason was not recorded"}.`;
+  }
+  return delivery.last_error
+    ? `Booking in ${target} is tried again (attempt ${delivery.attempts} failed: ${delivery.last_error}).`
+    : `Waiting to be booked in ${target}.`;
 }
 
 function auditText(event: AuditEvent): string {
@@ -262,6 +285,15 @@ export default function ReviewPage() {
             as read.
           </p>
         )}
+
+        {detail.deliveries.map((delivery) => (
+          <p
+            key={delivery.connector}
+            className={delivery.status === "failed" ? "notice notice-problem" : "notice"}
+          >
+            {deliveryText(delivery)}
+          </p>
+        ))}
 
         {detail.review_state === "pending" && detail.decision?.route === "review" && (
           <section className="group" aria-label="Why review">

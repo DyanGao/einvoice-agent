@@ -29,6 +29,8 @@ class Settings:
     erp_timeout_seconds: float = 5.0
     # How often the bank watch (app/watch.py) asks the ERP for new transfers.
     bank_watch_seconds: float = 300.0
+    # How often decided invoices are delivered (app/deliver.py).
+    delivery_seconds: float = 10.0
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -49,4 +51,5 @@ class Settings:
             erp_url=os.environ.get("ERP_URL") or None,
             erp_timeout_seconds=float(os.environ.get("ERP_TIMEOUT_SECONDS", "5")),
             bank_watch_seconds=float(os.environ.get("BANK_WATCH_SECONDS", "300")),
+            delivery_seconds=float(os.environ.get("DELIVERY_SECONDS", "10")),
         )

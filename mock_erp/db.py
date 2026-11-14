@@ -125,11 +125,27 @@ class BankTransactionRow(Base):
 
 
 class BookedInvoiceRow(Base):
-    """Invoices posted to the ERP. Empty until the output connectors exist."""
+    """Invoices posted to the ERP by the output connectors. Each booking
+    carries the key the sender gave it, so a booking sent twice is stored
+    once (see POST /booked-invoices)."""
 
     __tablename__ = "booked_invoices"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    idempotency_key: Mapped[str] = mapped_column(String(100), unique=True)
     supplier_id: Mapped[str] = mapped_column(ForeignKey("suppliers.id"), index=True)
     number: Mapped[str] = mapped_column(String(50))
+    issue_date: Mapped[date] = mapped_column(Date)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    currency: Mapped[str] = mapped_column(String(3))
+    net_cents: Mapped[int] = mapped_column(Integer)
+    vat_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
     gross_cents: Mapped[int] = mapped_column(Integer)
+    amount_due_cents: Mapped[int] = mapped_column(Integer)
+    po_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
+    # The sender's own reference for the invoice (the application's document id).
+    reference: Mapped[str] = mapped_column(String(100))
+    # api | form: which way the booking came in.
+    channel: Mapped[str] = mapped_column(String(10))
+    booked_at: Mapped[str] = mapped_column(String(32))
