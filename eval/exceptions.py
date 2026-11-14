@@ -70,6 +70,9 @@ GATED = (IBAN, DUPLICATE)
 class Outcome:
     case: ExceptionCase
     findings: tuple[Finding, ...]
+    # What the decision engine made of it, and why (causes, in order).
+    route: str = "review"
+    causes: tuple[str, ...] = ()
 
     def review_types(self) -> set[FindingType]:
         """Only findings that send the invoice to a person count: one shown
@@ -119,7 +122,15 @@ def run(exceptions: ExceptionSet) -> list[Outcome]:
             document = _document(case.id, case.invoice)
             session.add(document)
             session.flush()
-            outcomes.append(Outcome(case, tuple(checker.check(session, document))))
+            findings = tuple(checker.check(session, document))
+            outcomes.append(
+                Outcome(
+                    case,
+                    findings,
+                    route=document.decision.route,
+                    causes=tuple(reason["cause"] for reason in document.decision.reasons),
+                )
+            )
             # Each case meets the same invoices on file, never another case.
             session.rollback()
     engine.dispose()
@@ -153,6 +164,8 @@ def score(outcomes: list[Outcome]) -> dict:
             if not recall or not precision
             else round(2 * precision * recall / (precision + recall), 4),
             "sent_to_review": sum(outcome.flagged() for outcome in members),
+            # Booked by the decision engine without a person: must be 0.
+            "booked_without_review": sum(outcome.route == "auto" for outcome in members),
         }
     variants: dict[tuple[str, str], list[Outcome]] = {}
     for outcome in outcomes:
@@ -171,6 +184,18 @@ def score(outcomes: list[Outcome]) -> dict:
         "clean": {
             "cases": len(clean),
             "flagged": sum(outcome.flagged() for outcome in clean),
+            # Decision engine: booked without a person, and why the rest was not.
+            "booked_without_review": sum(outcome.route == "auto" for outcome in clean),
+            "held_back": dict(
+                sorted(
+                    Counter(
+                        cause
+                        for outcome in clean
+                        if outcome.route != "auto"
+                        for cause in outcome.causes
+                    ).items()
+                )
+            ),
             "by_finding": dict(
                 sorted(
                     Counter(
@@ -217,8 +242,14 @@ def _print(result: dict) -> None:
         )
     clean = result["clean"]
     print(
-        f"clean invoices: {clean['cases']}, sent to review: {clean['flagged']}"
+        f"clean invoices: {clean['cases']}, sent to review by a check: {clean['flagged']}"
         + (f" ({clean['by_finding']})" if clean["flagged"] else "")
+    )
+    planted = sum(row["booked_without_review"] for row in result["by_kind"].values())
+    print(
+        f"decision engine: {clean['booked_without_review']} of {clean['cases']} clean invoices "
+        f"booked without review, held back {clean['held_back']}; "
+        f"{planted} invoices with a planted problem booked without review"
     )
     print(f"{'variant':<40}{'cases':>6}{'detected':>10}{'to review':>11}")
     for name, row in result["by_variant"].items():
@@ -252,9 +283,13 @@ def main() -> int:
         kind
         for kind in GATED
         if args.gate is not None and (result["by_kind"][kind]["recall"] or 0) < args.gate
+    ] + [
+        f"{kind} (booked without review)"
+        for kind, row in result["by_kind"].items()
+        if args.gate is not None and row["booked_without_review"]
     ]
     if failed:
-        print(f"GATE FAILED: recall below {args.gate} for {', '.join(failed)}")
+        print(f"GATE FAILED: {', '.join(failed)}")
         return 1
     return 0
 

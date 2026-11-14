@@ -103,6 +103,13 @@ def _detail(document: db.DocumentRow) -> dict:
             "payment_basis": document.match.payment_basis,
             "explanation": document.match.explanation,
         },
+        "decision": None
+        if document.decision is None
+        else {
+            "route": document.decision.route,
+            "reasons": document.decision.reasons,
+            "version": document.decision.version,
+        },
         "findings": [
             {
                 "type": finding.type,

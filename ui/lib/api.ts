@@ -34,6 +34,17 @@ export type Finding = {
   detail: Record<string, unknown>;
 };
 
+/** One reason the invoice cannot be booked without a person. */
+export type Reason = {
+  cause: string;
+  message: string;
+  fields: string[];
+  findings: string[];
+};
+
+/** Whether the invoice may be booked without a person, and why not. */
+export type Decision = { route: "auto" | "review"; reasons: Reason[]; version: string };
+
 /** What the invoice was matched to in the ERP. */
 export type Match = {
   supplier_id: string | null;
@@ -61,6 +72,7 @@ export type Detail = Summary & {
   missing: string[];
   validation: { valid: boolean; scenario: string | null; violations: Violation[] } | null;
   match: Match | null;
+  decision: Decision | null;
   findings: Finding[];
   audit: AuditEvent[];
 };

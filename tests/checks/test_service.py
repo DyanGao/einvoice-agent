@@ -124,7 +124,14 @@ def test_without_an_erp_the_invoice_is_processed_and_carries_a_note(session_fact
         session_factory, document_id, lambda d: [(f.type, f.severity) for f in d.findings]
     )
     assert findings == [("master_data_not_checked", "info")]
-    assert read(session_factory, document_id, lambda d: d.review_state) == "not_required"
+
+
+def test_without_an_erp_even_a_valid_e_invoice_goes_to_a_person(session_factory, world, entry):
+    """Nobody has confirmed the bank account: it is not booked unseen."""
+    document_id = process(session_factory, render_ubl(entry.invoice, XRECHNUNG), Checker())
+    assert read(
+        session_factory, document_id, lambda d: (d.review_state, d.decision.reasons[0]["cause"])
+    ) == ("pending", "not_compared")
 
 
 def test_erp_outage_does_not_fail_the_document_but_sends_it_to_review(
@@ -146,7 +153,9 @@ def test_checks_are_recorded_in_the_audit_trail(session_factory, world, entry):
         "checked",
         {
             "findings": ["iban_changed"],
-            "needs_review": True,
+            "route": "review",
+            "reasons": ["findings"],
+            "thresholds": checker.decisions.version,
             "matched_order": entry.po_number,
             # The transfer went to the account the ERP no longer has on file.
             "matched_payments": [],
@@ -212,6 +221,33 @@ def test_invoice_without_an_order_reference_is_matched_by_what_it_bills(
     document_id = process(session_factory, render_ubl(silent.invoice, XRECHNUNG), Checker(erp))
     assert stored_match(session_factory, document_id)[:2] == (silent.po_number, "content")
     assert finding_types(session_factory, document_id) == ["po_not_quoted"]
+
+
+def test_order_found_only_by_what_it_bills_is_confirmed_by_a_person(session_factory, erp, world):
+    silent = next(entry for entry in world.invoices if entry.po_ref_kind == PO_MISSING)
+    document_id = process(session_factory, render_ubl(silent.invoice, XRECHNUNG), Checker(erp))
+    assert read(
+        session_factory, document_id, lambda d: (d.review_state, d.decision.reasons[0]["cause"])
+    ) == ("pending", "order_by_content")
+
+
+def test_decision_is_stored_with_its_reasons_and_replaced_on_every_run(
+    session_factory, tmp_path, world, entry
+):
+    checker = Checker(erp_knowing(world, entry, (OTHER_IBAN,)))
+    queue = inline_queue(session_factory, checker=checker)
+    client = TestClient(create_app(session_factory, queue, settings_for(tmp_path), checker))
+    document_id = uploaded(client, render_ubl(entry.invoice, XRECHNUNG))
+    before = client.get(f"/documents/{document_id}").json()["decision"]
+    (reason,) = before["reasons"]
+    assert (before["route"], reason["cause"], reason["findings"]) == (
+        "review",
+        "findings",
+        ["iban_changed"],
+    )
+    after = client.post(f"/documents/{document_id}/recheck").json()["decision"]
+    assert after == before
+    assert read(session_factory, document_id, lambda d: d.decision is not None) is True
 
 
 def test_price_above_the_matched_order_is_found_although_the_order_is_not_quoted(

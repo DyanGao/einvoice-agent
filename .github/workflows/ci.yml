@@ -62,6 +62,11 @@ jobs:
 
       # Regression gate: at least 95 % of held-out world invoices matched
       # to the right order, delivery and payments.
+      # Auto-rate vs. error of the decision engine on the replayed text PDFs;
+      # warns (does not fail) when the auto-rate drops by more than 5 points.
+      - name: Decision eval
+        run: make eval-decision-pdf
+
       - name: Matching eval
         run: make eval-matching
 

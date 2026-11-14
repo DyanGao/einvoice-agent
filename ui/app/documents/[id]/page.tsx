@@ -26,7 +26,7 @@ import {
   type FormState,
   type Kind,
 } from "@/lib/form";
-import { basisLabel, findingLabel, formatLabel, statusLabel, when } from "@/lib/labels";
+import { basisLabel, causeLabel, findingLabel, formatLabel, statusLabel, when } from "@/lib/labels";
 
 const REFRESH_MS = 3000;
 
@@ -256,9 +256,23 @@ export default function ReviewPage() {
         )}
         {detail.review_state === "not_required" && (
           <p className="notice">
-            The validator accepted this e-invoice, so it needs no review. The fields are shown as
-            read.
+            Nothing here needs a person, so it can be booked without review. The fields are shown
+            as read.
           </p>
+        )}
+
+        {detail.review_state === "pending" && detail.decision?.route === "review" && (
+          <section className="group" aria-label="Why review">
+            <h2>Why a person needs to look</h2>
+            <ul className="violations">
+              {detail.decision.reasons.map((reason, index) => (
+                <li key={index} className="violation">
+                  <strong>{causeLabel(reason.cause)}</strong>{" "}
+                  {reason.cause === "findings" ? "See the checks below." : reason.message}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {detail.findings.length > 0 && (
