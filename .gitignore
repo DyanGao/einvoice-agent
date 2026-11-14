@@ -51,3 +51,5 @@ ui/tsconfig.tsbuildinfo
 
 # Mock ERP database (make seed)
 data/mock_erp/
+# Action logs and screenshots of the browser connector (invoice data).
+data/browser/

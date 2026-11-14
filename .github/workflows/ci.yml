@@ -32,6 +32,10 @@ jobs:
           sudo apt-get install -y -qq tesseract-ocr
           make ocr-data
 
+      # The browser connector's tests drive a real Chromium.
+      - name: Install browser for the browser connector
+        run: uv run playwright install --with-deps chromium
+
       - name: Lint
         run: make lint
 

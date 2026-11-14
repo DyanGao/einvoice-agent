@@ -90,9 +90,7 @@ def test_invoice_decided_auto_is_booked_in_the_erp(
         entry.po_number,
         document_id,
     )
-    assert deliveries(session_factory, document_id) == [
-        ("erp_api", "delivered", 1, str(booked["id"]))
-    ]
+    assert deliveries(session_factory, document_id) == [("erp", "delivered", 1, str(booked["id"]))]
 
 
 def test_delivering_again_books_nothing_twice(session_factory, world, checker, connector, erp_http):
@@ -131,7 +129,7 @@ def test_no_delivery_without_a_recorded_decision(session_factory, world, connect
 class CrashAfterSending:
     """Books in the ERP, then dies before the application records it."""
 
-    name = "erp_api"
+    name = "erp"
 
     def __init__(self, inner):
         self.inner = inner
@@ -150,13 +148,11 @@ def test_crash_between_booking_and_recording_does_not_book_twice(
     assert deliveries(session_factory, document_id)[0][1] == "pending"
     deliver_due(session_factory, [connector], NOW + timedelta(hours=1))
     (booked,) = bookings(erp_http)
-    assert deliveries(session_factory, document_id) == [
-        ("erp_api", "delivered", 2, str(booked["id"]))
-    ]
+    assert deliveries(session_factory, document_id) == [("erp", "delivered", 2, str(booked["id"]))]
 
 
 class Down:
-    name = "erp_api"
+    name = "erp"
 
     def deliver(self, booking, key):
         raise DeliveryFailed("ERP not reachable", retryable=True)
@@ -186,7 +182,7 @@ def test_delivery_gives_up_after_the_last_attempt_and_says_why(session_factory, 
 
 def test_refused_booking_is_not_retried_and_is_surfaced(session_factory, world, checker, erp_http):
     class Refused:
-        name = "erp_api"
+        name = "erp"
         calls = 0
 
         def deliver(self, booking, key):
@@ -216,7 +212,7 @@ def test_every_attempt_is_in_the_audit_trail(session_factory, world, checker, co
             for event in session.get(db.DocumentRow, document_id).audit_events
             if event.event.startswith("deliver")
         ]
-    assert events == [("delivery_failed", "erp_api"), ("delivered", "erp_api")]
+    assert events == [("delivery_failed", "erp"), ("delivered", "erp")]
 
 
 def test_connector_turns_server_errors_into_retries_and_refusals_into_failures():
@@ -262,7 +258,7 @@ def test_document_detail_says_where_and_as_what_it_was_booked(
     (delivery,) = client.get(f"/documents/{document_id}").json()["deliveries"]
     (booked,) = bookings(erp_http)
     assert (delivery["connector"], delivery["status"], delivery["external_ref"]) == (
-        "erp_api",
+        "erp",
         "delivered",
         str(booked["id"]),
     )
@@ -280,7 +276,7 @@ def test_invoice_goes_to_every_connector_once(
     assert (len(bookings(erp_http)), len(rows), rows[1].endswith(document_id)) == (1, 2, True)
     assert [d[:2] for d in deliveries(session_factory, document_id)] == [
         ("csv_export", "delivered"),
-        ("erp_api", "delivered"),
+        ("erp", "delivered"),
     ]
 
 
@@ -329,3 +325,34 @@ def test_webhook_url_without_a_secret_stops_the_delivery_loop_from_starting(monk
     monkeypatch.delenv("ERP_URL", raising=False)
     with pytest.raises(SystemExit, match="WEBHOOK_SECRET"):
         build_connectors(Settings.from_env())
+
+
+def test_switching_the_erp_channel_does_not_book_an_invoice_again(
+    session_factory, world, checker, connector, erp_http
+):
+    """Booked through the API; the installation then switches to the screens.
+    Both are the same ERP, so the invoice is not sent again."""
+
+    class Screens:
+        name = "erp"
+        channel = "form"
+
+        def deliver(self, booking, key):
+            raise AssertionError("an invoice the ERP already has was sent again")
+
+    process(session_factory, entry_of(world, PO_EXACT), checker)
+    deliver_due(session_factory, [connector], NOW)
+    assert deliver_due(session_factory, [Screens()], NOW + timedelta(hours=1)) == []
+    assert len(bookings(erp_http)) == 1
+
+
+def test_attempts_record_the_channel_they_went_through(session_factory, world, checker, connector):
+    document_id = process(session_factory, entry_of(world, PO_EXACT), checker)
+    deliver_due(session_factory, [connector], NOW)
+    with session_factory() as session:
+        (event,) = [
+            e
+            for e in session.get(db.DocumentRow, document_id).audit_events
+            if e.event == "delivered"
+        ]
+    assert (event.detail["connector"], event.detail["channel"]) == ("erp", "api")
