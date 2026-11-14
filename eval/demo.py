@@ -14,6 +14,7 @@ five are e-invoices, read without a model. It exits non-zero if the story
 did not happen as told, so CI can run it.
 """
 
+import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -147,8 +148,6 @@ def _fresh_database(url: str) -> str:
 
 
 def _migrate(url: str) -> None:
-    import os
-
     from alembic import command
     from alembic.config import Config
 
@@ -210,6 +209,12 @@ def main() -> int:
         print("DEMO DID NOT GO AS TOLD: " + "; ".join(found))
         return 1
     print("As in the README: 5 in, 4 booked without review, 1 flagged for its price, approved,")
+    if os.environ.get("DEMO_IN_DOCKER"):
+        # Its database and mock ERP went with the container; the stack is what stays.
+        print("booked. To look around, start the whole application (make stack) and open")
+        print("  http://localhost:3000 — upload the files in sample_invoices/ there;")
+        print("  http://localhost:8100/ui/bookings — the mock ERP's bookings.")
+        return 0
     print("booked. To look around:")
     print(f"  the ERP's screens:  MOCK_ERP_DATABASE_URL=sqlite:///{erp_file} make erp")
     print("                     then http://127.0.0.1:8100/ui/bookings")

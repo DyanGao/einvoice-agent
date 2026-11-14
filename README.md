@@ -33,13 +33,14 @@ Since 2025 every German business must be able to receive e-invoices; issuing bec
 
 ## Quickstart
 ```bash
-docker compose up -d          # api, worker, postgres, ui, mock-erp, validator
-make seed                     # synthetic suppliers, POs, bank transactions
-make demo                     # processes sample_invoices/
-open http://localhost:3000
+docker compose up -d --build  # postgres, redis, validator, api, worker, watch, deliver, ui, mock-erp (seeds itself)
+make demo                     # processes sample_invoices/ in Docker: 5 in, 4 booked, 1 flagged — no API key
+open http://localhost:3000    # review UI; the mock ERP's bookings: http://localhost:8100/ui/bookings
 ```
+PDFs and scans are read by a model: put `ANTHROPIC_API_KEY` in `.env` (see `.env.example`). E-invoices need no key.
+Reseed the mock ERP: `docker compose run --rm mock-erp python -m mock_erp.seed`.
 
-Until the app is containerised, the review UI runs from source:
+For development, the same runs from source with uv and pnpm (stop the compose app services first, they use the same ports):
 
 ```bash
 make up && make migrate       # postgres, redis, validator
@@ -47,6 +48,7 @@ make seed && make erp         # optional: mock ERP on http://127.0.0.1:8100
 make api                      # http://127.0.0.1:8000, no authentication: localhost only
                               # with ERP_URL=http://127.0.0.1:8100 for supplier and order checks
 make worker
+make watch && make deliver    # optional: re-matching on new transfers, delivery to the ERP
 make ui-install && make ui    # http://localhost:3000
 ```
 

@@ -1,0 +1,17 @@
+# Never in an image: secrets, local data, caches, build output.
+.env
+.env.*
+!.env.example
+.git
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.tessdata
+data
+eval/out
+eval/recordings
+tests
+ui
+# The package build reads README.md; the local plan stays out.
+IMPLEMENTATION_PLAN.md
