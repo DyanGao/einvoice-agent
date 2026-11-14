@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5511,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "10547.01",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-02-12",
+  "gross_total": "10547.01",
+  "issue_date": "2026-01-29",
+  "line_net_total": "8863.03",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "8863.03",
+    "quantity": "99.25",
+    "unit_price": "89.30",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "8863.03",
+  "number": "RE-2026-03079",
+  "payment_ibans": [
+   "DE21000530422258983081"
+  ],
+  "po_ref": "PO-769187",
+  "seller_name": "Vogelsang Werkzeughandel e.K.",
+  "seller_vat_id": "DE782433945",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "1683.98",
+    "taxable_amount": "8863.03"
+   }
+  ],
+  "vat_total": "1683.98"
+ },
+ "output_tokens": 353
+}

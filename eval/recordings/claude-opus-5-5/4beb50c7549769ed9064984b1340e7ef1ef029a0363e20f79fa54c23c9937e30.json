@@ -1,0 +1,60 @@
+{
+ "input_tokens": 5579,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "8953.44",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-08-12",
+  "gross_total": "8953.44",
+  "issue_date": "2026-07-29",
+  "line_net_total": "7523.90",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "192.70",
+    "quantity": "41",
+    "unit_price": "4.70",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "7321.60",
+    "quantity": "22",
+    "unit_price": "332.80",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "9.60",
+    "quantity": "10",
+    "unit_price": "0.96",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "7523.90",
+  "number": "2026/4150",
+  "payment_ibans": [
+   "DE58000859404962175934"
+  ],
+  "po_ref": "PO-571174",
+  "seller_name": "Sommerfeld Gartenbau OHG",
+  "seller_vat_id": "DE480370638",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "1429.54",
+    "taxable_amount": "7523.90"
+   }
+  ],
+  "vat_total": "1429.54"
+ },
+ "output_tokens": 475
+}

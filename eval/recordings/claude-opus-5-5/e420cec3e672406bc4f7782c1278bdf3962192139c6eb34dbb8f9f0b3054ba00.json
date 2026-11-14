@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5487,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "1227.70",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-08-27",
+  "gross_total": "1227.70",
+  "issue_date": "2026-07-28",
+  "line_net_total": "1031.68",
+  "lines": [
+   {
+    "description": "Stahlprofil 40 × 40",
+    "line_id": "1",
+    "net": "1031.68",
+    "quantity": "75.25",
+    "unit_price": "13.71",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "1031.68",
+  "number": "RE-2026-04494",
+  "payment_ibans": [
+   "DE67000993837386589330"
+  ],
+  "po_ref": "PO-494075",
+  "seller_name": "Vogelsang Drucktechnik AG",
+  "seller_vat_id": "DE322714791",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "196.02",
+    "taxable_amount": "1031.68"
+   }
+  ],
+  "vat_total": "196.02"
+ },
+ "output_tokens": 352
+}

@@ -1,0 +1,60 @@
+{
+ "input_tokens": 5548,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "216.83",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-09-04",
+  "gross_total": "216.83",
+  "issue_date": "2026-08-05",
+  "line_net_total": "182.21",
+  "lines": [
+   {
+    "description": "Anfahrt",
+    "line_id": "1",
+    "net": "23.09",
+    "quantity": "40.50",
+    "unit_price": "0.57",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "16.40",
+    "quantity": "20",
+    "unit_price": "0.82",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "3",
+    "net": "142.72",
+    "quantity": "32",
+    "unit_price": "4.46",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "182.21",
+  "number": "R26002329",
+  "payment_ibans": [
+   "DE70000670494575584631"
+  ],
+  "po_ref": "PO-527545",
+  "seller_name": "Lindner Logistik e.K.",
+  "seller_vat_id": "DE542345282",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "34.62",
+    "taxable_amount": "182.21"
+   }
+  ],
+  "vat_total": "34.62"
+ },
+ "output_tokens": 462
+}

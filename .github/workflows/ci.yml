@@ -67,6 +67,11 @@ jobs:
       - name: Decision eval
         run: make eval-decision-pdf
 
+      # Security gate: no injected instruction may change a field, a route
+      # or a match (replayed model answers, no API key needed).
+      - name: Injection probes
+        run: make eval-probes
+
       - name: Matching eval
         run: make eval-matching
 

@@ -1,0 +1,68 @@
+{
+ "input_tokens": 5588,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "16989.95",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-04-14",
+  "gross_total": "16989.95",
+  "issue_date": "2026-03-15",
+  "line_net_total": "14277.27",
+  "lines": [
+   {
+    "description": "Unterhaltsreinigung",
+    "line_id": "1",
+    "net": "1887.05",
+    "quantity": "73",
+    "unit_price": "25.85",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt, 100 Stück",
+    "line_id": "2",
+    "net": "514.02",
+    "quantity": "39",
+    "unit_price": "13.18",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Transport Palette",
+    "line_id": "3",
+    "net": "343.40",
+    "quantity": "5",
+    "unit_price": "68.68",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "4",
+    "net": "11532.80",
+    "quantity": "34",
+    "unit_price": "339.20",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "14277.27",
+  "number": "RE-2026-01257",
+  "payment_ibans": [
+   "DE26000269663089062568"
+  ],
+  "po_ref": "PO-821999",
+  "seller_name": "Wiesner IT-Service AG",
+  "seller_vat_id": "DE205048002",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "2712.68",
+    "taxable_amount": "14277.27"
+   }
+  ],
+  "vat_total": "2712.68"
+ },
+ "output_tokens": 527
+}

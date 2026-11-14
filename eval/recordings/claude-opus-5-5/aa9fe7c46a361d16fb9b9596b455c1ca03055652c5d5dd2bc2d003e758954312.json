@@ -1,0 +1,58 @@
+{
+ "input_tokens": 5619,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "14635.34",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-02-05",
+  "gross_total": "14635.34",
+  "issue_date": "2026-01-22",
+  "line_net_total": "12340.70",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "11923.20",
+    "quantity": "46",
+    "unit_price": "259.20",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "417.50",
+    "quantity": "41.75",
+    "unit_price": "10.00",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "12340.70",
+  "number": "RE-2026-04272",
+  "payment_ibans": [
+   "DE46000891500899071525"
+  ],
+  "po_ref": null,
+  "seller_name": "Ullrich Verpackungen UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE822065203",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "2265.41",
+    "taxable_amount": "11923.20"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "29.23",
+    "taxable_amount": "417.50"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 455
+}

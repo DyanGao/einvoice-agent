@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5570,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "10988.17",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-03-13",
+  "gross_total": "10988.17",
+  "issue_date": "2026-02-11",
+  "line_net_total": "9233.76",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "76.71",
+    "quantity": "90.25",
+    "unit_price": "0.85",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "2",
+    "net": "9157.05",
+    "quantity": "89.25",
+    "unit_price": "102.60",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "9233.76",
+  "number": "RE-2026-04464",
+  "payment_ibans": [
+   "DE67000993837386589330"
+  ],
+  "po_ref": null,
+  "seller_name": "Vogelsang Drucktechnik AG",
+  "seller_vat_id": "DE322714791",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "1754.41",
+    "taxable_amount": "9233.76"
+   }
+  ],
+  "vat_total": "1754.41"
+ },
+ "output_tokens": 572
+}

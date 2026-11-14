@@ -1,0 +1,74 @@
+{
+ "input_tokens": 5648,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "9853.29",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-03-21",
+  "gross_total": "9853.29",
+  "issue_date": "2026-02-19",
+  "line_net_total": "8311.43",
+  "lines": [
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "33.77",
+    "quantity": "3.25",
+    "unit_price": "10.39",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Mittagsbuffet pro Person",
+    "line_id": "2",
+    "net": "277.20",
+    "quantity": "14",
+    "unit_price": "19.80",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Akkuschrauber 18 V",
+    "line_id": "3",
+    "net": "7581.12",
+    "quantity": "53",
+    "unit_price": "143.04",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "4",
+    "net": "419.34",
+    "quantity": "58",
+    "unit_price": "7.23",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "8311.43",
+  "number": "RE-2026-02934",
+  "payment_ibans": [
+   "DE20000833752117117994"
+  ],
+  "po_ref": null,
+  "seller_name": "Clausen Papierwerke KG",
+  "seller_vat_id": "DE820161699",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "1520.09",
+    "taxable_amount": "8000.46"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "21.77",
+    "taxable_amount": "310.97"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 691
+}

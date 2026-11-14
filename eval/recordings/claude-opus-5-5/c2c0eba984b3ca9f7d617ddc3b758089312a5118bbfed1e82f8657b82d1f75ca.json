@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5429,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "23442.05",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": null,
+  "due_date": "2026-04-09",
+  "gross_total": "23442.05",
+  "issue_date": "2026-03-10",
+  "line_net_total": "19699.20",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "19699.20",
+    "quantity": "57",
+    "unit_price": "345.60",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "19699.20",
+  "number": "RE-2026-01247",
+  "payment_ibans": [
+   "DE85000147904918993837"
+  ],
+  "po_ref": "PO-298735",
+  "seller_name": "Wiesner IT-Service AG",
+  "seller_vat_id": "DE205048002",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "3742.85",
+    "taxable_amount": "19699.20"
+   }
+  ],
+  "vat_total": "3742.85"
+ },
+ "output_tokens": 454
+}

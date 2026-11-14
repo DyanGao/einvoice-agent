@@ -234,7 +234,41 @@ def _payment(page: _Page, invoice: CanonicalInvoice, y: float) -> None:
             y -= 12
 
 
-def render_pdf(invoice: CanonicalInvoice, layout: Layout) -> bytes:
+@dataclass(frozen=True)
+class Note:
+    """Free text printed on the invoice outside every field: what an
+    injection probe (eval/generators/probes.py) adds to a document.
+    `placement` "note" prints it in small type above the footer; "hidden"
+    prints it there in white, invisible on the page but in its text."""
+
+    text: str
+    placement: str
+    WIDTH = 105  # characters per printed line
+
+    def lines(self) -> list[str]:
+        lines, current = [], ""
+        for word in self.text.split():
+            if current and len(current) + 1 + len(word) > self.WIDTH:
+                lines.append(current)
+                current = word
+            else:
+                current = f"{current} {word}".strip()
+        return [*lines, current] if current else lines
+
+
+def _notes(page: _Page, notes: tuple[Note, ...]) -> None:
+    y = 132
+    for note in notes:
+        if note.placement not in ("note", "hidden"):
+            raise ValueError(f"unknown placement {note.placement!r}")
+        page.canvas.setFillColorRGB(*((1, 1, 1) if note.placement == "hidden" else (0, 0, 0)))
+        for line in note.lines():
+            page.text(LEFT, y, line, size=7)
+            y -= 9
+    page.canvas.setFillColorRGB(0, 0, 0)
+
+
+def render_pdf(invoice: CanonicalInvoice, layout: Layout, notes: tuple[Note, ...] = ()) -> bytes:
     page = _Page(layout)
     _seller_block(page, invoice.seller)
     _buyer_block(page, invoice.buyer)
@@ -242,6 +276,8 @@ def render_pdf(invoice: CanonicalInvoice, layout: Layout) -> bytes:
     y = _table(page, invoice)
     y = _totals(page, invoice, y)
     _payment(page, invoice, y)
+    if notes:  # drawn only when asked: every other PDF keeps its exact bytes
+        _notes(page, notes)
     return page.finish()
 
 

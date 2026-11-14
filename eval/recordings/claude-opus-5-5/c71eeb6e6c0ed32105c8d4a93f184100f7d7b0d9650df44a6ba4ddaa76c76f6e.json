@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5588,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "7401.43",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-05-29",
+  "gross_total": "7401.43",
+  "issue_date": "2026-04-29",
+  "line_net_total": "6219.69",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "195.00",
+    "quantity": "39",
+    "unit_price": "5.00",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "2",
+    "net": "6024.69",
+    "quantity": "65.50",
+    "unit_price": "91.98",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "6219.69",
+  "number": "R26003808",
+  "payment_ibans": [
+   "DE46000353520361495518"
+  ],
+  "po_ref": null,
+  "seller_name": "Engelhardt Elektrotechnik KG",
+  "seller_vat_id": "DE496531438",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "1181.74",
+    "taxable_amount": "6219.69"
+   }
+  ],
+  "vat_total": "1181.74"
+ },
+ "output_tokens": 523
+}
