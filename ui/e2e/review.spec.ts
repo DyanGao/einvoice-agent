@@ -115,14 +115,22 @@ test("an unknown document says so instead of showing an empty form", async ({ pa
 test("a document that is still being read updates by itself", async ({ page }) => {
   // The test API reads documents at once, so the first answer is rewritten to
   // look like the real worker has not got to the document yet.
-  let first = true;
+  let rewritten = false;
   await page.route("**/documents?limit=200", async (route) => {
-    if (!first) return route.continue();
-    first = false;
-    const response = await route.fetch();
+    if (rewritten) return route.continue();
+    // The test's own fetch can meet a keep-alive connection the server is just
+    // closing (ECONNRESET, CI run 40): try once more. Only a rewrite that went
+    // through counts, so a failed one is not silently skipped.
+    let response;
+    try {
+      response = await route.fetch();
+    } catch {
+      response = await route.fetch();
+    }
     const body = await response.json();
     body.documents[0].status = "received";
     await route.fulfill({ response, json: body });
+    rewritten = true;
   });
   await page.goto("/");
   await page.getByRole("button", { name: /All documents/ }).click();
