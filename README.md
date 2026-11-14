@@ -27,15 +27,17 @@ Synthetic data only, held-out split; one model run, answered from recordings (`c
 <!-- eval:results:end -->
 
 ## Features
-- [ ] Ingest: email inbox (IMAP), folder watch, upload UI, API
+- [ ] Ingest: email inbox (IMAP), folder watch, upload UI, API _(built: folder watch, upload in the review UI, `POST /documents`; IMAP is not built)_
 - [x] Format detection: XRechnung (UBL/CII), ZUGFeRD/Factur-X (PDF/A-3 with embedded XML), plain PDF, scan
 - [x] Structured path: parse + validate (KoSIT validator / Mustang) — no LLM needed _(KoSIT only so far: ZUGFeRD profiles outside EN 16931 and PDF/A-3 conformance are not validated)_
-- [ ] Unstructured path: OCR + vision LLM → schema-constrained extraction (EN 16931 fields)
-- [ ] Matching agent: invoice ↔ PO ↔ delivery note ↔ bank transaction (3-way match + fuzzy)
-- [ ] Checks: VAT rate/ID plausibility, totals, duplicates, IBAN changes (fraud signal), price/quantity deviations
-- [ ] Human-in-the-loop review UI for low-confidence fields and exceptions _(built: upload, queue, correct, approve, history; low-confidence marking waits for confidence scores, exceptions for the checks)_
-- [ ] Output connectors: CSV/DATEV-style export, REST webhook, mock ERP via API, Playwright fallback for UI-only systems
-- [ ] Audit trail per document (source, extracted values, who approved)
+- [x] Unstructured path: OCR + vision LLM → schema-constrained extraction (EN 16931 fields) _(the model transcribes, rules fill only what is not printed and mark it; per-field confidence from checks and OCR grounding)_
+- [x] Matching: invoice ↔ PO ↔ delivery note ↔ bank transaction (3-way match + fuzzy) _(rule-based, including typos, missing references, partial and combined payments; matched again when new invoices or transfers arrive. The planned model agent was not built: on the eval world the rules leave open only what no reader could decide, and an agent would add cost and a place for injected text to act)_
+- [x] Checks: VAT rate/ID plausibility, totals, duplicates, IBAN changes (fraud signal), price/quantity deviations _(against the ERP's suppliers and orders; quantity deviation is unit-tested but not in the exception eval)_
+- [x] Human-in-the-loop review UI for low-confidence fields and exceptions _(upload, queue, "why a person needs to look", unsure fields marked, correct, approve, history, delivery status)_
+- [x] Decision engine: books an invoice without a person only when it was read with confidence, nothing was assumed and no check raised a finding _(75 % of held-out documents on synthetic data; ≤ 1 % error not yet shown, see Results)_
+- [x] Output connectors: CSV/DATEV-style export, REST webhook, mock ERP via API, Playwright fallback for UI-only systems _(each invoice delivered once per connector, retried with backoff; the browser connector reads every booking back)_
+- [x] Audit trail per document (source, extracted values, who approved) _(the reviewer's name comes from the UI and is not authenticated: the API has no login and is meant for localhost)_
+- [x] Eval harness: labeled synthetic sets, rule-based baseline, held-out split, recorded model answers, CI gates — `make eval-full` _(no real invoices yet)_
 
 ## Quickstart
 ```bash
@@ -68,10 +70,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Roadmap
 - [x] v0.1 structured path: parse + validate XRechnung/ZUGFeRD
-- [ ] v0.2 PDF/scan extraction + review UI
-- [ ] v0.3 matching agent + checks
-- [ ] v0.4 connectors (export, mock ERP, Playwright fallback)
-- [ ] v0.5 eval report published
+- [ ] v0.2 PDF/scan extraction + review UI _(built and on held-out synthetic data at 100 %; open: mean of 3 model runs, real invoices)_
+- [x] v0.3 matching + checks + decision engine _(rule-based matching instead of a model agent)_
+- [x] v0.4 connectors (export, webhook, mock ERP, Playwright fallback) and the whole stack in Docker
+- [ ] v0.5 eval report published _(written: [docs/eval-report.md](docs/eval-report.md); open: 3-run variance, model ablations, real-invoice set, hardening)_
 - [ ] v1.0 multi-tenant, IMAP ingest, German/English UI
 
 ## Tech stack
