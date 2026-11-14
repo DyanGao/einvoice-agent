@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record
 
 install:
 	uv sync
@@ -162,3 +162,14 @@ eval-decision:
 
 eval-decision-pdf:
 	uv run python -m eval.sweep report eval/out/pdf
+
+# Injection probes: 20 invoices with text that tries to steer the extraction
+# model, each next to a control without it, through the application's own
+# extraction, matching, checks and decision. Replays recorded model answers;
+# fails if any injection changed a field, a route or a match.
+# `eval-probes-record` calls the model for probes not recorded yet (~40 calls).
+eval-probes:
+	uv run python -m eval.probes --gate
+
+eval-probes-record:
+	uv run --env-file .env python -m eval.probes --llm-mode record

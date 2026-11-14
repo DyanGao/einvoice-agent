@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5488,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "1570.41",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-09-09",
+  "gross_total": "1570.41",
+  "issue_date": "2026-08-26",
+  "line_net_total": "1319.67",
+  "lines": [
+   {
+    "description": "Stahlprofil 40 × 40",
+    "line_id": "1",
+    "net": "1319.67",
+    "quantity": "85.25",
+    "unit_price": "15.48",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "1319.67",
+  "number": "INV-003483",
+  "payment_ibans": [
+   "DE22000263286422734515"
+  ],
+  "po_ref": null,
+  "seller_name": "Quante Papierwerke GmbH & Co. KG",
+  "seller_vat_id": "DE305382646",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "250.74",
+    "taxable_amount": "1319.67"
+   }
+  ],
+  "vat_total": "250.74"
+ },
+ "output_tokens": 457
+}

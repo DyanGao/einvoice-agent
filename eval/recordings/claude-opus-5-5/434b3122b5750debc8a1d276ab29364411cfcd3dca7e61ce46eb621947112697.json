@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5425,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "37.04",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-08-15",
+  "gross_total": "37.04",
+  "issue_date": "2026-07-16",
+  "line_net_total": "31.13",
+  "lines": [
+   {
+    "description": "Anfahrt",
+    "line_id": "1",
+    "net": "31.13",
+    "quantity": "62.25",
+    "unit_price": "0.50",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "31.13",
+  "number": "RE-2026-01860",
+  "payment_ibans": [
+   "DE37000019126006593852"
+  ],
+  "po_ref": null,
+  "seller_name": "Quante Logistik GmbH",
+  "seller_vat_id": "DE272896965",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "5.91",
+    "taxable_amount": "31.13"
+   }
+  ],
+  "vat_total": "5.91"
+ },
+ "output_tokens": 331
+}

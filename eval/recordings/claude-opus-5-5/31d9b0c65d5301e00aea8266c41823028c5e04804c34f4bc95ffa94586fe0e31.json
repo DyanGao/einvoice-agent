@@ -1,0 +1,60 @@
+{
+ "input_tokens": 5561,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "14912.98",
+  "buyer_name": "Nordlicht Handel GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE123456788",
+  "currency": "EUR",
+  "due_date": "2026-06-07",
+  "gross_total": "14912.98",
+  "issue_date": "2026-05-24",
+  "line_net_total": "12531.92",
+  "lines": [
+   {
+    "description": "Versandkarton 400 × 300 × 200",
+    "line_id": "1",
+    "net": "23.00",
+    "quantity": "20",
+    "unit_price": "1.15",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Transport Palette",
+    "line_id": "2",
+    "net": "1454.52",
+    "quantity": "23",
+    "unit_price": "63.24",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "3",
+    "net": "11054.40",
+    "quantity": "47",
+    "unit_price": "235.20",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "12531.92",
+  "number": "RE-2026-03606",
+  "payment_ibans": [
+   "DE04000554142758907688"
+  ],
+  "po_ref": "PO-417571",
+  "seller_name": "Petersen Werkzeughandel OHG",
+  "seller_vat_id": "DE111494416",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "2381.06",
+    "taxable_amount": "12531.92"
+   }
+  ],
+  "vat_total": "2381.06"
+ },
+ "output_tokens": 472
+}
