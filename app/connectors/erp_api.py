@@ -11,7 +11,10 @@ from app.connectors.base import Booking, DeliveryFailed
 
 
 class ErpApiConnector:
-    name = "erp_api"
+    # One identity for every way into the same ERP (see erp_form.py): an
+    # invoice booked through the API is not booked again through the screens.
+    name = "erp"
+    channel = "api"
 
     def __init__(self, client: httpx.Client) -> None:
         self._client = client

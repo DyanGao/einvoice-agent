@@ -2,8 +2,9 @@
 
 Every DELIVERY_SECONDS it books what has been approved or decided `auto`
 and is not booked yet (app/delivery.py), in every system configured: the
-ERP's API (ERP_URL), the DATEV-style booking lists (EXPORT_DIR) and a
-signed webhook (WEBHOOK_URL, WEBHOOK_SECRET).
+ERP, through its API (ERP_URL) or its screens (ERP_CHANNEL=form); the
+DATEV-style booking lists (EXPORT_DIR); a signed webhook (WEBHOOK_URL,
+WEBHOOK_SECRET).
 Exactly once holds across restarts and crashes; run one loop per database
 all the same, so that two do not send the same booking at the same moment.
 """
@@ -12,12 +13,19 @@ import logging
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import httpx
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.connectors import Connector, CsvExportConnector, ErpApiConnector, WebhookConnector
+from app.connectors import (
+    Connector,
+    CsvExportConnector,
+    ErpApiConnector,
+    ErpFormConnector,
+    WebhookConnector,
+)
 from app.delivery import deliver_due
 from app.settings import Settings
 
@@ -27,9 +35,24 @@ logger = logging.getLogger(__name__)
 def build_connectors(settings: Settings) -> list[Connector]:
     """Every downstream system this installation is configured for."""
     connectors: list[Connector] = []
-    if settings.erp_url is not None:
+    if settings.erp_channel not in ("api", "form"):
+        raise SystemExit(f"ERP_CHANNEL must be api or form, not {settings.erp_channel!r}")
+    if settings.erp_channel == "api" and settings.erp_url is not None:
         client = httpx.Client(base_url=settings.erp_url, timeout=settings.erp_timeout_seconds)
         connectors.append(ErpApiConnector(client))
+    if settings.erp_channel == "form":
+        ui_url = settings.erp_ui_url or settings.erp_url
+        if ui_url is None:
+            raise SystemExit("ERP_CHANNEL=form needs ERP_UI_URL (or ERP_URL)")
+        hosts = set(settings.browser_allowed_hosts) or {urlsplit(ui_url).hostname}
+        try:
+            connectors.append(
+                ErpFormConnector(
+                    ui_url, allowed_hosts=hosts, log_dir=Path(settings.browser_log_dir)
+                )
+            )
+        except ValueError as exc:
+            raise SystemExit(f"browser connector not configured: {exc}") from exc
     if settings.export_dir is not None:
         connectors.append(CsvExportConnector(Path(settings.export_dir)))
     if settings.webhook_url is not None:

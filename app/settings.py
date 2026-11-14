@@ -33,6 +33,15 @@ class Settings:
     delivery_seconds: float = 10.0
     # Folder for the DATEV-style booking lists; None = no CSV export.
     export_dir: str | None = None
+    # How invoices get into the ERP: "api" (POST /booked-invoices) or, where
+    # an ERP has no booking API, "form" (its HTML screens, with a browser).
+    erp_channel: str = "api"
+    # Where the ERP's screens are, if not at erp_url.
+    erp_ui_url: str | None = None
+    # Hosts the browser may reach; empty = only the host of the ERP's screens.
+    browser_allowed_hosts: tuple[str, ...] = ()
+    # Action logs and failure screenshots of the browser connector.
+    browser_log_dir: str = "data/browser"
     # Receiver of signed bookings, and the shared secret; None = no webhook.
     webhook_url: str | None = None
     webhook_secret: str | None = None
@@ -58,6 +67,14 @@ class Settings:
             bank_watch_seconds=float(os.environ.get("BANK_WATCH_SECONDS", "300")),
             delivery_seconds=float(os.environ.get("DELIVERY_SECONDS", "10")),
             export_dir=os.environ.get("EXPORT_DIR") or None,
+            erp_channel=os.environ.get("ERP_CHANNEL") or "api",
+            erp_ui_url=os.environ.get("ERP_UI_URL") or None,
+            browser_allowed_hosts=tuple(
+                host.strip()
+                for host in os.environ.get("BROWSER_ALLOWED_HOSTS", "").split(",")
+                if host.strip()
+            ),
+            browser_log_dir=os.environ.get("BROWSER_LOG_DIR") or "data/browser",
             webhook_url=os.environ.get("WEBHOOK_URL") or None,
             webhook_secret=os.environ.get("WEBHOOK_SECRET") or None,
         )

@@ -5,18 +5,19 @@ No authentication: it is test equipment and listens on localhost only.
 """
 
 from collections.abc import Iterator
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, or_, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, selectinload
 
 from mock_erp import db
+from mock_erp.bookings import Booking, book, booked_json
+from mock_erp.ui import add_ui
 
 Limit = Annotated[int, Query(ge=1, le=200)]
 Offset = Annotated[int, Query(ge=0)]
@@ -83,96 +84,10 @@ def _transaction(row: db.BankTransactionRow) -> dict:
     }
 
 
-class Booking(BaseModel):
-    """An invoice to book, as a connector sends it."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    supplier_id: str
-    number: str
-    issue_date: date
-    due_date: date | None = None
-    currency: str
-    net_total: Decimal
-    vat_total: Decimal | None = None
-    gross_total: Decimal
-    amount_due: Decimal
-    po_number: str | None = None
-    iban: str | None = None
-    # The sender's own reference for the invoice.
-    reference: str
-
-
-def _cents_or_none(amount: Decimal | None) -> int | None:
-    return None if amount is None else db.cents(amount)
-
-
-def _booking_columns(booking: Booking) -> dict:
-    return {
-        "supplier_id": booking.supplier_id,
-        "number": booking.number,
-        "issue_date": booking.issue_date,
-        "due_date": booking.due_date,
-        "currency": booking.currency,
-        "net_cents": db.cents(booking.net_total),
-        "vat_cents": _cents_or_none(booking.vat_total),
-        "gross_cents": db.cents(booking.gross_total),
-        "amount_due_cents": db.cents(booking.amount_due),
-        "po_number": booking.po_number,
-        "iban": booking.iban,
-        "reference": booking.reference,
-    }
-
-
-def _booked(row: db.BookedInvoiceRow) -> dict:
-    return {
-        "id": row.id,
-        "supplier_id": row.supplier_id,
-        "number": row.number,
-        "issue_date": row.issue_date.isoformat(),
-        "due_date": None if row.due_date is None else row.due_date.isoformat(),
-        "currency": row.currency,
-        "net_total": db.euros(row.net_cents),
-        "vat_total": None if row.vat_cents is None else db.euros(row.vat_cents),
-        "gross_total": db.euros(row.gross_cents),
-        "amount_due": db.euros(row.amount_due_cents),
-        "po_number": row.po_number,
-        "iban": row.iban,
-        "reference": row.reference,
-        "channel": row.channel,
-        "booked_at": row.booked_at,
-    }
-
-
-def book(active: Session, booking: Booking, key: str, channel: str) -> tuple[dict, bool]:
-    """Book once per key: the booking, and whether it is new. The same key
-    with other content is a sender's mistake, not a second invoice."""
-    try:
-        columns = _booking_columns(booking)
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-    existing = active.scalar(
-        select(db.BookedInvoiceRow).where(db.BookedInvoiceRow.idempotency_key == key)
-    )
-    if existing is not None:
-        if any(getattr(existing, name) != value for name, value in columns.items()):
-            raise HTTPException(409, f"key {key} was already used for a different booking")
-        return _booked(existing), False
-    if active.get(db.SupplierRow, booking.supplier_id) is None:
-        raise HTTPException(422, f"no supplier {booking.supplier_id}")
-    row = db.BookedInvoiceRow(
-        idempotency_key=key,
-        channel=channel,
-        booked_at=datetime.now(UTC).isoformat(timespec="seconds"),
-        **columns,
-    )
-    active.add(row)
-    active.commit()
-    return _booked(row), True
-
-
-def create_app(engine: Engine) -> FastAPI:
+def create_app(engine: Engine, ui_quirk: str | None = None) -> FastAPI:
+    """`ui_quirk` changes the HTML screens for the browser connector's tests (mock_erp/ui.py)."""
     app = FastAPI(title="mock ERP")
+    add_ui(app, engine, ui_quirk)
 
     def session() -> Iterator[Session]:
         with Session(engine) as active:
@@ -327,14 +242,14 @@ def create_app(engine: Engine) -> FastAPI:
         if reference is not None:
             query = query.where(db.BookedInvoiceRow.reference == reference)
         rows = active.scalars(query.order_by(db.BookedInvoiceRow.id).limit(limit).offset(offset))
-        return {"booked_invoices": [_booked(row) for row in rows]}
+        return {"booked_invoices": [booked_json(row) for row in rows]}
 
     @app.get("/booked-invoices/{booking_id}")
     def booked_invoice(booking_id: int, active: Db) -> dict:
         row = active.get(db.BookedInvoiceRow, booking_id)
         if row is None:
             raise HTTPException(404, "booking not found")
-        return _booked(row)
+        return booked_json(row)
 
     return app
 

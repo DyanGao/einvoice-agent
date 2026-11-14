@@ -87,6 +87,11 @@ def booking_for(document: DocumentRow) -> Booking:
     )
 
 
+def _channel(connector: Connector) -> str | None:
+    """Which way into the downstream system, where a connector has several."""
+    return getattr(connector, "channel", None)
+
+
 def _wait(attempts: int) -> timedelta:
     return min(FIRST_RETRY * 2 ** (attempts - 1), LONGEST_WAIT)
 
@@ -122,7 +127,13 @@ def _claim(
         except NotBookable as exc:
             delivery.status, delivery.last_error = FAILED, str(exc)
             document.deliveries.append(delivery)
-            _event(document, "delivery_failed", connector=connector.name, error=str(exc))
+            _event(
+                document,
+                "delivery_failed",
+                connector=connector.name,
+                channel=_channel(connector),
+                error=str(exc),
+            )
             return None
         document.deliveries.append(delivery)
     if delivery.status != PENDING or _aware(delivery.next_attempt_at) > now:
@@ -146,7 +157,14 @@ def _record(
     if error is None:
         delivery.status, delivery.external_ref, delivery.delivered_at = DELIVERED, ref, now
         delivery.last_error = None
-        _event(document, "delivered", connector=connector.name, ref=ref, attempt=delivery.attempts)
+        _event(
+            document,
+            "delivered",
+            connector=connector.name,
+            channel=_channel(connector),
+            ref=ref,
+            attempt=delivery.attempts,
+        )
         return
     message, retryable = str(error), error.retryable
     delivery.last_error = message
@@ -156,6 +174,7 @@ def _record(
         document,
         "delivery_failed",
         connector=connector.name,
+        channel=_channel(connector),
         error=message,
         attempt=delivery.attempts,
         will_retry=delivery.status == PENDING,
