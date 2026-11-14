@@ -20,6 +20,7 @@ import re
 from pathlib import Path
 
 from app.extract import LlmExtractor, ReplayLlm
+from app.extract.confidence import Calibration
 from app.extract.llm import recording_path
 from app.settings import Settings
 from eval.generators.structured import GOLD_FILE
@@ -33,6 +34,7 @@ from eval.run import (
     read_jsonl,
 )
 from eval.score import Bucket, score
+from eval.sweep import THRESHOLDS_FILE, documents
 
 # USD per million tokens (input, output), Anthropic list price, November 2026.
 PRICES = {"claude-opus-5-5": (4.0, 20.0)}
@@ -118,6 +120,26 @@ def micro_f1(by_kind: dict) -> float | None:
     return 2 * precision * recall / (precision + recall)
 
 
+def residual_errors(out: Path) -> list[dict] | None:
+    """Every document the application's pipeline still misread, on both
+    splits, and what kept it from being booked at the current threshold."""
+    sets = [out / name for name in SETS if (out / name / predictions_file(LLM_RULES)).exists()]
+    if not sets:
+        return None
+    threshold = json.loads(THRESHOLDS_FILE.read_text(encoding="utf-8"))["min_field_confidence"]
+    return [
+        {
+            "set": doc.set_name,
+            "split": doc.split,
+            "id": doc.id,
+            "wrong": sorted(doc.wrong),
+            "held_back_by": doc.causes(threshold),
+        }
+        for doc in documents(sets, LLM_RULES, Calibration.load())
+        if doc.wrong
+    ]
+
+
 def _read(path: Path) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
@@ -149,6 +171,7 @@ def collect(out: Path, recordings: Path, model: str, effort: str | None) -> dict
             system: _read(out / f"decision-{system}.json") for system in (BASELINE, LLM_RULES)
         },
         "probes": _read(out / "probes" / "report.json"),
+        "residual_errors": residual_errors(out),
     }
 
 
@@ -383,6 +406,29 @@ def details(results: dict) -> str:
             "Held back at the operating point, by reason: "
             + ", ".join(f"{k} {v}" for k, v in section["held_back"].items())
             + "."
+        )
+
+    parts.append("### What the pipeline still misreads (both splits)")
+    residual = results["residual_errors"]
+    if residual is None:
+        parts.append(NOT_RUN)
+    elif not residual:
+        parts.append("Nothing: every field of every document was read right.")
+    else:
+        parts.append(
+            _table(
+                ["set", "split", "document", "wrong", "held back by"],
+                [
+                    [
+                        r["set"],
+                        r["split"],
+                        r["id"],
+                        ", ".join(f"`{w}`" for w in r["wrong"]),
+                        ", ".join(r["held_back_by"]) or "**nothing: booked**",
+                    ]
+                    for r in residual
+                ],
+            )
         )
 
     parts.append("### Injection probes")

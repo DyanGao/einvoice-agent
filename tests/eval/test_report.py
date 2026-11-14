@@ -178,3 +178,15 @@ def test_threshold_that_books_nothing_has_no_error_bound_and_is_not_called_not_r
     results["decision"]["llm-rules"] = decision
     row = next(line for line in details(results).splitlines() if line.startswith("| 0.99"))
     assert row.endswith("| – |")
+
+
+def test_misread_document_is_listed_with_what_held_it_back(pdf_set):
+    (row,) = collect(pdf_set.parent, pdf_set.parent / "r", MODEL, None)["residual_errors"]
+    assert (row["id"], row["split"], row["wrong"]) == ("b", "test", ["currency"])
+    assert isinstance(row["held_back_by"], list)
+
+
+def test_misread_document_that_nothing_held_back_is_called_booked(pdf_set):
+    results = collect(pdf_set.parent, pdf_set.parent / "r", MODEL, None)
+    results["residual_errors"][0]["held_back_by"] = []
+    assert "**nothing: booked**" in details(results)
