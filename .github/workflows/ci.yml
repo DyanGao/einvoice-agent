@@ -76,10 +76,21 @@ jobs:
       - name: Injection probes
         run: make eval-probes
 
-      # The README story, end to end against the real validator and Postgres:
-      # 5 in, 4 booked without review, 1 flagged for its price, approved, booked.
+      # The README story in the app image, against the real validator and
+      # Postgres: 5 in, 4 booked without review, 1 flagged, approved, booked.
       - name: Demo
         run: make demo
+
+      # The whole application in Docker, as README's quickstart starts it:
+      # an invoice uploaded to the API is processed, decided and booked.
+      - name: Full stack in Docker
+        run: |
+          make stack
+          make stack-check
+
+      - name: Full stack logs
+        if: failure()
+        run: docker compose logs --tail 100 migrate api worker deliver mock-erp ui
 
       - name: Matching eval
         run: make eval-matching

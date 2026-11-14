@@ -1,3 +1,29 @@
+# Everything runs here: `docker compose up -d` starts the whole application
+# (the demo: `make demo`). For local development with uv, `make up` starts
+# only postgres, redis and the validator. Every port is bound to localhost.
+# Secrets come from .env (ANTHROPIC_API_KEY for PDFs and scans); the values
+# below win over .env, so the services find each other inside the network.
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: deploy/app/Dockerfile
+  image: einvoice-agent-app
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    DATABASE_URL: postgresql+psycopg://einvoice:einvoice@postgres:5432/einvoice
+    REDIS_URL: redis://redis:6379/0
+    VALIDATOR_URL: http://validator:8080
+    ERP_URL: http://mock-erp:8100
+    UI_ORIGIN: http://localhost:3000
+  restart: unless-stopped
+
+x-after-migrate: &after-migrate
+  migrate:
+    condition: service_completed_successfully
+
 services:
   postgres:
     image: postgres:17
@@ -39,5 +65,123 @@ services:
       retries: 12
     restart: unless-stopped
 
+  # Brings the schema up to date once, before anything uses the database.
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # Synthetic suppliers, orders and bank transactions; seeds itself on first
+  # start. Reseed: docker compose run --rm mock-erp python -m mock_erp.seed
+  mock-erp:
+    <<: *app
+    command:
+      - sh
+      - -c
+      - >-
+        [ -f data/mock_erp/erp.sqlite3 ] || python -m mock_erp.seed --out /tmp/world;
+        exec uvicorn --factory mock_erp.main:create_app_from_env --host 0.0.0.0 --port 8100
+    environment:
+      MOCK_ERP_DATABASE_URL: sqlite:////app/data/mock_erp/erp.sqlite3
+    volumes:
+      - erpdata:/app/data/mock_erp
+    ports:
+      - "127.0.0.1:8100:8100"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  api:
+    <<: *app
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - feedback:/app/data/private
+    depends_on:
+      <<: *after-migrate
+      redis:
+        condition: service_healthy
+      validator:
+        condition: service_healthy
+      mock-erp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      <<: *after-migrate
+      redis:
+        condition: service_healthy
+      validator:
+        condition: service_healthy
+      mock-erp:
+        condition: service_healthy
+
+  # Asks the ERP for new bank transfers and matches the invoices they pay.
+  watch:
+    <<: *app
+    command: ["python", "-m", "app.watch"]
+    depends_on:
+      <<: *after-migrate
+      mock-erp:
+        condition: service_healthy
+
+  # Books approved and auto-decided invoices in the ERP, exactly once.
+  deliver:
+    <<: *app
+    command: ["python", "-m", "app.deliver"]
+    depends_on:
+      <<: *after-migrate
+      mock-erp:
+        condition: service_healthy
+
+  ui:
+    build:
+      context: ui
+      dockerfile: ../deploy/ui/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    image: einvoice-agent-ui
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  # The README demo, run on demand: make demo
+  demo:
+    <<: *app
+    command: ["python", "-m", "eval.demo"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://einvoice:einvoice@postgres:5432/einvoice
+      VALIDATOR_URL: http://validator:8080
+      DEMO_IN_DOCKER: "1"
+    profiles: ["demo"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      validator:
+        condition: service_healthy
+    restart: "no"
+
 volumes:
   pgdata:
+  erpdata:
+  feedback:
