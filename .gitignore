@@ -53,3 +53,5 @@ ui/tsconfig.tsbuildinfo
 data/mock_erp/
 # Action logs and screenshots of the browser connector (invoice data).
 data/browser/
+# make demo's own mock ERP (its database lives in Postgres).
+data/demo/

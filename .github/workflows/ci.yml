@@ -76,6 +76,11 @@ jobs:
       - name: Injection probes
         run: make eval-probes
 
+      # The README story, end to end against the real validator and Postgres:
+      # 5 in, 4 booked without review, 1 flagged for its price, approved, booked.
+      - name: Demo
+        run: make demo
+
       - name: Matching eval
         run: make eval-matching
 
