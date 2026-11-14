@@ -108,6 +108,20 @@ def test_total_off_by_one_cent_is_rounding_not_a_mismatch():
     assert totals(invoice(gross_total=Decimal("119.01")), NO_CONTEXT) == []
 
 
+def test_vat_rounded_the_other_way_by_one_cent_is_not_a_mismatch():
+    """19 % of 838.89 is 159.3891: 159.39 rounded, and 159.40 is one cent off."""
+    draft = invoice(
+        lines=(),
+        vat_breakdown=(group(taxable_amount=Decimal("838.89"), tax_amount=Decimal("159.40")),),
+        line_net_total=None,
+        net_total=Decimal("838.89"),
+        vat_total=Decimal("159.40"),
+        gross_total=Decimal("998.29"),
+        amount_due=None,
+    )
+    assert totals(draft, NO_CONTEXT) == []
+
+
 def test_total_off_by_two_cents_is_a_mismatch():
     assert types(totals(invoice(gross_total=Decimal("119.02")), NO_CONTEXT)) == [
         FindingType.TOTALS_MISMATCH
@@ -273,11 +287,37 @@ def test_same_supplier_and_amount_with_a_similar_number_or_the_same_date_is_a_ne
     [
         {"number": "RE-101", "gross_total": Decimal("238.00")},
         {"number": "2026-77", "issue_date": date(2026, 4, 1)},
+        # Two equal part deliveries, billed a week apart under consecutive numbers.
+        {"number": "RE-101", "issue_date": date(2026, 3, 8)},
     ],
-    ids=["next-number-other-amount", "same-amount-a-month-later"],
+    ids=["next-number-other-amount", "same-amount-a-month-later", "next-number-same-amount"],
 )
 def test_the_suppliers_next_invoice_is_not_a_near_duplicate(fields):
     assert duplicates(invoice(**fields), on_file()) == []
+
+
+def test_similar_number_and_same_amount_is_a_near_duplicate_when_a_date_is_unknown():
+    undated = invoice(number="RE-10O", issue_date=None)
+    assert types(duplicates(undated, on_file())) == [FindingType.NEAR_DUPLICATE]
+
+
+def billed_before(**fields) -> CheckContext:
+    known = on_file(**fields).known_invoices
+    return CheckContext(known_invoices=known, delivery_id="LS-000007", delivery_billed_by=known)
+
+
+def test_delivery_billed_before_under_another_number_and_date_is_reported():
+    again = invoice(number="K-555", issue_date=date(2026, 3, 20))
+    (finding,) = duplicates(again, billed_before())
+    assert (finding.type, finding.severity, finding.detail) == (
+        FindingType.DELIVERY_ALREADY_BILLED,
+        Severity.REVIEW,
+        {"document_id": "doc-1", "number": "RE-100", "delivery": "LS-000007"},
+    )
+
+
+def test_duplicate_is_not_reported_a_second_time_for_its_delivery():
+    assert types(duplicates(invoice(), billed_before())) == [FindingType.DUPLICATE]
 
 
 def test_edit_distance_counts_single_character_changes():

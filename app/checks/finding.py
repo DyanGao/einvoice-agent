@@ -17,6 +17,8 @@ class FindingType(StrEnum):
     UNUSUAL_DOCUMENT_TYPE = "unusual_document_type"
     DUPLICATE = "duplicate"
     NEAR_DUPLICATE = "near_duplicate"
+    # The delivery this invoice bills was already billed by another invoice.
+    DELIVERY_ALREADY_BILLED = "delivery_already_billed"
     UNKNOWN_SUPPLIER = "unknown_supplier"
     IBAN_CHANGED = "iban_changed"
     MISSING_PO = "missing_po"

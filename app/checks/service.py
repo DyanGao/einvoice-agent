@@ -40,10 +40,29 @@ CHECKS_ACTOR = "system"
 def _known_invoices(session: Session, document: DocumentRow) -> tuple[KnownInvoice, ...]:
     """Every other document's invoice, as far as duplicate detection needs it.
     Reads all drafts; fine for thousands of documents, not for millions."""
-    known = []
     rows = session.execute(
         select(DraftRow.document_id, DraftRow.data).where(DraftRow.document_id != document.id)
     )
+    return _as_known(rows)
+
+
+def _billed_before(
+    session: Session, document: DocumentRow, match: Match
+) -> tuple[KnownInvoice, ...]:
+    """The other documents matched to the delivery this one was matched to."""
+    if match.delivery_id is None:
+        return ()
+    rows = session.execute(
+        select(DraftRow.document_id, DraftRow.data)
+        .join(MatchRow, MatchRow.document_id == DraftRow.document_id)
+        .where(MatchRow.delivery_id == match.delivery_id, MatchRow.document_id != document.id)
+        .order_by(DraftRow.document_id)
+    )
+    return _as_known(rows)
+
+
+def _as_known(rows) -> tuple[KnownInvoice, ...]:
+    known = []
     for document_id, data in rows:
         seller = data.get("seller") or {}
         try:
@@ -176,6 +195,8 @@ class Checker:
                 purchase_order_note=_order_note(draft, match),
                 purchase_order_problem=match.explanation[0] if undecided else None,
                 known_invoices=known,
+                delivery_id=match.delivery_id,
+                delivery_billed_by=_billed_before(session, document, match),
                 settings=self.settings,
             ),
             match,

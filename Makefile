@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions
 
 install:
 	uv sync
@@ -139,3 +139,10 @@ erp:
 eval-matching:
 	uv run python -m eval.match --system baseline --split test
 	uv run python -m eval.match --split test --gate 0.95
+
+# The checks on the exception set: 120 invoices with one planted problem each
+# and 120 clean ones. Fails if a changed bank account or a duplicate is missed
+# in more than 5 % of the held-out cases.
+eval-exceptions:
+	uv run python -m eval.exceptions --split dev
+	uv run python -m eval.exceptions --split test --gate 0.95

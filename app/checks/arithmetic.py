@@ -7,7 +7,7 @@ present; a missing value is not a wrong sum.
 """
 
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from app.extract.draft import InvoiceDraft
 
@@ -26,7 +26,11 @@ class RuleResult:
 
     @property
     def holds(self) -> bool:
-        return abs(self.expected - self.actual) <= TOLERANCE
+        """Within a cent of the expected amount as an invoice would print it.
+        Compared with the unrounded product, a tax of 159.40 would be 1.09
+        cents from 159.3891 and fail, although it is one cent from 159.39."""
+        printed = self.expected.quantize(TOLERANCE, rounding=ROUND_HALF_UP)
+        return abs(printed - self.actual) <= TOLERANCE
 
 
 def evaluate(draft: InvoiceDraft) -> list[RuleResult]:

@@ -183,11 +183,19 @@ def edit_distance(a: str, b: str) -> int:
 
 
 def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
-    """The same invoice again (same supplier and number), or one that looks
-    like it: same supplier and amount with almost the same number or the same
-    date — what a re-sent, re-scanned or retyped invoice looks like."""
+    """The same invoice again (same supplier and number); one that looks like
+    it (same supplier, amount and date — a re-sent, re-scanned or retyped
+    invoice); or one that bills a delivery another invoice already billed,
+    whatever its number and date.
+
+    A similar number alone does not make a near-duplicate: a supplier's
+    consecutive invoices have similar numbers, and two equal part deliveries
+    have the same amount as well. Only where a date is unknown does the
+    number stand in for it.
+    """
     number = _key(draft.number)
     findings = []
+    reported = set()
     for known in context.known_invoices:
         if not _same_seller(draft, known):
             continue
@@ -202,6 +210,7 @@ def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
                     detail=detail,
                 )
             )
+            reported.add(known.document_id)
             continue
         same_amount = draft.gross_total is not None and draft.gross_total == known.gross_total
         similar_number = (
@@ -210,7 +219,9 @@ def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
             and edit_distance(number, _key(known.number)) <= NEAR_NUMBER_DISTANCE
         )
         same_date = draft.issue_date is not None and draft.issue_date == known.issue_date
-        if same_amount and (similar_number or same_date):
+        undated = draft.issue_date is None or known.issue_date is None
+        if same_amount and (same_date or (similar_number and undated)):
+            reported.add(known.document_id)
             findings.append(
                 Finding(
                     type=FindingType.NEAR_DUPLICATE,
@@ -223,6 +234,25 @@ def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
                     detail=detail,
                 )
             )
+    for known in context.delivery_billed_by:
+        if known.document_id in reported:
+            continue
+        findings.append(
+            Finding(
+                type=FindingType.DELIVERY_ALREADY_BILLED,
+                severity=Severity.REVIEW,
+                message=(
+                    f"delivery {context.delivery_id} was already billed with invoice "
+                    f"{known.number}, on file"
+                ),
+                fields=("number",),
+                detail={
+                    "document_id": known.document_id,
+                    "number": known.number,
+                    "delivery": context.delivery_id,
+                },
+            )
+        )
     return findings
 
 
