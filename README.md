@@ -65,7 +65,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Data & privacy
 - Repo contains **only synthetic or fully anonymized** invoices
-- Local-model mode for on-prem use; no document leaves the machine
+- E-invoices (XRechnung, ZUGFeRD) are parsed and validated on the machine; no model sees them
+- PDFs and scans are sent to the Anthropic API to be read (`EXTRACTOR=llm`, the default). To keep every document on the machine, set `EXTRACTOR=baseline` (rule-based, far less accurate: see Results) or `EXTRACTOR=none` (PDFs and scans are not read; they are marked "extraction failed: no extractor configured"). A local vision model is not built yet; it would sit behind the same extractor interface
 - Not tax advice; archiving rules (GoBD) are out of scope for v1 and documented as such
 
 ## Roadmap
