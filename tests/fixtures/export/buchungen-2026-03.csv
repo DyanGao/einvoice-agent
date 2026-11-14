@@ -1,0 +1,3 @@
+Belegdatum;Belegnummer;Kreditor;Nettobetrag;Steuerbetrag;Bruttobetrag;Zahlbetrag;Währung;Fällig am;Bestellnummer;IBAN;Referenz
+01.03.2026;RE-2026-00042;S001;1234,50;234,56;1469,06;1469,06;EUR;31.03.2026;PO-123456;DE89370400440532013000;doc-1
+15.03.2026;2026/0007;S002;10,00;;10,00;10,00;EUR;;;;doc-2

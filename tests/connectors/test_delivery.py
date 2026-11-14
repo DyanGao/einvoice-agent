@@ -1,5 +1,6 @@
 """Delivering decided invoices to the ERP, exactly once."""
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -11,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 from app import db
 from app.api.main import create_app
 from app.checks.service import Checker
-from app.connectors import DeliveryFailed, ErpApiConnector
+from app.connectors import CsvExportConnector, DeliveryFailed, ErpApiConnector
 from app.db.review import approve
 from app.delivery import deliver_due
 from app.erp import HttpErpClient
@@ -265,3 +266,37 @@ def test_document_detail_says_where_and_as_what_it_was_booked(
         "delivered",
         str(booked["id"]),
     )
+
+
+def test_invoice_goes_to_every_connector_once(
+    session_factory, tmp_path, world, checker, connector, erp_http
+):
+    document_id = process(session_factory, entry_of(world, PO_EXACT), checker)
+    export = CsvExportConnector(tmp_path)
+    for _ in range(2):
+        deliver_due(session_factory, [connector, export], NOW)
+    (listed,) = tmp_path.iterdir()
+    rows = listed.read_text(encoding="cp1252").splitlines()
+    assert (len(bookings(erp_http)), len(rows), rows[1].endswith(document_id)) == (1, 2, True)
+    assert [d[:2] for d in deliveries(session_factory, document_id)] == [
+        ("csv_export", "delivered"),
+        ("erp_api", "delivered"),
+    ]
+
+
+def test_approved_credit_note_is_not_booked_as_an_invoice(
+    session_factory, world, checker, connector, erp_http
+):
+    entry = entry_of(world, PO_EXACT)
+    credit_note = replace(entry, invoice=replace(entry.invoice, type_code="381"))
+    document_id = process(session_factory, credit_note, checker)
+    with session_factory.begin() as session:
+        approve(session, session.get(db.DocumentRow, document_id), "anna")
+    deliver_due(session_factory, [connector], NOW)
+    with session_factory() as session:
+        (delivery,) = session.get(db.DocumentRow, document_id).deliveries
+        assert (bookings(erp_http), delivery.status, "credit notes" in delivery.last_error) == (
+            [],
+            "failed",
+            True,
+        )

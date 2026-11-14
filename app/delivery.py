@@ -60,6 +60,13 @@ def booking_for(document: DocumentRow) -> Booking:
     if document.match is None or document.match.supplier_id is None:
         raise NotBookable("the supplier is not known in the ERP")
     invoice = InvoiceDraft.model_validate(document.draft.data).to_invoice()
+    if invoice.type_code != "380":
+        # A booking has no sign and no document type: a credit note would be
+        # booked as an invoice. Until that exists (deferred), it is booked by hand.
+        raise NotBookable(
+            f"document type {invoice.type_code} is not an ordinary invoice; "
+            "credit notes and other types are booked by hand"
+        )
 
     def text(amount) -> str | None:
         return None if amount is None else str(amount)

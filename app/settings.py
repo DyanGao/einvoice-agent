@@ -31,6 +31,8 @@ class Settings:
     bank_watch_seconds: float = 300.0
     # How often decided invoices are delivered (app/deliver.py).
     delivery_seconds: float = 10.0
+    # Folder for the DATEV-style booking lists; None = no CSV export.
+    export_dir: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -52,4 +54,5 @@ class Settings:
             erp_timeout_seconds=float(os.environ.get("ERP_TIMEOUT_SECONDS", "5")),
             bank_watch_seconds=float(os.environ.get("BANK_WATCH_SECONDS", "300")),
             delivery_seconds=float(os.environ.get("DELIVERY_SECONDS", "10")),
+            export_dir=os.environ.get("EXPORT_DIR") or None,
         )

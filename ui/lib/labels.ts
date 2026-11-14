@@ -80,7 +80,10 @@ const CAUSE: Record<string, string> = {
 
 export const causeLabel = (cause: string) => CAUSE[cause] ?? cause.replaceAll("_", " ");
 
-const CONNECTOR: Record<string, string> = { erp_api: "the ERP" };
+const CONNECTOR: Record<string, string> = {
+  erp_api: "the ERP",
+  csv_export: "the booking list",
+};
 
 export const connectorLabel = (connector: string) =>
   CONNECTOR[connector] ?? connector.replaceAll("_", " ");

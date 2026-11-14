@@ -112,8 +112,9 @@ worker:
 watch:
 	uv run python -m app.watch
 
-# Books every approved or auto-decided invoice in the ERP, exactly once,
-# every DELIVERY_SECONDS (needs ERP_URL; the mock ERP: make erp).
+# Books every approved or auto-decided invoice, exactly once, every
+# DELIVERY_SECONDS: in the ERP (ERP_URL; the mock ERP: make erp) and in the
+# DATEV-style CSV booking lists (EXPORT_DIR), whichever are set.
 deliver:
 	uv run python -m app.deliver
 
