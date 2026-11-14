@@ -14,4 +14,4 @@ eval/recordings
 tests
 ui
 # The package build reads README.md; the local plan stays out.
-IMPLEMENTATION_PLAN.md
+.plan/

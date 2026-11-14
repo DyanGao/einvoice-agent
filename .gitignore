@@ -1,5 +1,8 @@
-# Plans stay local only
+# Plans stay local only: the working plan lives in .plan/. EVAL_PLAN.md is
+# published, because docs/eval-report.md measures against it.
+.plan/
 *_PLAN.md
+!/EVAL_PLAN.md
 
 # Secrets
 .env
