@@ -40,13 +40,15 @@ class LlmExtractor:
         self._model = model
         self._effort = effort
 
-    def extract(self, data: bytes) -> InvoiceDraft:
+    def request(self, data: bytes) -> LlmRequest:
+        """What is sent to the model for this document. Also used by the eval
+        report to find a document's recording, and with it its token counts."""
         fmt = detect(data)
         if fmt.is_structured:
             raise ExtractionError(
                 f"{fmt.value} is a structured e-invoice; it is parsed, not extracted"
             )
-        request = LlmRequest(
+        return LlmRequest(
             model=self._model,
             system=SYSTEM_PROMPT,
             prompt=USER_PROMPT,
@@ -56,7 +58,10 @@ class LlmExtractor:
             schema=WireInvoice.model_json_schema(),
             effort=self._effort,
         )
-        response = self._llm.complete(request)
+
+    def extract(self, data: bytes) -> InvoiceDraft:
+        fmt = detect(data)
+        response = self._llm.complete(self.request(data))
         try:
             wire = WireInvoice.model_validate(response.output)
         except ValidationError as exc:

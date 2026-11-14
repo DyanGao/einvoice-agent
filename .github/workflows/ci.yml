@@ -64,8 +64,6 @@ jobs:
       - name: PDF extraction eval (replay)
         run: make eval-pdf-llm
 
-      # Regression gate: at least 95 % of held-out world invoices matched
-      # to the right order, delivery and payments.
       # Auto-rate vs. error of the decision engine on the replayed text PDFs;
       # warns (does not fail) when the auto-rate drops by more than 5 points.
       - name: Decision eval
@@ -92,6 +90,8 @@ jobs:
         if: failure()
         run: docker compose logs --tail 100 migrate api worker deliver mock-erp ui
 
+      # Regression gate: at least 95 % of held-out world invoices matched
+      # to the right order, delivery and payments.
       - name: Matching eval
         run: make eval-matching
 
@@ -99,6 +99,12 @@ jobs:
       # at least 95 % of the held-out exception cases.
       - name: Exception eval
         run: make eval-exceptions
+
+      # The README table from what the evals above left in eval/out. Scans
+      # replay only where they were recorded, so here they show "not run";
+      # this checks the report still builds, it does not rewrite the README.
+      - name: Eval report
+        run: uv run python -m eval.report
 
       - uses: pnpm/action-setup@v4
         with:
