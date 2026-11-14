@@ -37,7 +37,7 @@ calibration and every rule change were made on dev; the reported numbers are the
 
 | Set | Size | Made by | Ground truth |
 |---|---|---|---|
-| Structured | 200 invoices × UBL, CII, ZUGFeRD = 600 files | `eval/generators/structured.py` | the generator's invoice; parsers also checked against the official XRechnung test suite and ZUGFeRD samples (D10) |
+| Structured | 200 invoices × UBL, CII, ZUGFeRD = 600 files | `eval/generators/structured.py` | the generator's invoice; parsers also checked against the official XRechnung test suite and ZUGFeRD samples ([D10](../ARCHITECTURE.md#5-design-decisions-adr-log)) |
 | Text PDFs | 150 (114 dev / 36 held-out) | `eval/generators/pdf.py`, 10+ layouts, DE/EN; held-out layouts never seen on dev | the canonical invoice behind the PDF |
 | Scans | 100 (76 / 24) | `eval/generators/scans.py`: the PDFs rasterised, skewed, blurred, stamped, JPEG-compressed | as for PDFs |
 | Matching world | 50 suppliers, 425 invoices (124 held-out), orders, deliveries, bank transfers with partials, combined payments and typos | `eval/generators/world.py` | the world's links |
@@ -193,7 +193,7 @@ needless review.
    that paid a twin invoice not yet on file, and nothing would have corrected it. **Fixed**: a payment
    matched by amount alone keeps the invoice open until a transfer quoting it arrives.
 4. **Credit notes would have been booked as invoices** (delivery design). A booking carries no sign.
-   **Fixed**: only invoices (type 380) are delivered; credit notes stay in review (D9).
+   **Fixed**: only invoices (type 380) are delivered; credit notes stay in review ([D9](../ARCHITECTURE.md#5-design-decisions-adr-log)).
 5. **The threshold rule picked the one wrong document** (decision sweep). See Method. **Fixed** by the
    marginal rule.
 6. **A re-issued invoice went unnoticed** (exceptions, 2 of 2 cases). Same delivery, new number, later
@@ -231,7 +231,7 @@ needless review.
   the wrong field (cases 1 and 2).
 - **Record and replay made the model eval a CI gate.** Free, deterministic, and any change to prompt,
   schema, model or document shows up as a missing recording, not as a silent drift.
-- **Rules were enough for matching** (D11). They reach 100 % held-out and 99.5 % on two seeds never looked
+- **Rules were enough for matching** ([D11](../ARCHITECTURE.md#5-design-decisions-adr-log)). They reach 100 % held-out and 99.5 % on two seeds never looked
   at; what remains is undecidable from the data for any reader. An agent would have added cost and a
   place for injected text to act.
 - **Same author, same blind spots.** Generators, checks and matcher were written together. Held-out

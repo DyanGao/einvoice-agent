@@ -3,7 +3,7 @@
 This is the deterministic first pass of decision D6: it settles what the
 references, the lines and the amounts settle, and says "ambiguous" or
 "nothing found" for the rest instead of forcing a match. What it leaves open
-is what a tool-calling agent may look at later.
+goes to a person: no tool-calling agent follows it in v1 (decision D11).
 """
 
 import re
