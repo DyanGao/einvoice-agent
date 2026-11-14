@@ -107,7 +107,7 @@ def _with_items(invoice: CanonicalInvoice, items: tuple[Item, ...]) -> Canonical
     )
 
 
-def _raise_prices(invoice: CanonicalInvoice, positions: set[int], percent: int) -> CanonicalInvoice:
+def raise_prices(invoice: CanonicalInvoice, positions: set[int], percent: int) -> CanonicalInvoice:
     items = tuple(
         replace(
             item,
@@ -204,9 +204,9 @@ def _duplicate(invoice: CanonicalInvoice, variant: str, rng: random.Random) -> C
 
 def _price(invoice: CanonicalInvoice, variant: str, rng: random.Random) -> CanonicalInvoice:
     if variant == "all_lines_plus_5_percent":
-        return _raise_prices(invoice, set(range(len(invoice.items))), 5)
+        return raise_prices(invoice, set(range(len(invoice.items))), 5)
     percent = int(variant.split("_")[1])
-    return _raise_prices(invoice, {rng.randrange(len(invoice.items))}, percent)
+    return raise_prices(invoice, {rng.randrange(len(invoice.items))}, percent)
 
 
 def _changed_iban(invoice: CanonicalInvoice, variant: str, rng: random.Random) -> CanonicalInvoice:
@@ -263,7 +263,7 @@ def _price_within_tolerance(
         for percent in (1, 2):
             price = money(item.unit_price * (100 + percent) / 100)
             if Decimal(0) < (price - item.unit_price) / item.unit_price <= tolerance:
-                return _raise_prices(invoice, {position}, percent)
+                return raise_prices(invoice, {position}, percent)
     return None
 
 
