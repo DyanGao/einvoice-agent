@@ -168,10 +168,16 @@ class Checker:
     decisions: DecisionSettings = field(default_factory=DecisionSettings.load)
 
     def context(
-        self, session: Session, document: DocumentRow, draft: InvoiceDraft
+        self,
+        session: Session,
+        document: DocumentRow,
+        draft: InvoiceDraft,
+        *,
+        erp_must_answer: bool = False,
     ) -> tuple[CheckContext, Match | None]:
         """What the checks need, and the match it is based on (None when the
-        ERP could not be asked)."""
+        ERP could not be asked). With `erp_must_answer`, an ERP that does not
+        answer raises ErpUnavailable instead of being noted."""
         known = _known_invoices(session, document)
         if self.erp is None:
             return (
@@ -199,6 +205,8 @@ class Checker:
                     draft, supplier, orders, self.erp.transactions_to(supplier.ibans), peers
                 )
         except ErpUnavailable as exc:
+            if erp_must_answer:
+                raise
             logger.warning("document %s: ERP not available for the checks: %s", document.id, exc)
             return (
                 CheckContext(
@@ -233,19 +241,30 @@ class Checker:
             match,
         )
 
-    def check(self, session: Session, document: DocumentRow) -> list[Finding]:
+    def check(
+        self,
+        session: Session,
+        document: DocumentRow,
+        *,
+        trigger: str | None = None,
+        erp_must_answer: bool = False,
+    ) -> list[Finding]:
         """Match and check the document's current draft, decide whether it
         may be booked without a person (app/decide), and store all three.
 
         The decision sets the review state: an extracted PDF read with
         confidence can skip review, a structured invoice the validator
         accepted can still need it. An approved document is left alone: its
-        findings are what the reviewer saw.
+        findings are what the reviewer saw (see `match_payments`).
+
+        `trigger` says why it runs again, for the audit trail; a run that
+        `erp_must_answer` raises ErpUnavailable and changes nothing when the
+        ERP does not answer, instead of noting the outage on the document.
         """
         if document.draft is None or document.review_state == ReviewState.APPROVED.value:
             return []
         draft = InvoiceDraft.model_validate(document.draft.data)
-        context, match = self.context(session, document, draft)
+        context, match = self.context(session, document, draft, erp_must_answer=erp_must_answer)
         _store_match(session, document, match)
         findings = run_checks(draft, context)
         document.findings = [
@@ -286,11 +305,51 @@ class Checker:
                     "matched_payments": None
                     if match is None
                     else [p.bank_transaction_id for p in match.payments],
-                },
+                }
+                | ({} if trigger is None else {"trigger": trigger}),
             )
         )
         session.flush()
         return findings
+
+    def match_payments(self, session: Session, document: DocumentRow, *, trigger: str) -> bool:
+        """Look for the payments of an approved invoice again, and nothing
+        else: order, delivery, findings and decision stay what the reviewer
+        approved. Raises ErpUnavailable if the ERP does not answer. Returns
+        whether the payments changed."""
+        if self.erp is None or document.match is None:
+            return False
+        draft = InvoiceDraft.model_validate(document.draft.data)
+        context, match = self.context(session, document, draft, erp_must_answer=True)
+        if match is None:
+            return False
+        stored = document.match
+        before = [p["bank_transaction_id"] for p in stored.payments]
+        after = [p.bank_transaction_id for p in match.payments]
+        if (before, stored.payment_basis) == (after, match.payment_basis.value):
+            return False
+        stored.payments = [
+            {"bank_transaction_id": p.bank_transaction_id, "amount": str(p.amount)}
+            for p in match.payments
+        ]
+        stored.payment_basis = match.payment_basis.value
+        if (match.po_number, match.delivery_id) == (stored.po_number, stored.delivery_id):
+            stored.explanation = list(match.explanation)
+        else:
+            stored.explanation = [
+                *stored.explanation,
+                f"payments matched again; order {stored.po_number} and delivery "
+                f"{stored.delivery_id} stay as approved",
+            ]
+        document.audit_events.append(
+            AuditEventRow(
+                event="payments_matched",
+                actor=CHECKS_ACTOR,
+                detail={"trigger": trigger, "before": before, "after": after},
+            )
+        )
+        session.flush()
+        return True
 
 
 def build_checker(erp_url: str | None, timeout_seconds: float) -> Checker:

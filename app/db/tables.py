@@ -178,6 +178,18 @@ class DecisionRow(Base):
     document: Mapped[DocumentRow] = relationship(back_populates="decision")
 
 
+class SeenBankTransactionRow(Base):
+    """Bank transactions of the ERP the bank watch has already acted on
+    (app/rematch.py). Only the last days are kept: the watch asks the ERP
+    for transactions booked since a little before the latest one seen."""
+
+    __tablename__ = "seen_bank_transactions"
+
+    id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    booking_date: Mapped[date] = mapped_column(index=True)
+    seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 def invoice_columns(invoice: Invoice) -> dict:
     return {
         "number": invoice.number,

@@ -22,6 +22,7 @@ from app.db.tables import (
     FindingRow,
     InvoiceRow,
     MatchRow,
+    SeenBankTransactionRow,
     ValidationRow,
 )
 
@@ -37,6 +38,7 @@ __all__ = [
     "NotReviewable",
     "ReviewError",
     "ReviewState",
+    "SeenBankTransactionRow",
     "ValidationRow",
     "apply_outcome",
     "approve",

@@ -124,6 +124,26 @@ class HttpErpClient:
             for row in self._all("/bank-transactions", {"iban": iban}, "bank_transactions")
         ]
 
+    def transactions_since(self, since: date | None) -> list[BankTransaction]:
+        """Every outgoing payment booked on or after `since` (all if None)."""
+        params = {} if since is None else {"date_from": since.isoformat()}
+        return [
+            BankTransaction(
+                id=row["id"],
+                booking_date=date.fromisoformat(row["booking_date"]),
+                amount=Decimal(row["amount"]),
+                counterparty_name=row["counterparty_name"],
+                counterparty_iban=row["counterparty_iban"],
+                purpose=row["purpose"],
+            )
+            for row in self._all("/bank-transactions", params, "bank_transactions")
+        ]
+
+    def supplier_with_iban(self, iban: str) -> Supplier | None:
+        """The supplier this account is on file for, if exactly one."""
+        found = self._get("/suppliers", {"iban": iban})["suppliers"]
+        return _supplier(found[0]) if len(found) == 1 else None
+
     def find_supplier(self, vat_id: str | None, name: str | None) -> Supplier | None:
         """By VAT ID if the invoice has one; otherwise by name, and then only
         if exactly one supplier carries that name."""
