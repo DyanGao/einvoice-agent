@@ -53,6 +53,7 @@ const FINDING: Record<string, string> = {
   unusual_document_type: "Not an ordinary invoice",
   duplicate: "Duplicate",
   near_duplicate: "Possible duplicate",
+  delivery_already_billed: "Delivery already billed",
   unknown_supplier: "Unknown supplier",
   iban_changed: "Bank account not on file",
   missing_po: "No purchase order",

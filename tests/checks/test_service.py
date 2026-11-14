@@ -2,6 +2,7 @@
 documents, with the ERP and the other invoices on file."""
 
 from dataclasses import replace
+from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -361,3 +362,23 @@ def test_findings_of_an_approved_document_stay_as_the_reviewer_saw_them(
         assert Checker(FakeErp()).check(session, document) == []
         # Without the reference the order was still found by content.
         assert [f.type for f in document.findings] == ["po_not_quoted"]
+
+
+def test_delivery_billed_again_under_a_new_number_and_date_goes_to_review(
+    session_factory, erp, entry
+):
+    """Neither number nor date gives it away; the delivery it bills does."""
+    checker = Checker(erp)
+    first = process(session_factory, render_ubl(entry.invoice, XRECHNUNG), checker)
+    again = replace(
+        entry.invoice,
+        number="K-70001234",
+        issue_date=entry.invoice.issue_date + timedelta(days=9),
+        due_date=entry.invoice.due_date + timedelta(days=9),
+    )
+    second = process(session_factory, render_ubl(again, XRECHNUNG), checker)
+    assert read(
+        session_factory,
+        second,
+        lambda d: ([(f.type, f.detail["document_id"]) for f in d.findings], d.review_state),
+    ) == ([("delivery_already_billed", first)], "pending")

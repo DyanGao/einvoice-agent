@@ -65,6 +65,11 @@ jobs:
       - name: Matching eval
         run: make eval-matching
 
+      # Regression gate: changed bank accounts and duplicates are caught in
+      # at least 95 % of the held-out exception cases.
+      - name: Exception eval
+        run: make eval-exceptions
+
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: ui/package.json

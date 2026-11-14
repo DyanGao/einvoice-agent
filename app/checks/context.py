@@ -84,4 +84,8 @@ class CheckContext:
     # could not be confirmed: why, for the reviewer.
     purchase_order_problem: str | None = None
     known_invoices: tuple[KnownInvoice, ...] = ()
+    # The delivery the invoice was matched to, and the invoices on file that
+    # were matched to the same one.
+    delivery_id: str | None = None
+    delivery_billed_by: tuple[KnownInvoice, ...] = ()
     settings: CheckSettings = field(default_factory=CheckSettings)
