@@ -4,7 +4,7 @@ import logging
 
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import db
+from app import db, rematch
 from app.checks.service import Checker
 from app.extract.base import Extractor
 from app.pipeline import DocumentStatus, Validator, process_document
@@ -23,7 +23,8 @@ def run_document_job(
 
     Safe to run twice: a document that is no longer `received` is left alone.
     The slow part (validator, model) runs outside any database transaction.
-    With a checker, the business-rule checks run on the result right away.
+    With a checker, the business-rule checks run on the result right away,
+    and the same supplier's open invoices are matched again (app/rematch.py).
     """
     with session_factory() as session:
         document = session.get(db.DocumentRow, document_id)
@@ -43,5 +44,7 @@ def run_document_job(
         db.apply_outcome(session, document, outcome)
         if checker is not None:
             checker.check(session, document)
+            # The supplier's open invoices may be settled together with this one.
+            rematch.after_processing(session, checker, document)
         logger.info("document %s: %s", document_id, outcome.status.value)
         return outcome.status.value

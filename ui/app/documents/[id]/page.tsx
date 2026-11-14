@@ -111,7 +111,9 @@ function auditText(event: AuditEvent): string {
   }
   if (event.event === "approved") return "Approved";
   const name = event.event.replaceAll("_", " ");
-  return name.charAt(0).toUpperCase() + name.slice(1);
+  const text = name.charAt(0).toUpperCase() + name.slice(1);
+  // A re-match says what set it off: a later invoice or a new bank transfer.
+  return typeof detail.trigger === "string" ? `${text} again: ${detail.trigger}` : text;
 }
 
 export default function ReviewPage() {

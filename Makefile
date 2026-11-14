@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-full eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch
 
 install:
 	uv sync
@@ -106,6 +106,11 @@ api:
 # in-process (no fork), which also works on macOS.
 worker:
 	uv run python -m app.worker
+
+# Asks the ERP every BANK_WATCH_SECONDS for bank transfers it has not seen and
+# matches the open invoices of the suppliers they went to (needs ERP_URL).
+watch:
+	uv run python -m app.watch
 
 # Review UI (Next.js, in ui/). `make ui` expects the API from `make api`.
 ui-install:
