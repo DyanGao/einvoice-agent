@@ -45,8 +45,12 @@ docker compose up -d --build  # postgres, redis, validator, api, worker, watch, 
 make demo                     # processes sample_invoices/ in Docker: 5 in, 4 booked, 1 flagged — no API key
 open http://localhost:3000    # review UI; the mock ERP's bookings: http://localhost:8100/ui/bookings
 ```
+`make demo` runs on its own database and mock ERP, so the review UI and the bookings page start empty.
+To see the same story there, drop the five files from `sample_invoices/` onto the review UI: four are
+booked without review, the fifth waits under "To review" until you enter your name and approve it.
+
 PDFs and scans are read by a model: put `ANTHROPIC_API_KEY` in `.env` (see `.env.example`). E-invoices need no key.
-Reseed the mock ERP: `docker compose run --rm mock-erp python -m mock_erp.seed`.
+Reseed the mock ERP: `docker compose run --rm mock-erp python -m mock_erp.seed --out /tmp/world`.
 
 For development, the same runs from source with uv and pnpm (stop the compose app services first, they use the same ports):
 

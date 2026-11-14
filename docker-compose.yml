@@ -75,7 +75,8 @@ services:
     restart: "no"
 
   # Synthetic suppliers, orders and bank transactions; seeds itself on first
-  # start. Reseed: docker compose run --rm mock-erp python -m mock_erp.seed
+  # start. Reseed: docker compose run --rm mock-erp python -m mock_erp.seed --out /tmp/world
+  # (--out: the image cannot write eval/out, where the eval's ground truth goes by default)
   mock-erp:
     <<: *app
     command:
