@@ -9,6 +9,8 @@ no model calls. It also writes the sample invoice the browser test uploads.
 
 import argparse
 import tempfile
+import threading
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -21,6 +23,7 @@ from app import db
 from app.api.main import create_app
 from app.checks.service import Checker
 from app.extract import BaselineExtractor
+from app.queue import JobQueue
 from app.settings import Settings
 from eval.generators.canonical import XRECHNUNG
 from eval.generators.world import PAID_ONCE, PO_EXACT, build_world
@@ -33,6 +36,38 @@ from tests.support import PDF, inline_queue
 UNCERTAIN_FIELD = "due_date"
 # ... and one field that a rule filled in, to check that the UI says so.
 DERIVED_FIELD = "currency"
+
+
+# A document uploaded under a name with this prefix stays "received" for a while,
+# like one the real worker has not got to yet, so the browser test can watch the
+# UI update by itself. It is processed by the first request after the hold.
+HOLD_PREFIX = "waiting-"
+HOLD_SECONDS = 5.0
+
+
+class HoldingQueue:
+    def __init__(self, inner: JobQueue, session_factory: sessionmaker) -> None:
+        self._inner = inner
+        self._session_factory = session_factory
+        self._held: dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    def enqueue(self, document_id: str) -> None:
+        with self._session_factory() as session:
+            name = session.get(db.DocumentRow, document_id).filename or ""
+        if name.startswith(HOLD_PREFIX):
+            with self._lock:
+                self._held[document_id] = time.monotonic() + HOLD_SECONDS
+        else:
+            self._inner.enqueue(document_id)
+
+    def release_due(self) -> None:
+        with self._lock:
+            now = time.monotonic()
+            due = [key for key, until in self._held.items() if until <= now]
+            for document_id in due:
+                del self._held[document_id]
+                self._inner.enqueue(document_id)
 
 
 class UncertainExtractor:
@@ -69,6 +104,8 @@ def main() -> None:
     args.sample.parent.mkdir(parents=True, exist_ok=True)
     args.sample.write_bytes(PDF)
     args.sample.with_suffix(".xml").write_bytes(render_ubl(entry.invoice, XRECHNUNG))
+    # Other bytes than the sample, so it is a new document and not a duplicate.
+    (args.sample.parent / f"{HOLD_PREFIX}{args.sample.name}").write_bytes(PDF + b"%held\n")
 
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -80,10 +117,18 @@ def main() -> None:
         feedback_dir=Path(tempfile.mkdtemp(prefix="einvoice-ui-test-")),
         ui_origin=args.ui_origin,
     )
-    queue = inline_queue(session_factory, extractor=UncertainExtractor(), checker=checker)
-    uvicorn.run(
-        create_app(session_factory, queue, settings, checker), host="127.0.0.1", port=args.port
+    queue = HoldingQueue(
+        inline_queue(session_factory, extractor=UncertainExtractor(), checker=checker),
+        session_factory,
     )
+    app = create_app(session_factory, queue, settings, checker)
+
+    @app.middleware("http")
+    async def release_held(request, call_next):
+        queue.release_due()
+        return await call_next(request)
+
+    uvicorn.run(app, host="127.0.0.1", port=args.port)
 
 
 if __name__ == "__main__":
