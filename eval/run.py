@@ -12,6 +12,10 @@ rule-based extractor, "llm" the vision-model extractor on its own, and
 The llm system answers from stored recordings by default (free and
 deterministic). --llm-mode record calls the model for every request that has
 no recording yet and stores the answer; that costs money and needs credentials.
+
+--run N (EVAL_PLAN: 3 runs, mean ± std) keeps run N's recordings in
+recordings/<model>/run-N and writes predictions-<system>-runN.jsonl. Run 1 is
+the plain folder and file, as before.
 """
 
 import argparse
@@ -51,6 +55,17 @@ def predictions_file(system: str) -> str:
     return f"predictions-{system}.jsonl"
 
 
+def run_system(system: str, run: int) -> str:
+    """The name a repeated run's predictions are stored and scored under."""
+    return system if run == 1 else f"{system}-run{run}"
+
+
+def recordings_dir(recordings: Path, model: str, run: int) -> Path:
+    """Recordings are found by the request's hash: each run needs its own folder,
+    or a second run would only replay the first."""
+    return recordings / model if run == 1 else recordings / model / f"run-{run}"
+
+
 def read_jsonl(path: Path) -> list[dict]:
     with path.open(encoding="utf-8") as lines:
         return [json.loads(line) for line in lines if line.strip()]
@@ -80,8 +95,10 @@ def predict_with_extractor(data: bytes, extractor: Extractor) -> dict:
         return {"invoice": None, "error": str(exc)}
 
 
-def build_llm_extractor(mode: str, recordings: Path, model: str, effort: str | None) -> Extractor:
-    directory = recordings / model
+def build_llm_extractor(
+    mode: str, recordings: Path, model: str, effort: str | None, run: int = 1
+) -> Extractor:
+    directory = recordings_dir(recordings, model, run)
     if mode == "record":
         llm = RecordingLlm(AnthropicLlm(anthropic.Anthropic()), directory)
     else:
@@ -109,13 +126,20 @@ def main() -> None:
     )
     parser.add_argument("--llm-mode", choices=("replay", "record"), default="replay")
     parser.add_argument("--recordings", type=Path, default=DEFAULT_RECORDINGS)
+    parser.add_argument("--run", type=int, default=1, help="which repeated model run (1, 2, 3)")
     args = parser.parse_args()
+    if args.run != 1 and args.system not in (LLM, LLM_RULES):
+        parser.error("--run applies to the model systems only")
     if args.system == BASELINE:
         predict = partial(predict_with_extractor, extractor=BaselineExtractor())
     elif args.system in (LLM, LLM_RULES):
         settings = Settings.from_env()
         extractor = build_llm_extractor(
-            args.llm_mode, args.recordings, settings.extractor_model, settings.extractor_effort
+            args.llm_mode,
+            args.recordings,
+            settings.extractor_model,
+            settings.extractor_effort,
+            args.run,
         )
         if args.system == LLM_RULES:
             extractor = CompletingExtractor(extractor)
@@ -126,7 +150,7 @@ def main() -> None:
             base_url=settings.validator_url, timeout=settings.validator_timeout_seconds
         )
         predict = partial(predict_structured, validator=KositValidator(client))
-    print(f"wrote {run(args.set_dir, args.system, predict)}")
+    print(f"wrote {run(args.set_dir, run_system(args.system, args.run), predict)}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "19585.64",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE358806507",
+  "currency": "EUR",
+  "due_date": "2026-01-18",
+  "gross_total": "19585.64",
+  "issue_date": "2026-01-11",
+  "line_net_total": "16458.52",
+  "lines": [
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "16458.52",
+    "quantity": "24.45",
+    "unit_price": "673.15",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "16458.52",
+  "number": "RE-2026-77626",
+  "payment_ibans": [
+   "DE80000203932629493287"
+  ],
+  "po_ref": "PO-420801",
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE145976842",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "3127.12",
+    "taxable_amount": "16458.52"
+   }
+  ],
+  "vat_total": "3127.12"
+ },
+ "output_tokens": 358
+}

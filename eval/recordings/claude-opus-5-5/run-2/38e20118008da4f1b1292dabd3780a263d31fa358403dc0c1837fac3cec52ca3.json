@@ -1,0 +1,75 @@
+{
+ "input_tokens": 6014,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "77863.58",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "77863.58",
+  "issue_date": "2026-09-15",
+  "line_net_total": "68397.03",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "21604.10",
+    "quantity": "10",
+    "unit_price": "2160.41",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "29407.35",
+    "quantity": "15",
+    "unit_price": "1960.49",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "575.38",
+    "quantity": "2.10",
+    "unit_price": "273.99",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "4",
+    "net": "16810.20",
+    "quantity": "30",
+    "unit_price": "560.34",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "68397.03",
+  "number": "RE-2026-96797",
+  "payment_ibans": [
+   "DE11000862239104617268",
+   "DE05000616033987929447"
+  ],
+  "po_ref": null,
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE156912659",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "7408.04",
+    "taxable_amount": "38989.68"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "2058.51",
+    "taxable_amount": "29407.35"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 744
+}

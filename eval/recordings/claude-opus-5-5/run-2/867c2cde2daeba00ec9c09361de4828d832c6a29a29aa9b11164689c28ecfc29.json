@@ -1,0 +1,66 @@
+{
+ "input_tokens": 5562,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "158724.90",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE142987439",
+  "currency": null,
+  "due_date": "2026-07-11",
+  "gross_total": "158724.90",
+  "issue_date": "2026-07-04",
+  "line_net_total": "133790.44",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "63721.44",
+    "quantity": "36",
+    "unit_price": "1770.04",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "2",
+    "net": "4047.68",
+    "quantity": "7",
+    "unit_price": "578.24",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "3",
+    "net": "66021.32",
+    "quantity": "31",
+    "unit_price": "2129.72",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "133790.44",
+  "number": "RE-2026-70264",
+  "payment_ibans": [
+   "DE26000079605115066936"
+  ],
+  "po_ref": "PO-644333",
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE023810595",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "24651.12",
+    "taxable_amount": "129742.76"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "283.34",
+    "taxable_amount": "4047.68"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 641
+}

@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5423,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "213.71",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-04-21",
+  "gross_total": "213.71",
+  "issue_date": "2026-04-07",
+  "line_net_total": "179.59",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "179.59",
+    "quantity": "1.21",
+    "unit_price": "148.42",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "179.59",
+  "number": "RE-2026-69155",
+  "payment_ibans": [
+   "DE76000763973095692850"
+  ],
+  "po_ref": "PO-618913",
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE958303286",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "34.12",
+    "taxable_amount": "179.59"
+   }
+  ],
+  "vat_total": "34.12"
+ },
+ "output_tokens": 339
+}

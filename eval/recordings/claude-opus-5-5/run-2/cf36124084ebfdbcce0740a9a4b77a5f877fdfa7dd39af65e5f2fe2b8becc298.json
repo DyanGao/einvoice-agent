@@ -1,0 +1,84 @@
+{
+ "input_tokens": 5682,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "254915.53",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE510212029",
+  "currency": "EUR",
+  "due_date": "2026-11-20",
+  "gross_total": "254915.53",
+  "issue_date": "2026-10-21",
+  "line_net_total": "214214.73",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "50465.40",
+    "quantity": "30",
+    "unit_price": "1682.18",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "2",
+    "net": "5013.32",
+    "quantity": "24.32",
+    "unit_price": "206.14",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "3",
+    "net": "66785.98",
+    "quantity": "26.90",
+    "unit_price": "2482.75",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "4",
+    "net": "11782.44",
+    "quantity": "6",
+    "unit_price": "1963.74",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "5",
+    "net": "69525.89",
+    "quantity": "33.10",
+    "unit_price": "2100.48",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "6",
+    "net": "10641.70",
+    "quantity": "10",
+    "unit_price": "1064.17",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "214214.73",
+  "number": "RE-2026-02018",
+  "payment_ibans": [
+   "DE53000374947642750336"
+  ],
+  "po_ref": null,
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE294777585",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "40700.80",
+    "taxable_amount": "214214.73"
+   }
+  ],
+  "vat_total": "40700.80"
+ },
+ "output_tokens": 655
+}

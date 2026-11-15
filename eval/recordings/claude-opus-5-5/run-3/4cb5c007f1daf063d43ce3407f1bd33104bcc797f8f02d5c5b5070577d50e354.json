@@ -1,0 +1,74 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "178852.66",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE817384657",
+  "currency": "EUR",
+  "due_date": "2026-04-28",
+  "gross_total": "178852.66",
+  "issue_date": "2026-04-14",
+  "line_net_total": "151504.27",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "81176.20",
+    "quantity": "32.96",
+    "unit_price": "2462.87",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "11978.55",
+    "quantity": "19",
+    "unit_price": "630.45",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "40613.94",
+    "quantity": "26.93",
+    "unit_price": "1508.13",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "4",
+    "net": "17735.58",
+    "quantity": "26.64",
+    "unit_price": "665.75",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "151504.27",
+  "number": "RE-2026-03856",
+  "payment_ibans": [
+   "DE96000153288934189545"
+  ],
+  "po_ref": "PO-459037",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE620207528",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "26509.89",
+    "taxable_amount": "139525.72"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "838.50",
+    "taxable_amount": "11978.55"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 586
+}

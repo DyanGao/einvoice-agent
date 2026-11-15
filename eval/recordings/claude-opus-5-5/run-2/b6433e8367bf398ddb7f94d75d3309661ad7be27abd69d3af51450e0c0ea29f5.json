@@ -1,0 +1,66 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "85899.33",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE428629115",
+  "currency": "EUR",
+  "due_date": "2026-01-23",
+  "gross_total": "85899.33",
+  "issue_date": "2026-01-16",
+  "line_net_total": "73537.25",
+  "lines": [
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "15201.87",
+    "quantity": "29.54",
+    "unit_price": "514.62",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "2",
+    "net": "44918.70",
+    "quantity": "26.73",
+    "unit_price": "1680.46",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "3",
+    "net": "13416.68",
+    "quantity": "9.49",
+    "unit_price": "1413.77",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "73537.25",
+  "number": "RE-2026-29097",
+  "payment_ibans": [
+   "DE97000984492650309341"
+  ],
+  "po_ref": null,
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE150583923",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "11422.91",
+    "taxable_amount": "60120.57"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "939.17",
+    "taxable_amount": "13416.68"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 501
+}

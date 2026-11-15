@@ -1,0 +1,90 @@
+{
+ "input_tokens": 5656,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "128343.02",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": "2026-10-23",
+  "gross_total": "128343.02",
+  "issue_date": "2026-10-16",
+  "line_net_total": "108228.30",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "6231.84",
+    "quantity": "24",
+    "unit_price": "259.66",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "32571.52",
+    "quantity": "16",
+    "unit_price": "2035.72",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "6927.12",
+    "quantity": "2.88",
+    "unit_price": "2405.25",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "4",
+    "net": "18607.00",
+    "quantity": "20",
+    "unit_price": "930.35",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "5",
+    "net": "3738.84",
+    "quantity": "4",
+    "unit_price": "934.71",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "6",
+    "net": "40151.98",
+    "quantity": "22",
+    "unit_price": "1825.09",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "108228.30",
+  "number": "RE-2026-85816",
+  "payment_ibans": [
+   "DE77000268743458658274"
+  ],
+  "po_ref": "PO-597509",
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE082304492",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "19853.00",
+    "taxable_amount": "104489.46"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "261.72",
+    "taxable_amount": "3738.84"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 695
+}

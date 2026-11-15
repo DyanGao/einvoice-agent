@@ -1,0 +1,59 @@
+{
+ "input_tokens": 5522,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "84211.12",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "84211.12",
+  "issue_date": "2026-10-19",
+  "line_net_total": "78327.52",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "3338.95",
+    "quantity": "5",
+    "unit_price": "667.79",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "2",
+    "net": "74988.57",
+    "quantity": "30.76",
+    "unit_price": "2437.86",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "78327.52",
+  "number": "RE-2026-67258",
+  "payment_ibans": [
+   "DE74000919098420224941",
+   "DE26000610508531494463"
+  ],
+  "po_ref": "PO-373944",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE316563553",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "634.40",
+    "taxable_amount": "3338.95"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "5249.20",
+    "taxable_amount": "74988.57"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 458
+}

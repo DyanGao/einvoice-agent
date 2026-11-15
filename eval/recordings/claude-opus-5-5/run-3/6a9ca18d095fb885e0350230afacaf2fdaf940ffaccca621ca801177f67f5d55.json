@@ -1,0 +1,67 @@
+{
+ "input_tokens": 5625,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "68127.66",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE835336196",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "68127.66",
+  "issue_date": "2026-05-18",
+  "line_net_total": "61422.94",
+  "lines": [
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "41380.36",
+    "quantity": "18.84",
+    "unit_price": "2196.41",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "18802.98",
+    "quantity": "18",
+    "unit_price": "1044.61",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "3",
+    "net": "1239.60",
+    "quantity": "2",
+    "unit_price": "619.80",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "61422.94",
+  "number": "RE-2026-76979",
+  "payment_ibans": [
+   "DE66000482032883254526",
+   "DE62000070817673425383"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE240385679",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "3808.09",
+    "taxable_amount": "20042.58"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "2896.63",
+    "taxable_amount": "41380.36"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 645
+}

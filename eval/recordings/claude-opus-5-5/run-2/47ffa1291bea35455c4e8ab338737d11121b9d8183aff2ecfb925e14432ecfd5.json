@@ -1,0 +1,60 @@
+{
+ "input_tokens": 5505,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "70743.07",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "70743.07",
+  "issue_date": "2026-01-25",
+  "line_net_total": "59447.96",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "2165.05",
+    "quantity": "2.24",
+    "unit_price": "966.54",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "4543.58",
+    "quantity": "13.22",
+    "unit_price": "343.69",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "52739.33",
+    "quantity": "33.74",
+    "unit_price": "1563.11",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "59447.96",
+  "number": "RE-2026-33540",
+  "payment_ibans": [
+   "DE56000957933721192571"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE529995260",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "11295.11",
+    "taxable_amount": "59447.96"
+   }
+  ],
+  "vat_total": "11295.11"
+ },
+ "output_tokens": 466
+}

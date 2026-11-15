@@ -1,0 +1,90 @@
+{
+ "input_tokens": 6014,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "195641.44",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE009042772",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "195641.44",
+  "issue_date": "2026-09-20",
+  "line_net_total": "173429.03",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "3628.94",
+    "quantity": "14",
+    "unit_price": "259.21",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "15962.30",
+    "quantity": "10",
+    "unit_price": "1596.23",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "3",
+    "net": "85863.60",
+    "quantity": "40",
+    "unit_price": "2146.59",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "4",
+    "net": "12754.77",
+    "quantity": "21",
+    "unit_price": "607.37",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "5",
+    "net": "28516.30",
+    "quantity": "28.56",
+    "unit_price": "998.47",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "6",
+    "net": "26703.12",
+    "quantity": "24",
+    "unit_price": "1112.63",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "173429.03",
+  "number": "RE-2026-90300",
+  "payment_ibans": [
+   "DE75000826389762963941"
+  ],
+  "po_ref": "PO-528255",
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE773727506",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "15947.93",
+    "taxable_amount": "83936.49"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "6264.48",
+    "taxable_amount": "89492.54"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 924
+}

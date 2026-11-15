@@ -1,0 +1,74 @@
+{
+ "input_tokens": 5565,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "122089.65",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-01-21",
+  "gross_total": "122089.65",
+  "issue_date": "2026-01-07",
+  "line_net_total": "103699.76",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "45195.93",
+    "quantity": "39",
+    "unit_price": "1158.87",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "23473.53",
+    "quantity": "27",
+    "unit_price": "869.39",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "24088.10",
+    "quantity": "23.81",
+    "unit_price": "1011.68",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "4",
+    "net": "10942.20",
+    "quantity": "12",
+    "unit_price": "911.85",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "103699.76",
+  "number": "RE-2026-54469",
+  "payment_ibans": [
+   "DE08000014410374238636"
+  ],
+  "po_ref": null,
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE609236602",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "17623.94",
+    "taxable_amount": "92757.56"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "765.95",
+    "taxable_amount": "10942.20"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 569
+}

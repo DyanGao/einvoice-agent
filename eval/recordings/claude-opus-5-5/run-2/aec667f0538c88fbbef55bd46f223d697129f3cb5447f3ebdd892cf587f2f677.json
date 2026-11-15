@@ -1,0 +1,74 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "138379.60",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-08-12",
+  "gross_total": "138379.60",
+  "issue_date": "2026-07-13",
+  "line_net_total": "116377.68",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "1952.96",
+    "quantity": "5.18",
+    "unit_price": "377.02",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "25025.36",
+    "quantity": "28.74",
+    "unit_price": "870.75",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "3",
+    "net": "88484.00",
+    "quantity": "40",
+    "unit_price": "2212.10",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "4",
+    "net": "915.36",
+    "quantity": "1.11",
+    "unit_price": "824.65",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "116377.68",
+  "number": "RE-2026-02776",
+  "payment_ibans": [
+   "DE20000203680413990275"
+  ],
+  "po_ref": "PO-361634",
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE404709285",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "21937.84",
+    "taxable_amount": "115462.32"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "64.08",
+    "taxable_amount": "915.36"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 581
+}

@@ -1,0 +1,66 @@
+{
+ "input_tokens": 5600,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "138257.31",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE434339166",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "138257.31",
+  "issue_date": "2026-05-02",
+  "line_net_total": "119523.32",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "63101.36",
+    "quantity": "28",
+    "unit_price": "2253.62",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "23293.27",
+    "quantity": "10.29",
+    "unit_price": "2263.68",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "3",
+    "net": "33128.69",
+    "quantity": "37",
+    "unit_price": "895.37",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "119523.32",
+  "number": "RE-2026-48552",
+  "payment_ibans": [
+   "DE83000515401579883582"
+  ],
+  "po_ref": "PO-972916",
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE359326272",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "16414.98",
+    "taxable_amount": "86394.63"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "2319.01",
+    "taxable_amount": "33128.69"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 513
+}

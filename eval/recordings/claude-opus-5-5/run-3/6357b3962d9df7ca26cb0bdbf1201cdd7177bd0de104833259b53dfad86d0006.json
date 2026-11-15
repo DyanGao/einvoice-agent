@@ -1,0 +1,60 @@
+{
+ "input_tokens": 5576,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "163398.82",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE386485803",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "163398.82",
+  "issue_date": "2026-07-11",
+  "line_net_total": "137309.93",
+  "lines": [
+   {
+    "description": "Anfahrt",
+    "line_id": "1",
+    "net": "68501.39",
+    "quantity": "29.88",
+    "unit_price": "2292.55",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "2",
+    "net": "3335.71",
+    "quantity": "7",
+    "unit_price": "476.53",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "65472.83",
+    "quantity": "39.99",
+    "unit_price": "1637.23",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "137309.93",
+  "number": "RE-2026-26285",
+  "payment_ibans": [
+   "DE06000381167628295155"
+  ],
+  "po_ref": null,
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE871893282",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "26088.89",
+    "taxable_amount": "137309.93"
+   }
+  ],
+  "vat_total": "26088.89"
+ },
+ "output_tokens": 549
+}

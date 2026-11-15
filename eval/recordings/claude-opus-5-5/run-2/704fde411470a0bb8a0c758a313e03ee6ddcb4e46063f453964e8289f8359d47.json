@@ -1,0 +1,91 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "257436.68",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": null,
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": "2026-04-02",
+  "gross_total": "257436.68",
+  "issue_date": "2026-03-26",
+  "line_net_total": "232760.24",
+  "lines": [
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "1",
+    "net": "62399.70",
+    "quantity": "33",
+    "unit_price": "1890.90",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "2",
+    "net": "53597.50",
+    "quantity": "25",
+    "unit_price": "2143.90",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "3",
+    "net": "8460.40",
+    "quantity": "13",
+    "unit_price": "650.80",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "4",
+    "net": "86501.30",
+    "quantity": "38",
+    "unit_price": "2276.35",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "5",
+    "net": "7802.24",
+    "quantity": "20.70",
+    "unit_price": "376.92",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "6",
+    "net": "13999.10",
+    "quantity": "10",
+    "unit_price": "1399.91",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "232760.24",
+  "number": "RE-2026-52459",
+  "payment_ibans": [
+   "DE81000162809683227898",
+   "DE40000207174595804998"
+  ],
+  "po_ref": "PO-381624",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE693467112",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "13273.43",
+    "taxable_amount": "69860.14"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "11403.01",
+    "taxable_amount": "162900.10"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 1145
+}

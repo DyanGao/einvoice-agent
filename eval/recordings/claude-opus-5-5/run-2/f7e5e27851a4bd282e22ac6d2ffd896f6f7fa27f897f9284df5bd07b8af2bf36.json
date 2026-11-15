@@ -1,0 +1,60 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "245293.81",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE370917309",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "245293.81",
+  "issue_date": "2026-03-28",
+  "line_net_total": "206129.25",
+  "lines": [
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "1",
+    "net": "50961.75",
+    "quantity": "35",
+    "unit_price": "1456.05",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "72806.24",
+    "quantity": "34",
+    "unit_price": "2141.36",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "3",
+    "net": "82361.26",
+    "quantity": "34",
+    "unit_price": "2422.39",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "206129.25",
+  "number": "RE-2026-42076",
+  "payment_ibans": [
+   "DE46000394946503143604"
+  ],
+  "po_ref": "PO-488724",
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE965617473",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "39164.56",
+    "taxable_amount": "206129.25"
+   }
+  ],
+  "vat_total": "39164.56"
+ },
+ "output_tokens": 473
+}

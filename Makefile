@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif
 
 # The README demo in Docker: sample_invoices/ through processing, checks,
 # decision and delivery into a fresh mock ERP, in a database of its own. Needs
@@ -76,12 +76,24 @@ eval-structured:
 	uv run python -m eval.run eval/out/structured
 	uv run python -m eval.score eval/out/structured --gate
 
+# Model runs 2 and 3 (EVAL_PLAN: 3 runs, mean ± std), replayed from their own
+# recordings, with the decision sweep per run. Recording them is paid:
+#   uv run --env-file .env python -m eval.run eval/out/<set> --system llm --llm-mode record --run N
+eval-runs:
+	for run in 2 3; do \
+		for set in pdf scans; do \
+			uv run python -m eval.run eval/out/$$set --system llm --llm-mode replay --run $$run || exit 1; \
+			uv run python -m eval.run eval/out/$$set --system llm-rules --llm-mode replay --run $$run || exit 1; \
+		done; \
+		uv run python -m eval.sweep report eval/out/pdf eval/out/scans --system llm-rules-run$$run > /dev/null || exit 1; \
+	done
+
 # Every eval, then the report: README results table and docs/eval-report.md.
 # Needs the validator (make up), tesseract with `make ocr-data`, and the scan
 # recordings, which replay only on the machine that made them (see
 # eval/generators/scans.py). Replays recorded model answers: no API key, no cost.
 eval-full: eval-structured eval-pdf-baseline eval-pdf-llm eval-scans-baseline eval-scans-llm \
-		eval-matching eval-exceptions eval-decision eval-probes eval-report
+		eval-matching eval-exceptions eval-decision eval-runs eval-probes eval-report
 
 # Collects what the evals left in eval/out into results.json and rewrites the
 # generated blocks of README.md and docs/eval-report.md.

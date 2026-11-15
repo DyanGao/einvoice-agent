@@ -13,15 +13,15 @@ state of 2026-11-14 (thresholds `2026-11-14.1`, model `claude-opus-5-5`).
 | Target (EVAL_PLAN §4) | Result | Verdict |
 |---|---|---|
 | Structured path: 100 % field accuracy and validator verdict | 100 % on 600 documents | met |
-| PDF ≥ 97 % field accuracy, held-out | 100 % (36 documents; model alone 98.07 %) | met on synthetic data, one run |
-| Scans ≥ 92 % field accuracy, held-out | 100 % (24 documents; model alone 98.22 %) | met on synthetic data, one run |
+| PDF ≥ 97 % field accuracy, held-out | 99.96 ± 0.04 % over 3 runs (36 documents; model alone 98.03 ± 0.04 %) | met on synthetic data |
+| Scans ≥ 92 % field accuracy, held-out | 100.00 ± 0.00 % over 3 runs (24 documents; model alone 98.22 ± 0.00 %) | met on synthetic data |
 | Match accuracy ≥ 95 % | 100 % of 124 held-out invoices, 0 wrong links | met on a regular synthetic world |
 | Recall ≥ 95 % for changed IBAN and duplicates | 100 % / 100 % (10 cases each, held-out) | met; small, same-author set |
-| Auto-processing ≥ 70 % at ≤ 1 % error | 75 % booked, 0 wrong of 45 | **≤ 1 % not shown**: the 95 % upper bound is 6.4 % |
+| Auto-processing ≥ 70 % at ≤ 1 % error | 75.0 ± 0.0 % booked over 3 runs; 0, 1 and 1 wrong of 45 | **≤ 1 % not shown**: the worst run's 95 % upper bound is 10.1 % (worst case 1) |
 | 0 successful injection probes | 0 of 20 | met; bounds the rate only to ≤ 14 % |
 | Calibration (ECE) | 0.0013 on held-out | trivial: one wrong field in 7,849 on dev |
 | Cost and latency per document | 0.034 USD per PDF or scan; 5–6 s | cost reproducible; latency measured once, not by the replay |
-| 3 runs, mean ± std | not done | missed: two more paid runs (~17 USD) |
+| 3 runs, mean ± std | done: runs 2 and 3 recorded 2026-11-15 (17.11 USD) | met |
 | Ablations (hosted vs. local model, with/without OCR text) | not done | missed: paid, and no local model set up |
 | Anonymized real invoices (30–50) | not done | missed: no real invoices available (O4) |
 
@@ -54,9 +54,10 @@ model (so `1.5` and `1.50` are one amount). A field that is missing, or that the
 wrong. Line items and VAT groups are compared field by field. The scorer is tested against hand-computed
 cases (`tests/eval/test_score.py`), and so is this report (`tests/eval/test_report.py`).
 
-**Model calls.** Every answer of `claude-opus-5-5` was recorded once (250 extraction calls and 40 probe
-calls, 2026-11-13/14) and is replayed from `eval/recordings/`: re-running costs nothing and gives the
-same numbers. The text PDFs are byte-identical across machines, so CI replays them; the scans are not
+**Model calls.** Every answer of `claude-opus-5-5` is recorded and replayed from `eval/recordings/`:
+re-running costs nothing and gives the same numbers. Extraction ran three times (EVAL_PLAN §5): run 1 on
+2026-11-13 (250 calls), runs 2 and 3 on 2026-11-15 (250 calls each, in `run-2/` and `run-3/`, 17.11 USD);
+numbers on PDFs and scans are mean ± sample standard deviation over the three. The 40 probe calls ran once. The text PDFs are byte-identical across machines, so CI replays them; the scans are not
 (floating-point image operations), so their recordings replay only on the machine that made them.
 
 **Decision threshold.** The confidence threshold is fitted on dev by loosening it from the strictest
@@ -99,6 +100,19 @@ Fields the model alone got wrong most often (scans):
 |---|---|
 | `vat_total` | 12 |
 | `currency` | 6 |
+
+### Reading across repeated model runs (held-out split)
+
+| set | system | run 1 | run 2 | run 3 | mean ± std |
+|---|---|---|---|---|---|
+| pdf | llm | 98.07 % | 98.01 % | 98.01 % | 98.03 % ± 0.04 |
+| pdf | llm-rules | 100.00 % | 99.94 % | 99.94 % | 99.96 % ± 0.04 |
+| scans | llm | 98.22 % | 98.22 % | 98.22 % | 98.22 % ± 0.00 |
+| scans | llm-rules | 100.00 % | 100.00 % | 100.00 % | 100.00 % ± 0.00 |
+
+Booked without a person at the operating point, per run: run 1 75.0 % (45 of 60, 0 wrong); run 2 75.0 % (45 of 60, 1 wrong); run 3 75.0 % (45 of 60, 1 wrong).
+
+Runs 2 and 3 are fresh calls to the same model with the same prompt; each run's answers are recorded, so every run replays exactly. The standard deviation is the sample one.
 
 ### Matching: held-out invoices of the synthetic world
 
@@ -172,35 +186,39 @@ List price of `claude-opus-5-5` in November 2026; one call per document. E-invoi
 
 ## Worst 10 cases
 
-On the held-out split the pipeline made no reading error, so these are the ten cases, from every eval
-and both splits, that did or could have done the most damage, worst first. A wrong booking ranks above a
-needless review.
+The ten cases, from every eval and both splits, that did or could have done the most damage, worst
+first. A wrong booking ranks above a needless review.
 
-1. **The confidence gate lets through errors it cannot see** (baseline stress test, dev). Run on the
+1. **A field left out, booked without a person** (`pdf-0142`, held-out, runs 2 and 3). The PDF prints
+   the buyer reference ("Client ref.: 90000000-03083-72"); run 1 read it, runs 2 and 3 left it out. A
+   missing field has no confidence to be low, and the buyer reference is not among the fields the decision
+   requires, so the invoice went through: the only held-out error of the pipeline in three runs. The
+   booking itself would have been right (the buyer reference is not booked), but the invoice of record
+   lacks a printed field. One run would not have shown it. **Open**: the blind spot of case 2 below,
+   seen on the model's own output.
+2. **The confidence gate lets through errors it cannot see** (baseline stress test, dev). Run on the
    baseline extractor's output, the threshold that holds back the model's one low-confidence misread lets
    29 of 32 wrong baseline scans through, for example `scan-0005` with its line items read wrong. Two
    blind spots: a value is "found in the text" even when it belongs to another field (quantity and price
    swapped also pass quantity × price), and something left out has no confidence to be low. **Open**:
    no second, independent signal yet.
-2. **Misreads held back only by an unrelated rule** (`scan-0002` seller VAT ID, `scan-0098` buyer
-   reference, dev). Both had high confidence and went to review only because the currency was assumed,
-   not printed. Had the currency been on the page, both would have been booked wrong. With `scan-0059`
-   (wrong issue date, held back because a field was missing), **only 1 of the 4 remaining misreads was
-   caught by confidence itself** (see the table under Results). The 0-error result leans on the
-   currency rule. **Open.**
-3. **An invoice marked paid with its twin's money** (matching, found while testing re-matching). With an
+3. **Misreads held back only by an unrelated rule** (`scan-0002` seller VAT ID, `scan-0098` buyer
+   reference, dev, run 1). Both had high confidence and went to review only because the currency was
+   assumed, not printed. Had the currency been on the page, both would have been booked wrong. With
+   `scan-0059` (wrong issue date, held back because a field was missing), **only 1 of the 4 remaining
+   misreads was caught by confidence itself**: `scan-0000`, a misread IBAN at confidence 0.33 (see the
+   table under Results). The low error count leans on the currency rule. **Open.**
+4. **An invoice marked paid with its twin's money** (matching, found while testing re-matching). With an
    invoice's own transfer still missing, the matcher took an unreferenced transfer of the same amount
    that paid a twin invoice not yet on file, and nothing would have corrected it. **Fixed**: a payment
    matched by amount alone keeps the invoice open until a transfer quoting it arrives.
-4. **Credit notes would have been booked as invoices** (delivery design). A booking carries no sign.
+5. **Credit notes would have been booked as invoices** (delivery design). A booking carries no sign.
    **Fixed**: only invoices (type 380) are delivered; credit notes stay in review ([D9](../ARCHITECTURE.md#5-design-decisions-adr-log)).
-5. **The threshold rule picked the one wrong document** (decision sweep). See Method. **Fixed** by the
+6. **The threshold rule picked the one wrong document** (decision sweep). See Method. **Fixed** by the
    marginal rule.
-6. **A re-issued invoice went unnoticed** (exceptions, 2 of 2 cases). Same delivery, new number, later
+7. **A re-issued invoice went unnoticed** (exceptions, 2 of 2 cases). Same delivery, new number, later
    date: no duplicate rule fired. **Fixed**: `delivery_already_billed`, another document matched to the
    same delivery.
-7. **A misread IBAN on a scan** (`scan-0000`, dev). Caught: confidence 0.33, sent to review. This is
-   the gate working, and the only remaining misread where it did.
 8. **Totals that are not printed** (model alone: 24 of 36 held-out PDFs, 15 of 24 scans). Every
    model-alone error is `vat_total` or `currency` on layouts that print neither. The model was right not
    to invent them; the gold counted them because it comes from the canonical invoice. The completion
@@ -226,6 +244,9 @@ needless review.
   scan degradation is mild for a vision model. These sets can no longer rank one change against another.
 - **Zero errors needs a bound next to it.** 0 of 45 sounds like a guarantee and is not one; showing
   ≤ 1 % needs about 300 automatic bookings without an error.
+- **Repeated runs find what one run hides.** Run 1 booked 45 held-out invoices with no error; runs 2
+  and 3, same model and prompt, each left one printed field out of the same invoice and booked it
+  (worst case 1). Accuracy barely moved (± 0.04 %), the error count did.
 - **Confidence built from checks and grounding is cheap and explainable, but not independent of the
   reading.** It catches values that fail a check or are absent from the page, and misses right values in
   the wrong field (cases 1 and 2).
@@ -242,8 +263,8 @@ needless review.
 - **Synthetic only.** No real invoice has been run; real layouts, handwriting, multi-page scans, foreign
   formats and messy ERP data are untested. The realism set (EVAL_PLAN §2) needs real invoices to
   anonymize.
-- **One model run.** The model is not deterministic; mean ± std over 3 runs was not paid for. The
-  numbers are one sample.
+- **Three runs.** The model is not deterministic; three runs give a mean and a spread, not a
+  distribution. Injection probes ran once.
 - **Small held-out sets.** 36 PDFs, 24 scans, 10 cases per exception kind, 20 probes: every 100 % here
   has a wide interval.
 - **Assumed currency.** Invoices that print no currency are taken as EUR and sent to review; that default

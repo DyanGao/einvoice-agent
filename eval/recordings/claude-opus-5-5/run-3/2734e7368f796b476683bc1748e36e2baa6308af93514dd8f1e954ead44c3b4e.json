@@ -1,0 +1,66 @@
+{
+ "input_tokens": 5601,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "117116.05",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE179002858",
+  "currency": "EUR",
+  "due_date": "2026-02-04",
+  "gross_total": "117116.05",
+  "issue_date": "2026-01-21",
+  "line_net_total": "106033.22",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "75529.08",
+    "quantity": "36",
+    "unit_price": "2098.03",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "23404.94",
+    "quantity": "26",
+    "unit_price": "900.19",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "3",
+    "net": "7099.20",
+    "quantity": "24",
+    "unit_price": "295.80",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "106033.22",
+  "number": "RE-2026-69569",
+  "payment_ibans": [
+   "DE94000471826990671469"
+  ],
+  "po_ref": null,
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE703297015",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "5795.79",
+    "taxable_amount": "30504.14"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "5287.04",
+    "taxable_amount": "75529.08"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 629
+}

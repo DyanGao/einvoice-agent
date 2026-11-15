@@ -1,0 +1,44 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "92534.59",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-03-19",
+  "gross_total": "92534.59",
+  "issue_date": "2026-03-12",
+  "line_net_total": "77760.16",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "77760.16",
+    "quantity": "37.58",
+    "unit_price": "2069.19",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "77760.16",
+  "number": "RE-2026-71078",
+  "payment_ibans": [
+   "DE10000709207994946926"
+  ],
+  "po_ref": "PO-983631",
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE438397084",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "14774.43",
+    "taxable_amount": "77760.16"
+   }
+  ],
+  "vat_total": "14774.43"
+ },
+ "output_tokens": 349
+}

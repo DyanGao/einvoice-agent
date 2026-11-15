@@ -1,0 +1,58 @@
+{
+ "input_tokens": 5484,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "86825.06",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": null,
+  "gross_total": "86825.06",
+  "issue_date": "2026-07-01",
+  "line_net_total": "74594.83",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "58404.95",
+    "quantity": "32.42",
+    "unit_price": "1801.51",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "16189.88",
+    "quantity": "14",
+    "unit_price": "1156.42",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "74594.83",
+  "number": "RE-2026-75089",
+  "payment_ibans": [
+   "DE63000753222970366663"
+  ],
+  "po_ref": "PO-800186",
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE775075254",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "11096.94",
+    "taxable_amount": "58404.95"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1133.29",
+    "taxable_amount": "16189.88"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 532
+}

@@ -58,3 +58,26 @@ def test_missing_recording_stops_a_replay_run(tmp_path):
     extractor = build_llm_extractor("replay", tmp_path, "claude-opus-5-5", None)
     with pytest.raises(MissingRecording):
         predict_with_extractor(make_pdf(text="Rechnung Nr. 1 Gesamtbetrag 119,00 EUR"), extractor)
+
+
+# --- repeated model runs (EVAL_PLAN §5: 3 runs, mean ± std) ----------------
+
+
+def test_first_run_keeps_the_existing_recordings_and_predictions():
+    from pathlib import Path
+
+    from eval.run import recordings_dir, run_system
+
+    assert recordings_dir(Path("rec"), "m", 1) == Path("rec/m")
+    assert run_system("llm-rules", 1) == "llm-rules"
+
+
+def test_later_runs_have_their_own_recordings_and_predictions():
+    """A recording is found by the request's hash, so a second run in the same
+    folder would only replay the first."""
+    from pathlib import Path
+
+    from eval.run import predictions_file, recordings_dir, run_system
+
+    assert recordings_dir(Path("rec"), "m", 2) == Path("rec/m/run-2")
+    assert predictions_file(run_system("llm", 3)) == "predictions-llm-run3.jsonl"

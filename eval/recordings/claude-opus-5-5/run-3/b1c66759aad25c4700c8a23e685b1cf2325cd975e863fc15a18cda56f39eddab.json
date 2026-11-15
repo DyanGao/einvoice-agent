@@ -1,0 +1,74 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "162977.67",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE160013513",
+  "currency": null,
+  "due_date": null,
+  "gross_total": "162977.67",
+  "issue_date": "2026-03-03",
+  "line_net_total": "139428.55",
+  "lines": [
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "1",
+    "net": "38826.48",
+    "quantity": "24",
+    "unit_price": "1617.77",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "2",
+    "net": "24519.18",
+    "quantity": "14",
+    "unit_price": "1751.37",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "51617.33",
+    "quantity": "28.74",
+    "unit_price": "1796.01",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "4",
+    "net": "24465.56",
+    "quantity": "23",
+    "unit_price": "1063.72",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "139428.55",
+  "number": "RE-2026-85026",
+  "payment_ibans": [
+   "DE18000821432544470382"
+  ],
+  "po_ref": null,
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE951131930",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "21832.78",
+    "taxable_amount": "114909.37"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1716.34",
+    "taxable_amount": "24519.18"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 672
+}

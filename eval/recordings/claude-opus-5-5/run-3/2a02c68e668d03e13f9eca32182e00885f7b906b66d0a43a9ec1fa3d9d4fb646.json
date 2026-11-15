@@ -1,0 +1,74 @@
+{
+ "input_tokens": 5601,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "140182.02",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE446504233",
+  "currency": null,
+  "due_date": null,
+  "gross_total": "140182.02",
+  "issue_date": "2026-07-08",
+  "line_net_total": "125631.81",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "7789.67",
+    "quantity": "5.14",
+    "unit_price": "1515.50",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "77665.28",
+    "quantity": "32",
+    "unit_price": "2427.04",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "3",
+    "net": "5831.42",
+    "quantity": "23",
+    "unit_price": "253.54",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "4",
+    "net": "34345.44",
+    "quantity": "33.12",
+    "unit_price": "1037.00",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "125631.81",
+  "number": "RE-2026-86046",
+  "payment_ibans": [
+   "DE81000327001769336560"
+  ],
+  "po_ref": "PO-386651",
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE155207280",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "9113.64",
+    "taxable_amount": "47966.53"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "5436.57",
+    "taxable_amount": "77665.28"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 864
+}

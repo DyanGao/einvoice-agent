@@ -1,0 +1,60 @@
+{
+ "input_tokens": 5519,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "113731.68",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": "2026-08-04",
+  "gross_total": "113731.68",
+  "issue_date": "2026-07-28",
+  "line_net_total": "95572.84",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "16551.56",
+    "quantity": "39.89",
+    "unit_price": "414.93",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "42405.88",
+    "quantity": "39.30",
+    "unit_price": "1079.03",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "3",
+    "net": "36615.40",
+    "quantity": "29",
+    "unit_price": "1262.60",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "95572.84",
+  "number": "RE-2026-21613",
+  "payment_ibans": [
+   "DE02000099478891111814"
+  ],
+  "po_ref": null,
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE028371197",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "18158.84",
+    "taxable_amount": "95572.84"
+   }
+  ],
+  "vat_total": "18158.84"
+ },
+ "output_tokens": 481
+}

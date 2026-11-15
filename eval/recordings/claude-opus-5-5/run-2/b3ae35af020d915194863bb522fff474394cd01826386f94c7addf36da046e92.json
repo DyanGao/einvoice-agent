@@ -1,0 +1,76 @@
+{
+ "input_tokens": 6014,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "163330.18",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-09-10",
+  "gross_total": "163330.18",
+  "issue_date": "2026-08-27",
+  "line_net_total": "137252.25",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "21236.00",
+    "quantity": "24.98",
+    "unit_price": "850.12",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "28383.60",
+    "quantity": "15",
+    "unit_price": "1892.24",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "3",
+    "net": "28972.41",
+    "quantity": "23",
+    "unit_price": "1259.67",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "4",
+    "net": "2433.93",
+    "quantity": "7.03",
+    "unit_price": "346.22",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "5",
+    "net": "56226.31",
+    "quantity": "37.45",
+    "unit_price": "1501.37",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "137252.25",
+  "number": "RE-2026-40304",
+  "payment_ibans": [
+   "DE38000699899660638308"
+  ],
+  "po_ref": "PO-112506",
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE732851145",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "26077.93",
+    "taxable_amount": "137252.25"
+   }
+  ],
+  "vat_total": "26077.93"
+ },
+ "output_tokens": 614
+}

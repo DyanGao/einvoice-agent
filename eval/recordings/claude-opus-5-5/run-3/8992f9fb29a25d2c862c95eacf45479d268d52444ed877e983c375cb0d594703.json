@@ -1,0 +1,60 @@
+{
+ "input_tokens": 6014,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "131967.38",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE202630716",
+  "currency": "EUR",
+  "due_date": "2026-08-25",
+  "gross_total": "131967.38",
+  "issue_date": "2026-07-26",
+  "line_net_total": "110896.96",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "21549.96",
+    "quantity": "9",
+    "unit_price": "2394.44",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "2",
+    "net": "89068.03",
+    "quantity": "38.63",
+    "unit_price": "2305.67",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "278.97",
+    "quantity": "33.57",
+    "unit_price": "8.31",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "110896.96",
+  "number": "RE-2026-83631",
+  "payment_ibans": [
+   "DE08000764193495195450"
+  ],
+  "po_ref": null,
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE286319071",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "21070.42",
+    "taxable_amount": "110896.96"
+   }
+  ],
+  "vat_total": "21070.42"
+ },
+ "output_tokens": 482
+}

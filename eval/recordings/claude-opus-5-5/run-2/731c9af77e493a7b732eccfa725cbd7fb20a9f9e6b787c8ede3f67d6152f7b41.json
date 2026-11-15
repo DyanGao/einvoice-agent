@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "4715.28",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "4715.28",
+  "issue_date": "2026-08-13",
+  "line_net_total": "3962.42",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "3962.42",
+    "quantity": "14",
+    "unit_price": "283.03",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "3962.42",
+  "number": "RE-2026-80762",
+  "payment_ibans": [
+   "DE67000547161952546097"
+  ],
+  "po_ref": "PO-749355",
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE493447453",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "752.86",
+    "taxable_amount": "3962.42"
+   }
+  ],
+  "vat_total": "752.86"
+ },
+ "output_tokens": 573
+}

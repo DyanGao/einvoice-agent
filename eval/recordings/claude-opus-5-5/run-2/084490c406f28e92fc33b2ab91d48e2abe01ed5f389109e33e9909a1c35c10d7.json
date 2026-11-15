@@ -1,0 +1,58 @@
+{
+ "input_tokens": 5509,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "105379.04",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": "2026-09-07",
+  "gross_total": "105379.04",
+  "issue_date": "2026-08-24",
+  "line_net_total": "94905.27",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "31920.00",
+    "quantity": "35",
+    "unit_price": "912.00",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "62985.27",
+    "quantity": "25.75",
+    "unit_price": "2446.03",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "94905.27",
+  "number": "RE-2026-56985",
+  "payment_ibans": [
+   "DE75000716685299436826"
+  ],
+  "po_ref": null,
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE782160920",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "6064.80",
+    "taxable_amount": "31920.00"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "4408.97",
+    "taxable_amount": "62985.27"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 456
+}

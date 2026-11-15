@@ -1,0 +1,68 @@
+{
+ "input_tokens": 5617,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "191136.11",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE257852599",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "191136.11",
+  "issue_date": "2026-08-19",
+  "line_net_total": "160618.58",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "5894.90",
+    "quantity": "10",
+    "unit_price": "589.49",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "67526.36",
+    "quantity": "31.22",
+    "unit_price": "2162.92",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "3",
+    "net": "51863.00",
+    "quantity": "25",
+    "unit_price": "2074.52",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "4",
+    "net": "35334.32",
+    "quantity": "28",
+    "unit_price": "1261.94",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "160618.58",
+  "number": "RE-2026-00552",
+  "payment_ibans": [
+   "DE40000297266916935173"
+  ],
+  "po_ref": "PO-237415",
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE258338744",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "30517.53",
+    "taxable_amount": "160618.58"
+   }
+  ],
+  "vat_total": "30517.53"
+ },
+ "output_tokens": 542
+}

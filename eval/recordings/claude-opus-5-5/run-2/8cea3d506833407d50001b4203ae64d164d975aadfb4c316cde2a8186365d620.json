@@ -1,0 +1,84 @@
+{
+ "input_tokens": 5632,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "183859.47",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-03-02",
+  "gross_total": "183859.47",
+  "issue_date": "2026-01-31",
+  "line_net_total": "154503.76",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "606.39",
+    "quantity": "1",
+    "unit_price": "606.39",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "1717.84",
+    "quantity": "2",
+    "unit_price": "858.92",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "3",
+    "net": "33536.16",
+    "quantity": "14",
+    "unit_price": "2395.44",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "4",
+    "net": "76844.56",
+    "quantity": "37",
+    "unit_price": "2076.88",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "5",
+    "net": "33562.14",
+    "quantity": "38.21",
+    "unit_price": "878.36",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "6",
+    "net": "8236.67",
+    "quantity": "13",
+    "unit_price": "633.59",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "154503.76",
+  "number": "RE-2026-67771",
+  "payment_ibans": [
+   "DE88000030641808445841"
+  ],
+  "po_ref": "PO-916768",
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE730060958",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "29355.71",
+    "taxable_amount": "154503.76"
+   }
+  ],
+  "vat_total": "29355.71"
+ },
+ "output_tokens": 664
+}

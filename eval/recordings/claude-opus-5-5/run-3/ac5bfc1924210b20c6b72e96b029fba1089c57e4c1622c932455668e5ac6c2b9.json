@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5481,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "61680.54",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-07-10",
+  "gross_total": "61680.54",
+  "issue_date": "2026-07-03",
+  "line_net_total": "51832.39",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "51832.39",
+    "quantity": "30.63",
+    "unit_price": "1692.21",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "51832.39",
+  "number": "RE-2026-42865",
+  "payment_ibans": [
+   "DE50000954436714294597"
+  ],
+  "po_ref": null,
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE367823826",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "9848.15",
+    "taxable_amount": "51832.39"
+   }
+  ],
+  "vat_total": "9848.15"
+ },
+ "output_tokens": 350
+}

@@ -1,0 +1,90 @@
+{
+ "input_tokens": 5683,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "79182.45",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE950161428",
+  "currency": "EUR",
+  "due_date": "2026-04-09",
+  "gross_total": "79182.45",
+  "issue_date": "2026-04-02",
+  "line_net_total": "71130.87",
+  "lines": [
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "9237.00",
+    "quantity": "4.12",
+    "unit_price": "2241.99",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "5396.16",
+    "quantity": "32",
+    "unit_price": "168.63",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "3",
+    "net": "109.08",
+    "quantity": "18",
+    "unit_price": "6.06",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "4",
+    "net": "2734.68",
+    "quantity": "6",
+    "unit_price": "455.78",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "5",
+    "net": "45527.40",
+    "quantity": "20",
+    "unit_price": "2276.37",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "6",
+    "net": "8126.55",
+    "quantity": "5",
+    "unit_price": "1625.31",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "71130.87",
+  "number": "RE-2026-99079",
+  "payment_ibans": [
+   "DE27000937794340984621"
+  ],
+  "po_ref": "PO-815988",
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE405660073",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "4864.66",
+    "taxable_amount": "25603.47"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "3186.92",
+    "taxable_amount": "45527.40"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 716
+}

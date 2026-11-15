@@ -17,6 +17,7 @@ the same files the output is the same text: no dates, no timings.
 import argparse
 import json
 import re
+import statistics
 from pathlib import Path
 
 from app.extract import LlmExtractor, ReplayLlm
@@ -32,6 +33,7 @@ from eval.run import (
     STRUCTURED,
     predictions_file,
     read_jsonl,
+    run_system,
 )
 from eval.score import Bucket, score
 from eval.sweep import THRESHOLDS_FILE, documents
@@ -39,6 +41,7 @@ from eval.sweep import THRESHOLDS_FILE, documents
 # USD per million tokens (input, output), Anthropic list price, November 2026.
 PRICES = {"claude-opus-5-5": (4.0, 20.0)}
 SETS = ("pdf", "scans")
+MAX_RUNS = 3  # EVAL_PLAN §5: 3 runs on the model paths
 EXTRACTORS = (BASELINE, LLM, LLM_RULES)
 NOT_RUN = "not run"
 README = Path("README.md")
@@ -140,6 +143,22 @@ def residual_errors(out: Path) -> list[dict] | None:
     ]
 
 
+def spread(values: list[float]) -> tuple[float, float | None]:
+    """Mean and sample standard deviation; no deviation from a single run."""
+    return statistics.fmean(values), statistics.stdev(values) if len(values) > 1 else None
+
+
+def runs(set_dir: Path, system: str) -> list[dict]:
+    """Extraction results of every recorded run, run 1 first."""
+    found = []
+    for run in range(1, MAX_RUNS + 1):
+        result = extraction(set_dir, run_system(system, run))
+        if result is None:
+            break
+        found.append(result)
+    return found
+
+
 def _read(path: Path) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
@@ -170,6 +189,14 @@ def collect(out: Path, recordings: Path, model: str, effort: str | None) -> dict
         "decision": {
             system: _read(out / f"decision-{system}.json") for system in (BASELINE, LLM_RULES)
         },
+        "runs": {
+            name: {system: runs(out / name, system) for system in (LLM, LLM_RULES)} for name in SETS
+        },
+        "decision_runs": [
+            found
+            for run in range(1, MAX_RUNS + 1)
+            if (found := _read(out / f"decision-{run_system(LLM_RULES, run)}.json")) is not None
+        ],
         "probes": _read(out / "probes" / "report.json"),
         "residual_errors": residual_errors(out),
     }
@@ -201,11 +228,45 @@ def auto_cell(point: dict | None) -> str:
     )
 
 
+def _accuracy(results: dict, name: str, system: str) -> str:
+    repeated = results.get("runs", {}).get(name, {}).get(system, [])
+    if len(repeated) > 1:
+        mean, std = spread([r["field_accuracy"] for r in repeated])
+        return f"{mean * 100:.2f} ± {std * 100:.2f} %"
+    cell = results["extraction"][name][system]
+    return NOT_RUN if cell is None else pct(cell["field_accuracy"], 2)
+
+
 def _accuracy_pair(results: dict, system: str) -> str:
-    cells = [results["extraction"][name][system] for name in SETS]
-    if all(cell is None for cell in cells):
+    cells = [_accuracy(results, name, system) for name in SETS]
+    if all(cell == NOT_RUN for cell in cells):
         return NOT_RUN
-    return " / ".join(NOT_RUN if c is None else pct(c["field_accuracy"], 2) for c in cells)
+    return " / ".join(cells)
+
+
+def model_runs(results: dict) -> int:
+    """How many model runs the extraction numbers rest on (at least one)."""
+    counts = [len(found) for found in results.get("runs", {}).get("pdf", {}).values()]
+    return max(counts, default=1) or 1
+
+
+def auto_runs_cell(decisions: list[dict]) -> str:
+    """Auto-rate over repeated runs. Errors are summed and the bound is the
+    worst run's: the runs read the same documents, so they are not pooled."""
+    points = [d["test"]["operating_point"] for d in decisions]
+    mean, std = spread([p["auto_rate"] for p in points])
+    errors = sum(p["errors"] for p in points)
+    uppers = [p["error_upper_95"] for p in points if p["error_upper_95"] is not None]
+    worst = max(uppers) if uppers else None
+    text = f"{mean * 100:.1f} ± {std * 100:.1f} % auto over {len(points)} runs, {errors} wrong"
+    if worst is None:
+        return text
+    if worst <= 0.01:
+        return f"{text}; ≤ 1 % error (95 % upper bound {pct(worst)})"
+    return (
+        f"{text}; ≤ 1 % not shown (95 % upper bound {pct(worst)} on "
+        f"{points[0]['documents']} documents per run)"
+    )
 
 
 def _matched(report: dict | None) -> str:
@@ -267,7 +328,9 @@ def readme_table(results: dict) -> str:
         (
             "Booked without a person",
             auto_cell(_test_point(results["decision"][BASELINE])),
-            auto_cell(_test_point(results["decision"][LLM_RULES])),
+            auto_runs_cell(results["decision_runs"])
+            if len(results.get("decision_runs", [])) > 1
+            else auto_cell(_test_point(results["decision"][LLM_RULES])),
         ),
         (
             "Injection probes that changed a field, route or match",
@@ -285,7 +348,13 @@ def readme_table(results: dict) -> str:
     thresholds = results["decision"][LLM_RULES]
     lines += [
         "",
-        "Synthetic data only, held-out split; one model run, answered from recordings "
+        "Synthetic data only, held-out split; "
+        + (
+            "one model run"
+            if model_runs(results) == 1
+            else f"{model_runs(results)} model runs, mean ± sample standard deviation"
+        )
+        + ", answered from recordings "
         f"(`{results['model']}`"
         + ("" if thresholds is None else f", thresholds {thresholds['version']}")
         + "). Generated by `make eval-report`; method, breakdowns and what these numbers do not "
@@ -330,6 +399,44 @@ def details(results: dict) -> str:
             top = list(alone["wrong_by_field"].items())[:8]
             parts.append(f"Fields the model alone got wrong most often ({name}):")
             parts.append(_table(["field", "times wrong"], [[f"`{k}`", str(v)] for k, v in top]))
+
+    parts.append("### Reading across repeated model runs (held-out split)")
+    repeated = results.get("runs", {})
+    rows = []
+    for name in SETS:
+        for system in (LLM, LLM_RULES):
+            found = repeated.get(name, {}).get(system, [])
+            if not found:
+                continue
+            values = [r["field_accuracy"] for r in found]
+            mean, std = spread(values)
+            rows.append(
+                [name, system]
+                + [pct(v, 2) for v in values]
+                + ["–"] * (MAX_RUNS - len(values))
+                + [pct(mean, 2) + ("" if std is None else f" ± {std * 100:.2f}")]
+            )
+    if rows:
+        header = ["set", "system"] + [f"run {n}" for n in range(1, MAX_RUNS + 1)]
+        parts.append(_table(header + ["mean ± std"], rows))
+    else:
+        parts.append(NOT_RUN)
+    decisions = results.get("decision_runs", [])
+    if decisions:
+        points = [d["test"]["operating_point"] for d in decisions]
+        parts.append(
+            "Booked without a person at the operating point, per run: "
+            + "; ".join(
+                f"run {n} {pct(p['auto_rate'])} ({p['auto']} of {p['documents']}, "
+                f"{p['errors']} wrong)"
+                for n, p in enumerate(points, start=1)
+            )
+            + "."
+        )
+    parts.append(
+        "Runs 2 and 3 are fresh calls to the same model with the same prompt; each run's answers "
+        "are recorded, so every run replays exactly. The standard deviation is the sample one."
+    )
 
     parts.append("### Matching: held-out invoices of the synthetic world")
     matching = results["matching"]

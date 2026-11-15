@@ -1,0 +1,90 @@
+{
+ "input_tokens": 5624,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "184669.99",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-04-06",
+  "gross_total": "184669.99",
+  "issue_date": "2026-03-23",
+  "line_net_total": "156943.74",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "2492.28",
+    "quantity": "18",
+    "unit_price": "138.46",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "2",
+    "net": "12338.57",
+    "quantity": "29.98",
+    "unit_price": "411.56",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "3",
+    "net": "10887.64",
+    "quantity": "6.05",
+    "unit_price": "1799.61",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "4",
+    "net": "52408.26",
+    "quantity": "23",
+    "unit_price": "2278.62",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "5",
+    "net": "6554.53",
+    "quantity": "10.83",
+    "unit_price": "605.22",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "6",
+    "net": "72262.46",
+    "quantity": "32.35",
+    "unit_price": "2233.77",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "156943.74",
+  "number": "RE-2026-07582",
+  "payment_ibans": [
+   "DE25000254597722602553"
+  ],
+  "po_ref": null,
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE746668365",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "26505.30",
+    "taxable_amount": "139501.57"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1220.95",
+    "taxable_amount": "17442.17"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 685
+}
