@@ -14,12 +14,14 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moves to Ubuntu 26 from 2026-10-19 on GitHub's schedule.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      # setup-uv publishes no major-version tag after v7: pinned to the release.
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
 
@@ -106,11 +108,11 @@ jobs:
       - name: Eval report
         run: uv run python -m eval.report
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: ui/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
