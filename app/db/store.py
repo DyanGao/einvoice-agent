@@ -30,6 +30,11 @@ def record_duplicate(session: Session, document: DocumentRow, filename: str | No
     )
 
 
+def record_queued_again(document: DocumentRow, waited_minutes: int) -> None:
+    """A document that sat in "received" was handed to the queue again."""
+    document.audit_events.append(_event("queued_again", waited_minutes=waited_minutes))
+
+
 def create_received(session: Session, data: bytes, filename: str | None) -> DocumentRow:
     """Store an incoming document before anything is known about it."""
     document = DocumentRow(

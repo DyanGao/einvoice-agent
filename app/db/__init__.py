@@ -11,6 +11,7 @@ from app.db.store import (
     create_received,
     find_document,
     record_duplicate,
+    record_queued_again,
     store_outcome,
 )
 from app.db.tables import (
@@ -49,5 +50,6 @@ __all__ = [
     "find_document",
     "missing_for_approval",
     "record_duplicate",
+    "record_queued_again",
     "store_outcome",
 ]
