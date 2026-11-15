@@ -104,6 +104,7 @@ comments refer to them by these numbers. A decision that replaced another says s
 | D9 | Credit notes (381) and other document types are parsed but always go to review, and are never delivered to a connector | book them with a negative sign | sign handling in matching and booking is a project of its own; a credit note booked as an invoice is worse than asking |
 | D10 | Parsers are tested against the official XRechnung test suite and ZUGFeRD sample files, not only the project's own generator | generator only | "ground truth by construction" is circular when generator and parser share one author's reading of the standard |
 | D11 | No model-based matching agent in v1: the rule-based matcher decides what it can and leaves the rest open for a person | a tool-calling agent for the remainder (2, D6) | on the eval world the rules reach 100 % on the held-out split and 99.5 % on seeds never looked at, with no wrong link; what remains is undecidable for any reader. An agent would add cost and a place for injected text to act. Revisit with real data or a harder world |
+| D12 | An invoice that prints no currency is read as EUR (confirmed by the project owner, 2026-11-15). The value is marked as assumed and the invoice goes to a person | leave the currency empty and refuse; ask the model to infer it from the country | German invoices without a currency sign are EUR in practice; an assumption stays visible and reviewed instead of passing as a reading (`app/extract/complete.py`) |
 
 ## 6. Security & privacy
 Built and tested:
@@ -144,8 +145,7 @@ migrations/, sample_invoices/, data/ (local only: private data, mock ERP, logs)
 ## 8. Open questions
 - ~~Which subset of EN 16931 fields matters most for small businesses?~~ Answered for v1 by D8.
 - ~~How to model partial deliveries / partial payments in matching?~~ Answered by D7.
-- Is EUR the right default for an invoice that prints no currency? Assumed, and always sent to review;
-  not yet confirmed.
+- ~~Is EUR the right default for an invoice that prints no currency?~~ Yes (D12, 2026-11-15).
 - What second, independent confidence signal would catch a right value read into the wrong field
   (eval report, worst cases 1–2)? Agreement across repeated runs is the candidate (D5).
 - How do the numbers hold on real, anonymized invoices and a real ERP's data?
