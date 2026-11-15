@@ -21,7 +21,7 @@ Drop 5 invoices → 4 matched and booked without review, 1 flagged (price +12 % 
 | Field accuracy, PDF / scan | 44.99 % / 31.47 % | **99.96 ± 0.04 % / 100.00 ± 0.00 %** |
 | Order, delivery and payments all matched right | 25.8 % | **100.0 %** (124 invoices) |
 | Exception detection F1 | – | **1.00** (recall: changed IBAN 100.0 %, duplicate 100.0 %) |
-| Booked without a person | 0.0 %: every invoice sent to review | 75.0 ± 0.0 % auto over 3 runs, 2 wrong; ≤ 1 % not shown (95 % upper bound 10.1 % on 60 documents per run) |
+| Booked without a person | 0.0 %: every invoice sent to review | 73.9 ± 1.0 % auto over 3 runs, 0 wrong; ≤ 1 % not shown (95 % upper bound 6.6 % on 60 documents per run) |
 | Injection probes that changed a field, route or match | – | **0 of 20** |
 | Model cost per PDF or scan (list price) | – | **0.034 USD** |
 

@@ -285,5 +285,74 @@ class ScoringExtractor:
 
     def extract(self, data: bytes) -> InvoiceDraft:
         draft = self._inner.extract(data)
-        confidence = score(draft, self._text_of(data), self._calibration)
-        return draft.model_copy(update={"field_confidence": confidence})
+        text = self._text_of(data)
+        return draft.model_copy(
+            update={
+                "field_confidence": score(draft, text, self._calibration),
+                "unread_fields": printed_but_unread(draft, text),
+            }
+        )
+
+
+# --- values printed in a standard format but not read ------------------------
+# A field the reading left out has no confidence to be low. For fields with a
+# standard format and check digits, the page itself can say that something
+# was there: a valid Leitweg-ID, IBAN or German VAT ID in the document's text
+# that is not among the values read. Formats, not labels: labels differ per
+# supplier, the formats do not.
+
+_LEITWEG = re.compile(r"(?<![\w-])(\d{2,12})(?:-([0-9A-Z]{1,30}))?-(\d{2})(?![\w-])")
+_IBAN_IN_TEXT = re.compile(
+    r"(?<![A-Z0-9])[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,3})?(?![A-Z0-9])"
+)
+_GERMAN_VAT_IN_TEXT = re.compile(r"(?<![A-Z0-9])DE[ ]?\d{9}(?!\d)")
+
+
+def _mod97(digits_and_letters: str) -> int:
+    return int("".join(str(int(char, 36)) for char in digits_and_letters)) % 97
+
+
+def _is_date(token: str) -> bool:
+    try:
+        date.fromisoformat(token)
+    except ValueError:
+        return False
+    return True
+
+
+def _leitweg_ids(text: str) -> set[str]:
+    found = set()
+    for match in _LEITWEG.finditer(text):
+        coarse, fine, check = match.groups()
+        token = match.group(0)
+        if not _is_date(token) and _mod97(coarse + (fine or "") + check) == 1:
+            found.add(token)
+    return found
+
+
+def _ibans(text: str) -> set[str]:
+    return {
+        compact
+        for match in _IBAN_IN_TEXT.finditer(text)
+        if valid_iban(compact := match.group(0).replace(" ", ""))
+    }
+
+
+def printed_but_unread(draft: InvoiceDraft, text: str | None) -> tuple[str, ...]:
+    """Fields whose value is on the page in a standard format but was not read."""
+    if not text:
+        return ()
+    unread = []
+    if draft.buyer_reference is None and _leitweg_ids(text):
+        unread.append("buyer_reference")
+    read_ibans = {iban.replace(" ", "") for iban in draft.payment_ibans}
+    if _ibans(text) - read_ibans:
+        unread.append("payment_ibans")
+    seller, buyer = (
+        draft.seller.vat_id if draft.seller else None,
+        (draft.buyer.vat_id if draft.buyer else None),
+    )
+    printed_vat = {m.group(0).replace(" ", "") for m in _GERMAN_VAT_IN_TEXT.finditer(text)}
+    if printed_vat - {seller, buyer}:
+        unread.append("seller.vat_id" if seller is None else "buyer.vat_id")
+    return tuple(unread)

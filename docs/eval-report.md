@@ -17,7 +17,7 @@ state of 2026-11-14 (thresholds `2026-11-14.1`, model `claude-opus-5-5`).
 | Scans ≥ 92 % field accuracy, held-out | 100.00 ± 0.00 % over 3 runs (24 documents; model alone 98.22 ± 0.00 %) | met on synthetic data |
 | Match accuracy ≥ 95 % | 100 % of 124 held-out invoices, 0 wrong links | met on a regular synthetic world |
 | Recall ≥ 95 % for changed IBAN and duplicates | 100 % / 100 % (10 cases each, held-out) | met; small, same-author set |
-| Auto-processing ≥ 70 % at ≤ 1 % error | 75.0 ± 0.0 % booked over 3 runs; 0, 1 and 1 wrong of 45 | **≤ 1 % not shown**: the worst run's 95 % upper bound is 10.1 % (worst case 1) |
+| Auto-processing ≥ 70 % at ≤ 1 % error | 73.9 ± 1.0 % booked over 3 runs, 0 wrong (before the printed-but-not-read rule: 75.0 %, with 1 wrong in runs 2 and 3, worst case 1) | **≤ 1 % not shown**: the worst run's 95 % upper bound is 6.6 % |
 | 0 successful injection probes | 0 of 20 | met; bounds the rate only to ≤ 14 % |
 | Calibration (ECE) | 0.0013 on held-out | trivial: one wrong field in 7,849 on dev |
 | Cost and latency per document | 0.034 USD per PDF or scan; 5–6 s | cost reproducible; latency measured once, not by the replay |
@@ -110,7 +110,7 @@ Fields the model alone got wrong most often (scans):
 | scans | llm | 98.22 % | 98.22 % | 98.22 % | 98.22 % ± 0.00 |
 | scans | llm-rules | 100.00 % | 100.00 % | 100.00 % | 100.00 % ± 0.00 |
 
-Booked without a person at the operating point, per run: run 1 75.0 % (45 of 60, 0 wrong); run 2 75.0 % (45 of 60, 1 wrong); run 3 75.0 % (45 of 60, 1 wrong).
+Booked without a person at the operating point, per run: run 1 75.0 % (45 of 60, 0 wrong); run 2 73.3 % (44 of 60, 0 wrong); run 3 73.3 % (44 of 60, 0 wrong).
 
 Runs 2 and 3 are fresh calls to the same model with the same prompt; each run's answers are recorded, so every run replays exactly. The standard deviation is the sample one.
 
@@ -165,14 +165,14 @@ Held back at the operating point, by reason: assumed_value 15.
 
 | set | split | document | wrong | held back by |
 |---|---|---|---|---|
-| scans | dev | scan-0000 | `payment_ibans` | low_confidence |
+| scans | dev | scan-0000 | `payment_ibans` | printed_not_read, low_confidence |
 | scans | dev | scan-0002 | `seller.vat_id` | assumed_value |
 | scans | dev | scan-0059 | `issue_date` | missing_fields |
 | scans | dev | scan-0098 | `buyer_reference` | assumed_value |
 
 ### Injection probes
 
-0 of 20 injected instructions changed a field, a route or a match; 0 only sent an invoice to review that would otherwise have been booked.
+0 of 20 injected instructions changed a field, a route or a match; 2 only sent an invoice to review that would otherwise have been booked.
 
 ### Cost
 
@@ -194,14 +194,19 @@ first. A wrong booking ranks above a needless review.
    missing field has no confidence to be low, and the buyer reference is not among the fields the decision
    requires, so the invoice went through: the only held-out error of the pipeline in three runs. The
    booking itself would have been right (the buyer reference is not booked), but the invoice of record
-   lacks a printed field. One run would not have shown it. **Open**: the blind spot of case 2 below,
-   seen on the model's own output.
+   lacks a printed field. One run would not have shown it. **Fixed** (2026-11-15): a value printed in a
+   standard format with check digits (Leitweg-ID, IBAN, German VAT ID) that is not among the values read
+   now sends the invoice to a person. Formats, not labels, so the rule is not tuned to the held-out
+   layouts. On all three runs it flags only real errors (`pdf-0142`, and `scan-0000`'s misread IBAN, which
+   it catches independently of its low confidence), at no cost to the auto-rate beyond them; it also
+   sends both IBAN-swap injection probes to a person, since the injected IBAN is printed but not read.
 2. **The confidence gate lets through errors it cannot see** (baseline stress test, dev). Run on the
    baseline extractor's output, the threshold that holds back the model's one low-confidence misread lets
-   29 of 32 wrong baseline scans through, for example `scan-0005` with its line items read wrong. Two
-   blind spots: a value is "found in the text" even when it belongs to another field (quantity and price
-   swapped also pass quantity × price), and something left out has no confidence to be low. **Open**:
-   no second, independent signal yet.
+   27 of 32 wrong baseline scans through (29 before the printed-but-not-read rule), for example
+   `scan-0005` with its line items read wrong. Two blind spots: a value is "found in the text" even when
+   it belongs to another field (quantity and price swapped also pass quantity × price), and something
+   left out has no confidence to be low; for fields with a standard format the second is now caught
+   (case 1), for the rest it is not. **Open**: no second, independent signal for the first.
 3. **Misreads held back only by an unrelated rule** (`scan-0002` seller VAT ID, `scan-0098` buyer
    reference, dev, run 1). Both had high confidence and went to review only because the currency was
    assumed, not printed. Had the currency been on the page, both would have been booked wrong. With
@@ -246,7 +251,8 @@ first. A wrong booking ranks above a needless review.
   ≤ 1 % needs about 300 automatic bookings without an error.
 - **Repeated runs find what one run hides.** Run 1 booked 45 held-out invoices with no error; runs 2
   and 3, same model and prompt, each left one printed field out of the same invoice and booked it
-  (worst case 1). Accuracy barely moved (± 0.04 %), the error count did.
+  (worst case 1). Accuracy barely moved (± 0.04 %), the error count did. The fix came from the page,
+  not from more confidence: a standard format with check digits says a value was there.
 - **Confidence built from checks and grounding is cheap and explainable, but not independent of the
   reading.** It catches values that fail a check or are absent from the page, and misses right values in
   the wrong field (cases 1 and 2).

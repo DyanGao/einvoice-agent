@@ -70,6 +70,7 @@ const CAUSE: Record<string, string> = {
   not_read: "Not validated or read",
   missing_fields: "Fields missing",
   assumed_value: "Value assumed",
+  printed_not_read: "On the document, not read",
   low_confidence: "Read with low confidence",
   findings: "Checks need a person",
   not_compared: "Not compared with the ERP",

@@ -29,7 +29,7 @@ from app.models import Invoice
 from eval.generators.structured import GOLD_FILE
 from eval.run import predictions_file, read_jsonl
 
-NOT_SCORED = {"field_confidence", "derived_fields"}
+NOT_SCORED = {"field_confidence", "derived_fields", "unread_fields"}
 _MISSING = object()
 
 

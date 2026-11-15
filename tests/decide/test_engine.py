@@ -137,6 +137,13 @@ def test_assumed_value_goes_to_review_however_sure_the_rest_is():
     assert (reason.cause, reason.fields) == (Cause.ASSUMED_VALUE, ("currency",))
 
 
+def test_value_printed_but_not_read_goes_to_review_and_is_named():
+    """A field left out has no confidence to be low (pdf-0142 in runs 2 and 3)."""
+    draft = invoice(unread_fields=("buyer_reference",))
+    (reason,) = run(draft, status=DocumentStatus.EXTRACTED).reasons
+    assert (reason.cause, reason.fields) == (Cause.PRINTED_NOT_READ, ("buyer_reference",))
+
+
 def test_value_computed_from_other_values_is_not_an_assumption():
     draft = invoice(derived_fields=("vat_total",), field_confidence={"vat_total": 0.99})
     assert run(draft, status=DocumentStatus.EXTRACTED).route is Route.AUTO
