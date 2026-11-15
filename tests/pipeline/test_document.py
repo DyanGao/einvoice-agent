@@ -82,3 +82,85 @@ def test_other_input_is_unsupported_and_touches_neither_service(accepting, data)
     extractor = SpyExtractor()
     outcome = process_document(data, accepting, extractor)
     assert (outcome.status, extractor.seen, accepting.seen) == (DocumentStatus.UNSUPPORTED, [], [])
+
+
+# --- page limit (hardening H4): a long document is not sent to the model ---
+
+
+def pages_of(source: bytes, count: int) -> bytes:
+    """A PDF made of `count` copies of the first page of `source`."""
+    import io
+
+    from pypdf import PdfReader, PdfWriter
+
+    writer = PdfWriter()
+    page = PdfReader(io.BytesIO(source)).pages[0]
+    for _ in range(count):
+        writer.add_page(page)
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+def scanned_pages(count: int) -> bytes:
+    import io
+
+    from pypdf import PdfWriter
+
+    writer = PdfWriter()
+    for _ in range(count):
+        writer.add_blank_page(595, 842)
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+def test_pdf_longer_than_the_limit_goes_to_a_person_unread(accepting):
+    extractor = SpyExtractor()
+    outcome = process_document(pages_of(PDF, 11), accepting, extractor, max_pages=10)
+    assert (outcome.status, extractor.seen) == (DocumentStatus.EXTRACTION_FAILED, [])
+    assert outcome.error == "11 pages, more than the 10 read automatically"
+
+
+def test_pdf_at_the_limit_is_read(accepting):
+    extractor = SpyExtractor()
+    process_document(pages_of(PDF, 10), accepting, extractor, max_pages=10)
+    assert len(extractor.seen) == 1
+
+
+def test_scanned_pdf_longer_than_the_limit_is_not_read_either(accepting):
+    extractor = SpyExtractor()
+    outcome = process_document(scanned_pages(11), accepting, extractor, max_pages=10)
+    assert (outcome.status, extractor.seen) == (DocumentStatus.EXTRACTION_FAILED, [])
+
+
+def test_an_image_is_one_page(accepting):
+    import io
+
+    from PIL import Image
+
+    out = io.BytesIO()
+    Image.new("RGB", (60, 80), "white").save(out, format="JPEG")
+    extractor = SpyExtractor()
+    process_document(out.getvalue(), accepting, extractor, max_pages=1)
+    assert len(extractor.seen) == 1
+
+
+def test_pages_of_an_unreadable_pdf_are_unknown():
+    from app.pipeline.document import page_count
+
+    assert page_count(b"%PDF-1.7\n%not really a pdf\n") is None
+
+
+def test_pdf_whose_pages_cannot_be_counted_is_left_to_the_extractor(accepting, monkeypatch):
+    """Not counting is not a reason to refuse: the extractor fails on its own terms."""
+    monkeypatch.setattr("app.pipeline.document.page_count", lambda data: None)
+    extractor = SpyExtractor()
+    process_document(PDF, accepting, extractor, max_pages=1)
+    assert extractor.seen == [PDF]
+
+
+def test_default_limit_reads_an_ordinary_invoice(accepting):
+    extractor = SpyExtractor()
+    process_document(PDF, accepting, extractor)
+    assert len(extractor.seen) == 1

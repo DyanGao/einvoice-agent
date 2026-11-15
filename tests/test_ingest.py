@@ -135,3 +135,30 @@ def test_hidden_empty_oversized_and_non_files_are_skipped(session_factory, tmp_p
     (tmp_path / "link.xml").symlink_to(outside)
     assert scan_folder(tmp_path, session_factory, RecordingQueue(), max_bytes=1000) == []
     assert count(session_factory) == 0
+
+
+def test_long_pdf_waits_for_a_person_unread(session_factory):
+    """Hardening H4: through the job and the database, not only the pipeline."""
+    from tests.pipeline.test_document import pages_of
+
+    queue = RecordingQueue()
+    document_id = ingest(session_factory, queue, pages_of(PDF, 3), "long.pdf").document_id
+    status = run_document_job(
+        session_factory, document_id, StubValidator(ACCEPT), SpyNever(), max_pages=2
+    )
+    with session_factory() as session:
+        document = session.get(db.DocumentRow, document_id)
+        assert (status, document.review_state) == ("extraction_failed", "pending")
+        assert document.error == "3 pages, more than the 2 read automatically"
+
+
+class SpyNever:
+    def extract(self, data):
+        raise AssertionError("a document over the page limit must not be read")
+
+
+def test_page_limit_comes_from_the_environment(monkeypatch):
+    from app.settings import Settings
+
+    monkeypatch.setenv("MAX_PAGES", "25")
+    assert Settings.from_env().max_pages == 25

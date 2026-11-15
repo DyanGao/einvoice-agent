@@ -66,12 +66,15 @@ def _context() -> tuple:
         KositValidator(client),
         build_extractor(settings),
         build_checker(settings.erp_url, settings.erp_timeout_seconds),
+        settings.max_pages,
     )
 
 
 def process_document_job(document_id: str) -> str:
-    session_factory, validator, extractor, checker = _context()
-    return run_document_job(session_factory, document_id, validator, extractor, checker)
+    session_factory, validator, extractor, checker, max_pages = _context()
+    return run_document_job(
+        session_factory, document_id, validator, extractor, checker, max_pages=max_pages
+    )
 
 
 def main() -> None:
