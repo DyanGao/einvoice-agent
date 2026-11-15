@@ -1,0 +1,76 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "81208.62",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-06-17",
+  "gross_total": "81208.62",
+  "issue_date": "2026-06-10",
+  "line_net_total": "68242.54",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "32428.28",
+    "quantity": "31.68",
+    "unit_price": "1023.62",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "3251.48",
+    "quantity": "14.69",
+    "unit_price": "221.34",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "3",
+    "net": "20011.83",
+    "quantity": "8.27",
+    "unit_price": "2419.81",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "4",
+    "net": "1655.94",
+    "quantity": "26",
+    "unit_price": "63.69",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "5",
+    "net": "10895.01",
+    "quantity": "7",
+    "unit_price": "1556.43",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "68242.54",
+  "number": "RE-2026-73960",
+  "payment_ibans": [
+   "DE23000145557758492027"
+  ],
+  "po_ref": null,
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE956474015",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "12966.08",
+    "taxable_amount": "68242.54"
+   }
+  ],
+  "vat_total": "12966.08"
+ },
+ "output_tokens": 599
+}

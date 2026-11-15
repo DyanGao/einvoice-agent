@@ -1,0 +1,90 @@
+{
+ "input_tokens": 5683,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "213393.50",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE921405250",
+  "currency": "EUR",
+  "due_date": "2026-03-21",
+  "gross_total": "213393.50",
+  "issue_date": "2026-03-07",
+  "line_net_total": "181664.83",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "5039.82",
+    "quantity": "16.66",
+    "unit_price": "302.51",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "2",
+    "net": "54266.80",
+    "quantity": "40",
+    "unit_price": "1356.67",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "25785.53",
+    "quantity": "12.42",
+    "unit_price": "2076.13",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "4",
+    "net": "1079.68",
+    "quantity": "6.29",
+    "unit_price": "171.65",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "5",
+    "net": "18190.60",
+    "quantity": "19",
+    "unit_price": "957.40",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "6",
+    "net": "77302.40",
+    "quantity": "32",
+    "unit_price": "2415.70",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "181664.83",
+  "number": "RE-2026-49812",
+  "payment_ibans": [
+   "DE81000298046537929012"
+  ],
+  "po_ref": "PO-577143",
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE192780573",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "30102.54",
+    "taxable_amount": "158434.41"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1626.13",
+    "taxable_amount": "23230.42"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 686
+}

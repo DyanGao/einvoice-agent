@@ -1,0 +1,68 @@
+{
+ "input_tokens": 5598,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "199432.77",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "199432.77",
+  "issue_date": "2026-06-24",
+  "line_net_total": "167590.56",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "26812.20",
+    "quantity": "12",
+    "unit_price": "2234.35",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "89015.94",
+    "quantity": "39",
+    "unit_price": "2282.46",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "3",
+    "net": "17283.50",
+    "quantity": "13",
+    "unit_price": "1329.50",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "4",
+    "net": "34478.92",
+    "quantity": "19",
+    "unit_price": "1814.68",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "167590.56",
+  "number": "RE-2026-57308",
+  "payment_ibans": [
+   "DE52000064169215085647"
+  ],
+  "po_ref": "PO-539617",
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE053809688",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "31842.21",
+    "taxable_amount": "167590.56"
+   }
+  ],
+  "vat_total": "31842.21"
+ },
+ "output_tokens": 527
+}

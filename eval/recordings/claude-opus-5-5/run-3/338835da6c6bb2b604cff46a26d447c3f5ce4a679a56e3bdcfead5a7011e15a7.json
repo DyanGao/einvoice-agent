@@ -1,0 +1,58 @@
+{
+ "input_tokens": 5578,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "95324.70",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE450670321",
+  "currency": "EUR",
+  "due_date": "2026-10-22",
+  "gross_total": "95324.70",
+  "issue_date": "2026-09-22",
+  "line_net_total": "84540.58",
+  "lines": [
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "43988.20",
+    "quantity": "34.03",
+    "unit_price": "1292.63",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "40552.38",
+    "quantity": "22",
+    "unit_price": "1843.29",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "84540.58",
+  "number": "RE-2026-72107",
+  "payment_ibans": [
+   "DE66000932616814865485"
+  ],
+  "po_ref": "PO-564096",
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE772087832",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "7704.95",
+    "taxable_amount": "40552.38"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "3079.17",
+    "taxable_amount": "43988.20"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 448
+}

@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5500,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "44759.32",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "44759.32",
+  "issue_date": "2026-07-26",
+  "line_net_total": "37612.87",
+  "lines": [
+   {
+    "description": "Anfahrt",
+    "line_id": "1",
+    "net": "37612.87",
+    "quantity": "30.38",
+    "unit_price": "1238.08",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "37612.87",
+  "number": "RE-2026-04962",
+  "payment_ibans": [
+   "DE51000557869184550406"
+  ],
+  "po_ref": "PO-921038",
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE855497573",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "7146.45",
+    "taxable_amount": "37612.87"
+   }
+  ],
+  "vat_total": "7146.45"
+ },
+ "output_tokens": 342
+}

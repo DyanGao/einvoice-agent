@@ -1,0 +1,74 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "60179.23",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE963910250",
+  "currency": null,
+  "due_date": "2026-03-13",
+  "gross_total": "60179.23",
+  "issue_date": "2026-03-06",
+  "line_net_total": "53265.24",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "26720.10",
+    "quantity": "30",
+    "unit_price": "890.67",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "2",
+    "net": "10597.01",
+    "quantity": "15.68",
+    "unit_price": "675.83",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "3",
+    "net": "7520.04",
+    "quantity": "6",
+    "unit_price": "1253.34",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "4",
+    "net": "8428.09",
+    "quantity": "11",
+    "unit_price": "766.19",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "53265.24",
+  "number": "RE-2026-91347",
+  "payment_ibans": [
+   "DE95000890059459480426"
+  ],
+  "po_ref": null,
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": null,
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "5043.58",
+    "taxable_amount": "26545.14"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1870.41",
+    "taxable_amount": "26720.10"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 845
+}

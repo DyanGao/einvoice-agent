@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5447,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "13576.50",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE015434564",
+  "currency": "EUR",
+  "due_date": "2026-03-06",
+  "gross_total": "13576.50",
+  "issue_date": "2026-02-04",
+  "line_net_total": "12688.32",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "12688.32",
+    "quantity": "8",
+    "unit_price": "1586.04",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "12688.32",
+  "number": "RE-2026-79639",
+  "payment_ibans": [
+   "DE13000214834335882349"
+  ],
+  "po_ref": null,
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE758518252",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "888.18",
+    "taxable_amount": "12688.32"
+   }
+  ],
+  "vat_total": "888.18"
+ },
+ "output_tokens": 351
+}

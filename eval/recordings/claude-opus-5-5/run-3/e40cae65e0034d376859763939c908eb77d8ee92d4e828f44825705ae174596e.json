@@ -1,0 +1,60 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "105680.28",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE035428614",
+  "currency": "EUR",
+  "due_date": "2026-10-25",
+  "gross_total": "105680.28",
+  "issue_date": "2026-10-11",
+  "line_net_total": "88806.96",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "34574.56",
+    "quantity": "16",
+    "unit_price": "2160.91",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "27308.20",
+    "quantity": "26.31",
+    "unit_price": "1037.94",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "3",
+    "net": "26924.20",
+    "quantity": "20",
+    "unit_price": "1346.21",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "88806.96",
+  "number": "RE-2026-23299",
+  "payment_ibans": [
+   "DE28000204650186669758"
+  ],
+  "po_ref": "PO-536499",
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE931243534",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "16873.32",
+    "taxable_amount": "88806.96"
+   }
+  ],
+  "vat_total": "16873.32"
+ },
+ "output_tokens": 483
+}

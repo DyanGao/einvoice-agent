@@ -1,0 +1,66 @@
+{
+ "input_tokens": 5553,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "172748.88",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE941579502",
+  "currency": "EUR",
+  "due_date": "2026-09-28",
+  "gross_total": "172748.88",
+  "issue_date": "2026-08-29",
+  "line_net_total": "146369.44",
+  "lines": [
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "11922.90",
+    "quantity": "5.60",
+    "unit_price": "2129.09",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "59503.70",
+    "quantity": "33.06",
+    "unit_price": "1799.87",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "3",
+    "net": "74942.84",
+    "quantity": "38",
+    "unit_price": "1972.18",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "146369.44",
+  "number": "RE-2026-83553",
+  "payment_ibans": [
+   "DE94000117231801388000"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE729584777",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "25544.84",
+    "taxable_amount": "134446.54"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "834.60",
+    "taxable_amount": "11922.90"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 516
+}

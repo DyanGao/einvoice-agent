@@ -1,0 +1,66 @@
+{
+ "input_tokens": 5612,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "136719.55",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-09-01",
+  "gross_total": "136719.55",
+  "issue_date": "2026-08-18",
+  "line_net_total": "117744.98",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "79258.41",
+    "quantity": "33",
+    "unit_price": "2401.77",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "28308.16",
+    "quantity": "36.68",
+    "unit_price": "771.76",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "10178.41",
+    "quantity": "9.26",
+    "unit_price": "1099.18",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "117744.98",
+  "number": "RE-2026-33664",
+  "payment_ibans": [
+   "DE55000434360332258230"
+  ],
+  "po_ref": "PO-371291",
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE612004414",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "16993.00",
+    "taxable_amount": "89436.82"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1981.57",
+    "taxable_amount": "28308.16"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 525
+}

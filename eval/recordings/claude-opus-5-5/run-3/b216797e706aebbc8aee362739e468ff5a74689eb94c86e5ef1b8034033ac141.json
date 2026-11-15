@@ -1,0 +1,90 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "158213.97",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-03-15",
+  "gross_total": "158213.97",
+  "issue_date": "2026-03-08",
+  "line_net_total": "135334.14",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "8816.32",
+    "quantity": "16",
+    "unit_price": "551.02",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "21635.68",
+    "quantity": "11",
+    "unit_price": "1966.88",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "3",
+    "net": "23613.77",
+    "quantity": "37",
+    "unit_price": "638.21",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "4",
+    "net": "27220.32",
+    "quantity": "24",
+    "unit_price": "1134.18",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "5",
+    "net": "29973.65",
+    "quantity": "30.23",
+    "unit_price": "991.52",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "6",
+    "net": "24074.40",
+    "quantity": "35",
+    "unit_price": "687.84",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "135334.14",
+  "number": "RE-2026-02544",
+  "payment_ibans": [
+   "DE97000576116860762588"
+  ],
+  "po_ref": null,
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE198548390",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "21226.87",
+    "taxable_amount": "111720.37"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1652.96",
+    "taxable_amount": "23613.77"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 814
+}

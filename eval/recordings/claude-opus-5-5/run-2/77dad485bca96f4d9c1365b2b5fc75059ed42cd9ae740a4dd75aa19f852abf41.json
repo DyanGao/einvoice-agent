@@ -1,0 +1,82 @@
+{
+ "input_tokens": 5671,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "134773.44",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "134773.44",
+  "issue_date": "2026-03-15",
+  "line_net_total": "116226.51",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "48147.90",
+    "quantity": "33.05",
+    "unit_price": "1456.82",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "20665.44",
+    "quantity": "9",
+    "unit_price": "2296.16",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "3",
+    "net": "38611.04",
+    "quantity": "26",
+    "unit_price": "1485.04",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "4",
+    "net": "1947.95",
+    "quantity": "1.99",
+    "unit_price": "978.87",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "5",
+    "net": "6854.18",
+    "quantity": "12.87",
+    "unit_price": "532.57",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "116226.51",
+  "number": "RE-2026-22102",
+  "payment_ibans": [
+   "DE82000424877915532124"
+  ],
+  "po_ref": "PO-130438",
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE058100731",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "16484.20",
+    "taxable_amount": "86758.94"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "2062.73",
+    "taxable_amount": "29467.57"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 629
+}

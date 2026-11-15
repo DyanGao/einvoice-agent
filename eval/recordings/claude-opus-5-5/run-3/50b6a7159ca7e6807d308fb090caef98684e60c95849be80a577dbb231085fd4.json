@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "38866.03",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-08-07",
+  "gross_total": "38866.03",
+  "issue_date": null,
+  "line_net_total": "32660.53",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "10483.49",
+    "quantity": "13.26",
+    "unit_price": "790.61",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "2",
+    "net": "22177.04",
+    "quantity": "12.44",
+    "unit_price": "1782.72",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "32660.53",
+  "number": "RE-2026-16159",
+  "payment_ibans": [
+   "DE75000888700358688702"
+  ],
+  "po_ref": "PO-256676",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE088576221",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "6205.50",
+    "taxable_amount": "32660.53"
+   }
+  ],
+  "vat_total": "6205.50"
+ },
+ "output_tokens": 812
+}

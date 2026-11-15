@@ -1,0 +1,74 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "214585.71",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-02-04",
+  "gross_total": "214585.71",
+  "issue_date": "2026-01-21",
+  "line_net_total": "189320.35",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "8700.30",
+    "quantity": "35",
+    "unit_price": "248.58",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "2",
+    "net": "91407.48",
+    "quantity": "38",
+    "unit_price": "2405.46",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "3",
+    "net": "16952.80",
+    "quantity": "8",
+    "unit_price": "2119.10",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "4",
+    "net": "72259.77",
+    "quantity": "33",
+    "unit_price": "2189.69",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "189320.35",
+  "number": "RE-2026-17234",
+  "payment_ibans": [
+   "DE61000064986009679677"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE644783128",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "19020.48",
+    "taxable_amount": "100107.78"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "6244.88",
+    "taxable_amount": "89212.57"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 574
+}

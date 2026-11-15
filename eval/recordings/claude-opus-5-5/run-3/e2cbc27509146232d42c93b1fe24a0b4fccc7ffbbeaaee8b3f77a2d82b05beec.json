@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5487,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "72506.21",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE730300033",
+  "currency": null,
+  "due_date": "2026-07-10",
+  "gross_total": "72506.21",
+  "issue_date": "2026-07-03",
+  "line_net_total": "60929.59",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "3603.19",
+    "quantity": "1.77",
+    "unit_price": "2035.70",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "57326.40",
+    "quantity": "32",
+    "unit_price": "1791.45",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "60929.59",
+  "number": "RE-2026-53526",
+  "payment_ibans": [
+   "DE03000801391064833945"
+  ],
+  "po_ref": null,
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE720619678",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "11576.62",
+    "taxable_amount": "60929.59"
+   }
+  ],
+  "vat_total": "11576.62"
+ },
+ "output_tokens": 402
+}

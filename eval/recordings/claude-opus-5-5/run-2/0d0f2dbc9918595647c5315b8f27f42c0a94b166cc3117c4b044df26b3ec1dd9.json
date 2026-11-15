@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5469,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "63971.82",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "63971.82",
+  "issue_date": "2026-09-26",
+  "line_net_total": "53757.83",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "373.46",
+    "quantity": "10.80",
+    "unit_price": "34.58",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "53384.37",
+    "quantity": "39",
+    "unit_price": "1368.83",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "53757.83",
+  "number": "RE-2026-59664",
+  "payment_ibans": [
+   "DE12000395282299360721"
+  ],
+  "po_ref": null,
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE888678656",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "10213.99",
+    "taxable_amount": "53757.83"
+   }
+  ],
+  "vat_total": "10213.99"
+ },
+ "output_tokens": 593
+}

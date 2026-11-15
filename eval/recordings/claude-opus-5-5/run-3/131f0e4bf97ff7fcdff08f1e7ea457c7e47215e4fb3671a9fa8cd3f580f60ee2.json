@@ -1,0 +1,83 @@
+{
+ "input_tokens": 6014,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "95675.82",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-09-23",
+  "gross_total": "95675.82",
+  "issue_date": "2026-09-09",
+  "line_net_total": "81265.06",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "6434.84",
+    "quantity": "17",
+    "unit_price": "378.52",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "749.33",
+    "quantity": "1.67",
+    "unit_price": "448.70",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "3",
+    "net": "7830.69",
+    "quantity": "21",
+    "unit_price": "372.89",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "4",
+    "net": "66211.92",
+    "quantity": "30.81",
+    "unit_price": "2149.04",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "5",
+    "net": "38.28",
+    "quantity": "2",
+    "unit_price": "19.14",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "81265.06",
+  "number": "RE-2026-91232",
+  "payment_ibans": [
+   "DE51000103011805329334",
+   "DE41000567386494572882"
+  ],
+  "po_ref": null,
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE908308246",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "13810.16",
+    "taxable_amount": "72685.04"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "600.60",
+    "taxable_amount": "8580.02"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 655
+}

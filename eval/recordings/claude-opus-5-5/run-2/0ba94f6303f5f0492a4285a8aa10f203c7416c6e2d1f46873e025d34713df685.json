@@ -1,0 +1,66 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "101589.19",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE683082909",
+  "currency": "EUR",
+  "due_date": "2026-03-08",
+  "gross_total": "101589.19",
+  "issue_date": "2026-03-01",
+  "line_net_total": "90202.78",
+  "lines": [
+   {
+    "description": "Anfahrt",
+    "line_id": "1",
+    "net": "3980.72",
+    "quantity": "35.02",
+    "unit_price": "113.67",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "2",
+    "net": "38287.74",
+    "quantity": "37.70",
+    "unit_price": "1015.59",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "3",
+    "net": "47934.32",
+    "quantity": "28",
+    "unit_price": "1711.94",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "90202.78",
+  "number": "RE-2026-51041",
+  "payment_ibans": [
+   "DE58000829541939457995"
+  ],
+  "po_ref": "PO-747168",
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE788091991",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "8031.01",
+    "taxable_amount": "42268.46"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "3355.40",
+    "taxable_amount": "47934.32"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 520
+}

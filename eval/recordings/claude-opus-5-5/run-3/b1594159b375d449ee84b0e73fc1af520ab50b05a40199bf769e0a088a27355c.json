@@ -1,0 +1,52 @@
+{
+ "input_tokens": 6014,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "119667.66",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": null,
+  "gross_total": "119667.66",
+  "issue_date": "2026-07-18",
+  "line_net_total": "100561.06",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "69317.44",
+    "quantity": "32",
+    "unit_price": "2166.17",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "31243.62",
+    "quantity": "17",
+    "unit_price": "1837.86",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "100561.06",
+  "number": "RE-2026-86422",
+  "payment_ibans": [
+   "DE53000281964980761190"
+  ],
+  "po_ref": "PO-789238",
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE253122816",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "19106.60",
+    "taxable_amount": "100561.06"
+   }
+  ],
+  "vat_total": "19106.60"
+ },
+ "output_tokens": 632
+}

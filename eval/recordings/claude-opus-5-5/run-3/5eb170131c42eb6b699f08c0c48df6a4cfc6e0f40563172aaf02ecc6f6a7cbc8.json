@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5480,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "47214.62",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "47214.62",
+  "issue_date": "2026-01-21",
+  "line_net_total": "39676.15",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "39676.15",
+    "quantity": "23",
+    "unit_price": "1725.05",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "39676.15",
+  "number": "RE-2026-92308",
+  "payment_ibans": [
+   "DE76000328988202450950"
+  ],
+  "po_ref": "PO-695117",
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE833386167",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "7538.47",
+    "taxable_amount": "39676.15"
+   }
+  ],
+  "vat_total": "7538.47"
+ },
+ "output_tokens": 345
+}

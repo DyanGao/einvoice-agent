@@ -1,0 +1,66 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "92080.72",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE960189027",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "92080.72",
+  "issue_date": "2026-10-21",
+  "line_net_total": "77734.44",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "72652.71",
+    "quantity": "39",
+    "unit_price": "1862.89",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "1554.54",
+    "quantity": "39",
+    "unit_price": "39.86",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "3",
+    "net": "3527.19",
+    "quantity": "3",
+    "unit_price": "1175.73",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "77734.44",
+  "number": "RE-2026-66409",
+  "payment_ibans": [
+   "DE96000844469012734783"
+  ],
+  "po_ref": "PO-333595",
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE662015487",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "14099.38",
+    "taxable_amount": "74207.25"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "246.90",
+    "taxable_amount": "3527.19"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 503
+}

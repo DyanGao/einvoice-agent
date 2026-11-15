@@ -1,0 +1,83 @@
+{
+ "input_tokens": 5637,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "124202.02",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "124202.02",
+  "issue_date": "2026-08-29",
+  "line_net_total": "106186.82",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "44443.13",
+    "quantity": "23",
+    "unit_price": "1932.31",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "797.20",
+    "quantity": "20",
+    "unit_price": "39.86",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "3",
+    "net": "31009.30",
+    "quantity": "35",
+    "unit_price": "885.98",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "4",
+    "net": "18002.53",
+    "quantity": "10.13",
+    "unit_price": "1777.15",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "5",
+    "net": "11934.66",
+    "quantity": "16.53",
+    "unit_price": "722.00",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "106186.82",
+  "number": "RE-2026-23121",
+  "payment_ibans": [
+   "DE18000447958942342403",
+   "DE08000777094715843096"
+  ],
+  "po_ref": "PO-404987",
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE126806292",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "16755.02",
+    "taxable_amount": "88184.29"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1260.18",
+    "taxable_amount": "18002.53"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 648
+}

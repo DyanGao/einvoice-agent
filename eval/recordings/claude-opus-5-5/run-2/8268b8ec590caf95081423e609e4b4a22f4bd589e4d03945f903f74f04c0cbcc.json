@@ -1,0 +1,84 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "359018.94",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE371414826",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "359018.94",
+  "issue_date": "2026-06-25",
+  "line_net_total": "301696.59",
+  "lines": [
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "56163.44",
+    "quantity": "36.38",
+    "unit_price": "1543.80",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "70606.22",
+    "quantity": "31",
+    "unit_price": "2277.62",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "3",
+    "net": "76078.65",
+    "quantity": "31",
+    "unit_price": "2454.15",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "4",
+    "net": "22800.96",
+    "quantity": "29",
+    "unit_price": "786.24",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "5",
+    "net": "40636.12",
+    "quantity": "21.36",
+    "unit_price": "1902.44",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "6",
+    "net": "35411.20",
+    "quantity": "16",
+    "unit_price": "2213.20",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "301696.59",
+  "number": "RE-2026-75972",
+  "payment_ibans": [
+   "DE80000050015193996295"
+  ],
+  "po_ref": null,
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE461844639",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "57322.35",
+    "taxable_amount": "301696.59"
+   }
+  ],
+  "vat_total": "57322.35"
+ },
+ "output_tokens": 868
+}

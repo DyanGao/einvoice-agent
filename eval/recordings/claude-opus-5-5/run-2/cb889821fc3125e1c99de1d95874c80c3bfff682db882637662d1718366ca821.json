@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5470,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "58307.11",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-07-08",
+  "gross_total": "58307.11",
+  "issue_date": "2026-06-24",
+  "line_net_total": "48997.57",
+  "lines": [
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "29704.51",
+    "quantity": "13.39",
+    "unit_price": "2218.41",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "2",
+    "net": "19293.06",
+    "quantity": "32.24",
+    "unit_price": "598.42",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "48997.57",
+  "number": "RE-2026-45657",
+  "payment_ibans": [
+   "DE77000796424058826762"
+  ],
+  "po_ref": null,
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE943831069",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "9309.54",
+    "taxable_amount": "48997.57"
+   }
+  ],
+  "vat_total": "9309.54"
+ },
+ "output_tokens": 413
+}

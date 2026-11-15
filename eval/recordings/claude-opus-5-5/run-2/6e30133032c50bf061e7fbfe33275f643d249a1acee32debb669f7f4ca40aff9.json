@@ -1,0 +1,90 @@
+{
+ "input_tokens": 5661,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "115901.87",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE280036057",
+  "currency": "EUR",
+  "due_date": "2026-10-29",
+  "gross_total": "115901.87",
+  "issue_date": "2026-10-22",
+  "line_net_total": "105629.27",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "1627.84",
+    "quantity": "4",
+    "unit_price": "406.96",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "2",
+    "net": "7159.05",
+    "quantity": "5",
+    "unit_price": "1431.81",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "3",
+    "net": "12198.88",
+    "quantity": "8",
+    "unit_price": "1524.86",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "4",
+    "net": "16364.72",
+    "quantity": "8",
+    "unit_price": "2045.59",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "5",
+    "net": "63648.84",
+    "quantity": "35.96",
+    "unit_price": "1769.99",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "6",
+    "net": "4629.94",
+    "quantity": "2",
+    "unit_price": "2314.97",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "105629.27",
+  "number": "RE-2026-52602",
+  "payment_ibans": [
+   "DE13000379693921098129"
+  ],
+  "po_ref": null,
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE329569347",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "4557.70",
+    "taxable_amount": "23987.87"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "5714.90",
+    "taxable_amount": "81641.40"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 712
+}

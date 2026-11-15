@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5457,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "17706.74",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-03-13",
+  "gross_total": "17706.74",
+  "issue_date": "2026-02-27",
+  "line_net_total": "14879.61",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "14879.61",
+    "quantity": "9",
+    "unit_price": "1653.29",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "14879.61",
+  "number": "RE-2026-59654",
+  "payment_ibans": [
+   "DE29000932168810800787"
+  ],
+  "po_ref": "PO-707152",
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE133183892",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "2827.13",
+    "taxable_amount": "14879.61"
+   }
+  ],
+  "vat_total": "2827.13"
+ },
+ "output_tokens": 363
+}

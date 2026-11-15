@@ -1,0 +1,82 @@
+{
+ "input_tokens": 5655,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "52078.35",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-06-03",
+  "gross_total": "52078.35",
+  "issue_date": "2026-05-04",
+  "line_net_total": "44337.70",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "34283.85",
+    "quantity": "24.18",
+    "unit_price": "1417.86",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "1940.08",
+    "quantity": "2",
+    "unit_price": "970.04",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "3",
+    "net": "5695.96",
+    "quantity": "4",
+    "unit_price": "1423.99",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "4",
+    "net": "1591.63",
+    "quantity": "19",
+    "unit_price": "83.77",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "5",
+    "net": "826.18",
+    "quantity": "2.57",
+    "unit_price": "321.47",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "44337.70",
+  "number": "RE-2026-48354",
+  "payment_ibans": [
+   "DE14000149734822826944"
+  ],
+  "po_ref": "PO-632154",
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE633398956",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "7341.93",
+    "taxable_amount": "38641.74"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "398.72",
+    "taxable_amount": "5695.96"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 635
+}

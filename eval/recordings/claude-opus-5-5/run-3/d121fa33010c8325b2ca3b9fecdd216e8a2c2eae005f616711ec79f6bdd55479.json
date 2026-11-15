@@ -1,0 +1,58 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "75371.76",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "75371.76",
+  "issue_date": "2026-10-27",
+  "line_net_total": "69336.48",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "9847.68",
+    "quantity": "19.20",
+    "unit_price": "512.90",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "59488.80",
+    "quantity": "30",
+    "unit_price": "1982.96",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "69336.48",
+  "number": "RE-2026-76212",
+  "payment_ibans": [
+   "DE08000788257240321179"
+  ],
+  "po_ref": "PO-570582",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE288285405",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "1871.06",
+    "taxable_amount": "9847.68"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "4164.22",
+    "taxable_amount": "59488.80"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 455
+}

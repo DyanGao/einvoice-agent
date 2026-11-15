@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5467,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "32327.86",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE004899931",
+  "currency": null,
+  "due_date": "2026-11-03",
+  "gross_total": "32327.86",
+  "issue_date": "2026-10-04",
+  "line_net_total": "27166.27",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "27166.27",
+    "quantity": "15.39",
+    "unit_price": "1765.19",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "27166.27",
+  "number": "RE-2026-99788",
+  "payment_ibans": [
+   "DE43000666872032217847"
+  ],
+  "po_ref": "PO-202622",
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE779802406",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "5161.59",
+    "taxable_amount": "27166.27"
+   }
+  ],
+  "vat_total": "5161.59"
+ },
+ "output_tokens": 508
+}

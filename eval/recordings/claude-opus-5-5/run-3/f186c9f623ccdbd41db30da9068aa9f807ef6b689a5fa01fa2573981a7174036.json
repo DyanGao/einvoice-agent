@@ -1,0 +1,90 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "94677.18",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE704725359",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "94677.18",
+  "issue_date": "2026-01-19",
+  "line_net_total": "82950.42",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "26868.96",
+    "quantity": "16",
+    "unit_price": "1679.31",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "4236.63",
+    "quantity": "4.11",
+    "unit_price": "1030.81",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "10159.21",
+    "quantity": "30.96",
+    "unit_price": "328.14",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "4",
+    "net": "14329.49",
+    "quantity": "9.55",
+    "unit_price": "1500.47",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "5",
+    "net": "8070.40",
+    "quantity": "20",
+    "unit_price": "403.52",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "6",
+    "net": "19285.73",
+    "quantity": "11.09",
+    "unit_price": "1739.02",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "82950.42",
+  "number": "RE-2026-17581",
+  "payment_ibans": [
+   "DE13000184843157272108"
+  ],
+  "po_ref": "PO-652194",
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE130692694",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "9373.69",
+    "taxable_amount": "49335.20"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "2353.07",
+    "taxable_amount": "33615.22"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 706
+}

@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5440,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "15271.51",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE148357003",
+  "currency": "EUR",
+  "due_date": "2026-09-10",
+  "gross_total": "15271.51",
+  "issue_date": "2026-08-27",
+  "line_net_total": "12833.20",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "12833.20",
+    "quantity": "10",
+    "unit_price": "1283.32",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "12833.20",
+  "number": "RE-2026-51674",
+  "payment_ibans": [
+   "DE91000655325337712605"
+  ],
+  "po_ref": null,
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE255041197",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "2438.31",
+    "taxable_amount": "12833.20"
+   }
+  ],
+  "vat_total": "2438.31"
+ },
+ "output_tokens": 351
+}

@@ -190,3 +190,53 @@ def test_misread_document_that_nothing_held_back_is_called_booked(pdf_set):
     results = collect(pdf_set.parent, pdf_set.parent / "r", MODEL, None)
     results["residual_errors"][0]["held_back_by"] = []
     assert "**nothing: booked**" in details(results)
+
+
+# --- repeated model runs: mean ± sample standard deviation ------------------
+
+
+def test_spread_of_three_runs_is_mean_and_sample_standard_deviation():
+    from eval.report import spread
+
+    # mean 0.98; deviations -0.02, 0, 0.02 → variance 0.0008 / 2 → std 0.02
+    mean, std = spread([0.96, 0.98, 1.00])
+    assert (mean, std) == (pytest.approx(0.98), pytest.approx(0.02))
+
+
+def test_one_run_has_no_spread():
+    from eval.report import spread
+
+    assert spread([0.97]) == (0.97, None)
+
+
+def write_run(folder, system, run, records, changes):
+    from eval.run import predictions_file, run_system
+
+    write_jsonl(
+        folder / predictions_file(run_system(system, run)),
+        [predicted(r, **changes) for r in records],
+    )
+
+
+def test_readme_shows_mean_and_spread_when_there_are_several_runs(tmp_path):
+    folder = tmp_path / "pdf"
+    folder.mkdir()
+    records = [gold("a", "test"), gold("b", "test")]
+    write_jsonl(folder / "gold.jsonl", records)
+    for record in records:
+        (folder / record["file"]).write_bytes(b"%PDF-1.4\n%" + record["id"].encode() + b"\n")
+    write_run(folder, "llm-rules", 1, records, {})
+    write_run(folder, "llm-rules", 2, records, {})
+    write_run(folder, "llm-rules", 3, records, {"currency": "USD"})
+    results = collect(tmp_path, tmp_path / "recordings", MODEL, None)
+    per_run = [r["field_accuracy"] for r in results["runs"]["pdf"]["llm-rules"]]
+    assert per_run == [1.0, 1.0, pytest.approx(1 - 1 / FIELDS)]
+    table = readme_table(results)
+    assert "±" in table
+    assert "3 model runs" in table
+
+
+def test_readme_says_one_run_when_there_is_only_one(pdf_set):
+    table = readme_table(collect(pdf_set.parent, pdf_set.parent / "r", MODEL, None))
+    assert "one model run" in table
+    assert "±" not in table

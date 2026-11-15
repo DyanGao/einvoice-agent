@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5541,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "12856.12",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE744858834",
+  "currency": "EUR",
+  "due_date": "2026-05-30",
+  "gross_total": "12856.12",
+  "issue_date": "2026-05-23",
+  "line_net_total": "10803.46",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "1138.91",
+    "quantity": "0.64",
+    "unit_price": "1779.54",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "9664.55",
+    "quantity": "5",
+    "unit_price": "1932.91",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "10803.46",
+  "number": "RE-2026-74930",
+  "payment_ibans": [
+   "DE60000211568360049808"
+  ],
+  "po_ref": null,
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE861045072",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "2052.66",
+    "taxable_amount": "10803.46"
+   }
+  ],
+  "vat_total": "2052.66"
+ },
+ "output_tokens": 424
+}

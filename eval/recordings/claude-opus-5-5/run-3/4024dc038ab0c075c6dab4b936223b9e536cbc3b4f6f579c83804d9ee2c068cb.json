@@ -1,0 +1,44 @@
+{
+ "input_tokens": 6371,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "70677.67",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE152000500",
+  "currency": "EUR",
+  "due_date": "2026-08-14",
+  "gross_total": "70677.67",
+  "issue_date": "2026-08-07",
+  "line_net_total": "59393.00",
+  "lines": [
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "1",
+    "net": "59393.00",
+    "quantity": "25",
+    "unit_price": "2375.72",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "59393.00",
+  "number": "RE-2026-18718",
+  "payment_ibans": [
+   "DE80000172872006471309"
+  ],
+  "po_ref": "PO-195079",
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE077877805",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "11284.67",
+    "taxable_amount": "59393.00"
+   }
+  ],
+  "vat_total": "11284.67"
+ },
+ "output_tokens": 356
+}

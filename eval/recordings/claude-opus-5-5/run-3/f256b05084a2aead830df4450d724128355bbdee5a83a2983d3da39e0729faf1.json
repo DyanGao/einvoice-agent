@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5681,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "4076.98",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": null,
+  "due_date": "2026-09-27",
+  "gross_total": "4076.98",
+  "issue_date": "2026-09-13",
+  "line_net_total": "3426.03",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "672.30",
+    "quantity": "27",
+    "unit_price": "24.90",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "2753.73",
+    "quantity": "21",
+    "unit_price": "131.13",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "3426.03",
+  "number": "RE-2026-07184",
+  "payment_ibans": [
+   "DE52000020662977509224"
+  ],
+  "po_ref": null,
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE780828356",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "650.95",
+    "taxable_amount": "3426.03"
+   }
+  ],
+  "vat_total": "650.95"
+ },
+ "output_tokens": 611
+}

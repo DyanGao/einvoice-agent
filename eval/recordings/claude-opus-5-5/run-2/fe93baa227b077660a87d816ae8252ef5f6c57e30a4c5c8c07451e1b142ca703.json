@@ -1,0 +1,52 @@
+{
+ "input_tokens": 5530,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "100581.49",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "100581.49",
+  "issue_date": "2026-06-17",
+  "line_net_total": "84522.26",
+  "lines": [
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "1",
+    "net": "46804.16",
+    "quantity": "26",
+    "unit_price": "1800.16",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "37718.10",
+    "quantity": "35",
+    "unit_price": "1077.66",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "84522.26",
+  "number": "RE-2026-43657",
+  "payment_ibans": [
+   "DE82000946326253879804"
+  ],
+  "po_ref": "PO-454325",
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE652531765",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "16059.23",
+    "taxable_amount": "84522.26"
+   }
+  ],
+  "vat_total": "16059.23"
+ },
+ "output_tokens": 410
+}

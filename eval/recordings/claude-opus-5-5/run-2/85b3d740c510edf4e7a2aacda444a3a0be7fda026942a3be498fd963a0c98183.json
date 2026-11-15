@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5472,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "87143.25",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE200755624",
+  "currency": "EUR",
+  "due_date": "2026-08-10",
+  "gross_total": "87143.25",
+  "issue_date": "2026-07-27",
+  "line_net_total": "81442.29",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "81442.29",
+    "quantity": "33.34",
+    "unit_price": "2442.78",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "81442.29",
+  "number": "RE-2026-25922",
+  "payment_ibans": [
+   "DE91000994841819209682"
+  ],
+  "po_ref": "PO-558785",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE876431928",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "5700.96",
+    "taxable_amount": "81442.29"
+   }
+  ],
+  "vat_total": "5700.96"
+ },
+ "output_tokens": 373
+}
