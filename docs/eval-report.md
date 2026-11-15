@@ -273,8 +273,10 @@ first. A wrong booking ranks above a needless review.
   distribution. Injection probes ran once.
 - **Small held-out sets.** 36 PDFs, 24 scans, 10 cases per exception kind, 20 probes: every 100 % here
   has a wide interval.
-- **Assumed currency.** Invoices that print no currency are taken as EUR and sent to review; that default
-  is not confirmed by the project owner yet.
+- **Assumed currency.** Invoices that print no currency are taken as EUR (confirmed by the project
+  owner, [D12](../ARCHITECTURE.md#5-design-decisions-adr-log)) and sent to review. On the held-out split
+  that rule sends 15 of 60 invoices to a person, almost every review there; it also held back two
+  misread scans on dev (worst case 3).
 - **Regular world.** One delivery per invoice, amounts exact to the cent, no discounts, fees, foreign
   currency or credit notes in matching.
 - **Exceptions are invoice data, not files.** The exception and matching evals start after reading, so
