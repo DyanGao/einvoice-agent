@@ -62,7 +62,10 @@ class InvoiceDraft(_Draft):
     # Dotted paths of fields that were filled in by a rule instead of being
     # read from the document (see complete.py).
     derived_fields: tuple[str, ...] = ()
+    # Dotted paths of fields whose value is printed on the document in a
+    # standard format but was not read (confidence.printed_but_unread).
+    unread_fields: tuple[str, ...] = ()
 
     def to_invoice(self) -> Invoice:
         """Raises pydantic.ValidationError while mandatory fields are missing."""
-        return Invoice.model_validate(self.model_dump(exclude={"derived_fields"}))
+        return Invoice.model_validate(self.model_dump(exclude={"derived_fields", "unread_fields"}))

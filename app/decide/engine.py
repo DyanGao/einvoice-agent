@@ -5,7 +5,8 @@ reason that does is collected, not only the first, so the reviewer sees all of
 them. Two kinds of reasons:
 
 - reading: a mandatory field is missing, a value was assumed instead of read,
-  or a field was read with less confidence than the threshold;
+  a value printed in a standard format was not read, or a field was read with
+  less confidence than the threshold;
 - business: a check needs a person, the invoice could not be compared with
   the ERP, its order was only found by what it bills, nothing of the order
   has been delivered, or a reviewer changed it.
@@ -45,6 +46,7 @@ class Cause(StrEnum):
     NOT_READ = "not_read"
     MISSING_FIELDS = "missing_fields"
     ASSUMED_VALUE = "assumed_value"
+    PRINTED_NOT_READ = "printed_not_read"
     LOW_CONFIDENCE = "low_confidence"
     FINDINGS = "findings"
     NOT_COMPARED = "not_compared"
@@ -111,6 +113,14 @@ def reading_causes(draft: InvoiceDraft, settings: DecisionSettings) -> list[Reas
                 Cause.ASSUMED_VALUE,
                 f"not on the document, assumed: {_listed(assumed)}",
                 fields=assumed,
+            )
+        )
+    if draft.unread_fields:
+        reasons.append(
+            Reason(
+                Cause.PRINTED_NOT_READ,
+                f"on the document but not read: {_listed(draft.unread_fields)}",
+                fields=tuple(draft.unread_fields),
             )
         )
     unsure = tuple(

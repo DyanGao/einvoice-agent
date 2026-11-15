@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.decide import THRESHOLDS_FILE, DecisionSettings, reading_causes
-from app.extract.confidence import Calibration, document_text, score
+from app.extract.confidence import Calibration, document_text, printed_but_unread, score
 from app.extract.draft import InvoiceDraft
 from app.models import Invoice
 from eval.generators.structured import GOLD_FILE
@@ -74,7 +74,12 @@ def documents(set_dirs: list[Path], system: str, calibration: Calibration) -> li
             if prediction["invoice"] is not None:
                 read = InvoiceDraft.model_validate(prediction["invoice"])
                 text = document_text((set_dir / gold["file"]).read_bytes())
-                draft = read.model_copy(update={"field_confidence": score(read, text, calibration)})
+                draft = read.model_copy(
+                    update={
+                        "field_confidence": score(read, text, calibration),
+                        "unread_fields": printed_but_unread(read, text),
+                    }
+                )
             wrong, _ = wrong_fields(truth, draft)
             found.append(Document(set_dir.name, gold["id"], gold["split"], draft, tuple(wrong)))
     return found
