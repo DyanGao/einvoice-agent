@@ -7,8 +7,11 @@ field by its label, so moved fields do not matter and a renamed one stops it.
 
 Safety, in the order it matters:
 
-- The browser reaches only the allowlisted hosts. Every request goes through
-  a guard; anything else is blocked, logged and fails the delivery.
+- The browser reaches only the allowlisted origins: `host:port`, or a bare
+  `host` for its default port (80 for http, 443 for https). Another port on an
+  allowed host (a database, the application's own API) is not allowed. Every
+  request goes through a guard; anything else is blocked, logged and fails the
+  delivery.
 - A screen has no idempotency key, so the connector searches the ERP for the
   invoice's reference first. Already booked with the same values: that
   booking is the answer (also after a crash between booking and recording);
@@ -50,6 +53,20 @@ LABELS = (
 _DATES = {"issue_date", "due_date"}
 _AMOUNTS = {"net_total", "vat_total", "gross_total", "amount_due"}
 _EMPTY = "—"
+_DEFAULT_PORTS = {"http": 80, "https": 443, "ws": 80, "wss": 443}
+
+
+def _origin(host: str | None, port: int | None, scheme: str) -> tuple[str, int | None]:
+    return ((host or "").lower(), port if port is not None else _DEFAULT_PORTS.get(scheme))
+
+
+def parse_allowed(entry: str) -> tuple[str, int | None]:
+    """`host:port`, `[v6]:port` or a bare host. A bare host stands for its
+    default port, which is only known per request scheme: port None."""
+    parts = urlsplit(f"//{entry.strip()}")
+    return ((parts.hostname or "").lower(), parts.port)
+
+
 _BOOKING_URL = re.compile(r".*/ui/bookings/(\d+)$")
 
 
@@ -101,15 +118,24 @@ class ErpFormConnector:
         log_dir: Path,
         timeout_ms: int = 10_000,
     ) -> None:
-        host = urlsplit(base_url).hostname
-        if host not in allowed_hosts:
+        self._allowed = {parse_allowed(entry) for entry in allowed_hosts}
+        if not self.permits(base_url):
             raise ValueError(
-                f"ERP host {host!r} is not on the browser allowlist {sorted(allowed_hosts)}"
+                f"ERP address {urlsplit(base_url).netloc!r} is not on the browser allowlist "
+                f"{sorted(allowed_hosts)} (entries are host:port; a bare host allows only "
+                "its default port)"
             )
         self._base = base_url.rstrip("/")
-        self._allowed = set(allowed_hosts)
         self._log_dir = Path(log_dir)
         self._timeout_ms = timeout_ms
+
+    def permits(self, url: str) -> bool:
+        """Whether the browser may request this URL."""
+        parts = urlsplit(url)
+        host, port = _origin(parts.hostname, parts.port, parts.scheme)
+        if (host, port) in self._allowed:
+            return True
+        return (host, None) in self._allowed and port == _DEFAULT_PORTS.get(parts.scheme)
 
     # --- the browser session -------------------------------------------------
 
@@ -127,7 +153,7 @@ class ErpFormConnector:
 
         def guard(route) -> None:
             url = route.request.url
-            if urlsplit(url).hostname in self._allowed:
+            if self.permits(url):
                 route.continue_()
             else:
                 blocked.append(url)

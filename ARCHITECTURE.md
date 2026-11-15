@@ -30,7 +30,7 @@ flowchart TD
   OUT --> E1[CSV / DATEV-style export]
   OUT --> E2[Signed webhook]
   OUT --> E3[ERP booking API]
-  OUT --> E4[Playwright on the ERP's screens<br/>allowlisted hosts, read back]
+  OUT --> E4[Playwright on the ERP's screens<br/>allowlisted host:port only, read back]
   ALL[(Postgres: documents, drafts, invoices,<br/>findings, matches, decisions, deliveries, audit)]
 ```
 
@@ -55,7 +55,7 @@ extractor interface.
 | Decision engine | Combine confidence, assumed values and findings → auto / review, with every reason | `app/decide` | threshold fitted on the eval set (3); version stored with each decision |
 | Review UI | Document beside its fields, unsure fields marked, why it needs a person, correct, approve, history, delivery status | `ui/` (Next.js) | corrections are kept as future eval cases in `data/private/feedback/` (outside git) |
 | Delivery outbox | Deliver approved or auto-decided invoices once per connector; frozen booking, idempotency key, backoff | `app/delivery.py`, `app/deliver.py` | only type 380 (D9); one delivery loop per database, enforced like the bank watch |
-| Connectors | CSV/DATEV-style export, signed webhook, ERP booking API, ERP screens with a browser | `app/connectors` | the browser runs only on allowlisted hosts, logs every action, reads every booking back (4) |
+| Connectors | CSV/DATEV-style export, signed webhook, ERP booking API, ERP screens with a browser | `app/connectors` | the browser runs only on allowlisted host and port, logs every action, reads every booking back (4) |
 | Mock ERP | Suppliers, orders, deliveries, bank transfers, bookings; API and German HTML screens | `mock_erp/` | the eval world's data; seeds itself in Docker |
 | Matching agent | _Planned: tool-calling loop over ERP data for what the rules leave open_ | – | not built (D11) |
 
@@ -113,7 +113,7 @@ Built and tested:
 - **Writes only through connectors, only after a decision** (auto or a person's approval), each
   invoice once per connector.
 - **A changed bank account always goes to review** (fraud signal), as does anything assumed.
-- **Browser connector**: allowlisted hosts only; every request outside them is blocked, logged and
+- **Browser connector**: allowlisted host and port only (another port on the ERP's host is blocked); every request outside them is blocked, logged and
   fails the delivery; every action is logged, failures leave a screenshot.
 - **Webhook**: HMAC-SHA256 over timestamp and body; HTTPS only except to localhost; no redirects.
 - **XML**: no entity expansion, DTD loading or network access.
