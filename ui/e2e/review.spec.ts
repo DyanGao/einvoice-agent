@@ -5,6 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 // Written by tests/ui_server.py when it starts: a generated (synthetic) invoice.
 const PDF = path.join(__dirname, ".tmp", "rechnung.pdf");
 const XML = path.join(__dirname, ".tmp", "rechnung.xml");
+const WAITING = path.join(__dirname, ".tmp", "waiting-rechnung.pdf");
 const NUMBER = "RE-2026-17234";
 
 test.describe.configure({ mode: "serial" });
@@ -113,27 +114,11 @@ test("an unknown document says so instead of showing an empty form", async ({ pa
 });
 
 test("a document that is still being read updates by itself", async ({ page }) => {
-  // The test API reads documents at once, so the first answer is rewritten to
-  // look like the real worker has not got to the document yet.
-  let rewritten = false;
-  await page.route("**/documents?limit=200", async (route) => {
-    if (rewritten) return route.continue();
-    // The test's own fetch can meet a keep-alive connection the server is just
-    // closing (ECONNRESET, CI run 40): try once more. Only a rewrite that went
-    // through counts, so a failed one is not silently skipped.
-    let response;
-    try {
-      response = await route.fetch();
-    } catch {
-      response = await route.fetch();
-    }
-    const body = await response.json();
-    body.documents[0].status = "received";
-    await route.fulfill({ response, json: body });
-    rewritten = true;
-  });
-  await page.goto("/");
+  // tests/ui_server.py holds a file named waiting-* in "received" for a few
+  // seconds, like a document the real worker has not got to yet. No request is
+  // intercepted: the UI must notice the change on its own.
+  await upload(page, WAITING);
   await page.getByRole("button", { name: /All documents/ }).click();
   await expect(page.getByText("Waiting to be read")).toBeVisible();
-  await expect(page.getByText("Waiting to be read")).toHaveCount(0);
+  await expect(page.getByText("Waiting to be read")).toHaveCount(0, { timeout: 15_000 });
 });
