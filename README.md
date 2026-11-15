@@ -9,7 +9,9 @@ Since 2025 every German business must be able to receive e-invoices; issuing bec
 **Why this one:** structured-first pipeline (validate XML before any LLM), confidence-based human review, browser-automation fallback for legacy systems, and an eval on a labeled document set.
 
 ## Demo
-<!-- GIF: drop 5 invoices → 4 auto-matched, 1 flagged (price +12% vs PO) → reviewer approves → entry appears in mock ERP -->
+![Five invoices dropped on the review UI: four booked without review, one flagged because its price is 12 % above the purchase order, approved by a reviewer, and all five booked in the mock ERP](docs/demo.gif)
+
+Drop 5 invoices → 4 matched and booked without review, 1 flagged (price +12 % vs. the order) → a reviewer approves → all 5 are booked in the mock ERP. Recorded from the running application with `make demo-gif`; synthetic data.
 
 ## Results
 <!-- eval:results:start -->

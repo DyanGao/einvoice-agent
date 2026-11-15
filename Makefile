@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif
 
 # The README demo in Docker: sample_invoices/ through processing, checks,
 # decision and delivery into a fresh mock ERP, in a database of its own. Needs
@@ -34,6 +34,14 @@ up:
 # The whole application in Docker: http://localhost:3000 (API :8000, mock ERP :8100).
 stack:
 	docker compose up -d --build --wait
+
+# The README's demo GIF (docs/demo.gif), recorded from the running application
+# with a browser. Needs `make stack` on an empty database: it refuses to add
+# invoices to one in use. For a throwaway stack:
+#   docker compose -p einvoice-gif up -d --build --wait && make demo-gif
+#   docker compose -p einvoice-gif down -v
+demo-gif:
+	uv run python deploy/demo_gif.py
 
 # Smoke test of `make stack`: one sample uploaded, processed, booked; UI up.
 stack-check:
