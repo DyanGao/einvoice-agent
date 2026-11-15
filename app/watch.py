@@ -3,7 +3,8 @@
 The ERP cannot tell us when a transfer is booked, so this asks it every
 BANK_WATCH_SECONDS for transfers not seen yet and matches the open invoices
 of the suppliers they went to (app/rematch.py). One watch at a time per
-database: two would act on the same transfers twice.
+database: two would act on the same transfers twice, so a second one refuses
+to start (app/db/instance_lock.py).
 """
 
 import logging
@@ -14,6 +15,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.checks.service import Checker
+from app.db.instance_lock import AlreadyRunning, InstanceLock, LockLost
 from app.erp import ErpUnavailable, HttpErpClient
 from app.rematch import BankData, watch_bank
 from app.settings import Settings
@@ -36,10 +38,19 @@ def main() -> None:
     erp = HttpErpClient(
         httpx.Client(base_url=settings.erp_url, timeout=settings.erp_timeout_seconds)
     )
-    session_factory = sessionmaker(create_engine(settings.database_url))
+    engine = create_engine(settings.database_url)
+    try:
+        lock = InstanceLock(engine, "bank watch").acquire()
+    except AlreadyRunning as exc:
+        raise SystemExit(str(exc)) from exc
+    session_factory = sessionmaker(engine)
     checker = Checker(erp)
     logger.info("watching %s every %ss", settings.erp_url, settings.bank_watch_seconds)
     while True:
+        try:
+            lock.check()
+        except LockLost as exc:
+            raise SystemExit(str(exc)) from exc
         try:
             new = run_once(session_factory, erp, checker)
             if new:
