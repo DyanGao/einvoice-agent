@@ -26,6 +26,7 @@ from app.connectors import (
     ErpFormConnector,
     WebhookConnector,
 )
+from app.db.instance_lock import AlreadyRunning, InstanceLock, LockLost
 from app.delivery import deliver_due
 from app.settings import Settings
 
@@ -80,13 +81,23 @@ def main() -> None:
     connectors = build_connectors(settings)
     if not connectors:
         raise SystemExit("nothing to deliver to: set ERP_URL, EXPORT_DIR or WEBHOOK_URL")
-    session_factory = sessionmaker(create_engine(settings.database_url))
+    engine = create_engine(settings.database_url)
+    try:
+        # Two loops would race for the same due deliveries.
+        lock = InstanceLock(engine, "delivery loop").acquire()
+    except AlreadyRunning as exc:
+        raise SystemExit(str(exc)) from exc
+    session_factory = sessionmaker(engine)
     logger.info(
         "delivering to %s every %ss",
         ", ".join(connector.name for connector in connectors),
         settings.delivery_seconds,
     )
     while True:
+        try:
+            lock.check()
+        except LockLost as exc:
+            raise SystemExit(str(exc)) from exc
         for document_id, connector, outcome in deliver_due(
             session_factory, connectors, datetime.now(UTC)
         ):
