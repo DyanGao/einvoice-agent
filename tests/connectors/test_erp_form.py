@@ -6,6 +6,7 @@ import threading
 import time
 from contextlib import contextmanager
 from dataclasses import replace
+from urllib.parse import urlsplit
 
 import pytest
 import uvicorn
@@ -74,8 +75,10 @@ def erp(world, quirk=None):
         yield url, engine
 
 
-def form_connector(url, tmp_path, hosts=("127.0.0.1",)):
-    return ErpFormConnector(url, allowed_hosts=set(hosts), log_dir=tmp_path / "browser")
+def form_connector(url, tmp_path, hosts=None):
+    """Allowed: the ERP's own host and port, unless the test says otherwise."""
+    allowed = set(hosts) if hosts is not None else {urlsplit(url).netloc}
+    return ErpFormConnector(url, allowed_hosts=allowed, log_dir=tmp_path / "browser")
 
 
 def stored(engine) -> list[dict]:
@@ -197,3 +200,54 @@ def test_markup_in_invoice_text_is_booked_as_text(world, tmp_path):
         form_connector(url, tmp_path).deliver(odd, "k")
     (booked,) = stored(engine)
     assert (booked["number"], booked["reference"]) == ("<b>RE</b>&'1\"", "doc-<x>")
+
+
+# --- the allowlist names host and port (hardening H6) ----------------------
+
+
+def connector_for(url, hosts, tmp_path):
+    return ErpFormConnector(url, allowed_hosts=set(hosts), log_dir=tmp_path)
+
+
+def test_another_port_on_the_erps_host_is_blocked(tmp_path):
+    connector = connector_for("http://127.0.0.1:8100", {"127.0.0.1:8100"}, tmp_path)
+    assert connector.permits("http://127.0.0.1:8100/ui/bookings/new")
+    assert not connector.permits("http://127.0.0.1:5432/")
+
+
+def test_a_host_without_a_port_allows_only_its_default_port(tmp_path):
+    connector = connector_for("https://erp.example", {"erp.example"}, tmp_path)
+    assert connector.permits("https://erp.example/ui")
+    assert connector.permits("http://erp.example/ui")
+    assert not connector.permits("https://erp.example:8443/ui")
+
+
+def test_host_names_are_compared_without_case(tmp_path):
+    connector = connector_for("http://ERP.example:8100", {"erp.EXAMPLE:8100"}, tmp_path)
+    assert connector.permits("http://Erp.Example:8100/ui")
+
+
+def test_ipv6_host_and_port(tmp_path):
+    connector = connector_for("http://[::1]:8100", {"[::1]:8100"}, tmp_path)
+    assert connector.permits("http://[::1]:8100/ui")
+    assert not connector.permits("http://[::1]:8101/ui")
+
+
+def test_erp_on_a_port_the_allowlist_does_not_name_is_refused_at_start(tmp_path):
+    """An allowlist written as a bare host name used to allow every port."""
+    with pytest.raises(ValueError, match="127.0.0.1:8100"):
+        connector_for("http://127.0.0.1:8100", {"127.0.0.1"}, tmp_path)
+
+
+def test_default_allowlist_is_the_erp_screens_host_and_port(monkeypatch, tmp_path):
+    from app.deliver import build_connectors
+    from app.settings import Settings
+
+    monkeypatch.setenv("ERP_CHANNEL", "form")
+    monkeypatch.setenv("ERP_UI_URL", "http://127.0.0.1:8100")
+    monkeypatch.setenv("BROWSER_LOG_DIR", str(tmp_path))
+    for name in ("BROWSER_ALLOWED_HOSTS", "ERP_URL", "EXPORT_DIR", "WEBHOOK_URL"):
+        monkeypatch.delenv(name, raising=False)
+    (connector,) = build_connectors(Settings.from_env())
+    assert connector.permits("http://127.0.0.1:8100/ui")
+    assert not connector.permits("http://127.0.0.1:8000/documents")

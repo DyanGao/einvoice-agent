@@ -45,7 +45,8 @@ def build_connectors(settings: Settings) -> list[Connector]:
         ui_url = settings.erp_ui_url or settings.erp_url
         if ui_url is None:
             raise SystemExit("ERP_CHANNEL=form needs ERP_UI_URL (or ERP_URL)")
-        hosts = set(settings.browser_allowed_hosts) or {urlsplit(ui_url).hostname}
+        # Default: the ERP screens' own host and port, nothing else on that host.
+        hosts = set(settings.browser_allowed_hosts) or {urlsplit(ui_url).netloc}
         try:
             connectors.append(
                 ErpFormConnector(
