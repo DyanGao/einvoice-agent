@@ -1,5 +1,15 @@
-"""The background worker:  python -m app.worker  (or `make worker`)."""
+"""The background worker:  python -m app.worker  (or `make worker`).
 
+Besides running jobs, the worker sweeps for documents that sat in "received"
+for longer than STUCK_AFTER without a job waiting or running for them (a
+worker that died mid-job, a queue that was down at upload) and queues them
+again, so no document waits for someone to run `einvoice requeue`.
+"""
+
+import logging
+import threading
+import time
+from datetime import UTC, datetime, timedelta
 from functools import cache
 
 import httpx
@@ -10,10 +20,39 @@ from sqlalchemy.orm import sessionmaker
 
 from app.checks.service import build_checker
 from app.extract.factory import build_extractor
+from app.ingest import requeue_stuck
 from app.jobs import run_document_job
-from app.queue import QUEUE_NAME
+from app.queue import QUEUE_NAME, QueueUnavailable, RqQueue
 from app.settings import Settings
 from app.validate import KositValidator
+
+logger = logging.getLogger(__name__)
+
+SWEEP_SECONDS = 120
+# Longer than a job normally waits and runs; a job still waiting or running
+# is never queued twice, whatever its age.
+STUCK_AFTER = timedelta(minutes=15)
+
+
+def sweep_once(session_factory, queue: RqQueue, now: datetime) -> list[str]:
+    queued = requeue_stuck(
+        session_factory, queue, now=now, older_than=STUCK_AFTER, pending=queue.pending
+    )
+    if queued:
+        logger.warning("queued %d stuck documents again: %s", len(queued), ", ".join(queued))
+    return queued
+
+
+def _sweep_forever(session_factory, queue: RqQueue) -> None:
+    while True:
+        try:
+            sweep_once(session_factory, queue, datetime.now(UTC))
+        except QueueUnavailable as exc:
+            logger.warning("sweep for stuck documents: queue not reachable (%s)", exc)
+        except Exception:
+            # The sweep must not die silently and leave documents stuck again.
+            logger.exception("sweep for stuck documents failed; trying again later")
+        time.sleep(SWEEP_SECONDS)
 
 
 @cache
@@ -38,7 +77,15 @@ def process_document_job(document_id: str) -> str:
 def main() -> None:
     """Run a worker until interrupted. SimpleWorker executes jobs in this
     process instead of forking, which also works on macOS."""
-    connection = Redis.from_url(Settings.from_env().redis_url)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    settings = Settings.from_env()
+    threading.Thread(
+        target=_sweep_forever,
+        args=(sessionmaker(create_engine(settings.database_url)), RqQueue(settings.redis_url)),
+        name="stuck-document-sweep",
+        daemon=True,
+    ).start()
+    connection = Redis.from_url(settings.redis_url)
     SimpleWorker([Queue(QUEUE_NAME, connection=connection)], connection=connection).work()
 
 

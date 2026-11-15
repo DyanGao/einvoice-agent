@@ -2,7 +2,9 @@
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import select
@@ -89,3 +91,39 @@ def scan_folder(
         if not result.duplicate:
             new.append(result)
     return new
+
+
+def requeue_stuck(
+    session_factory: sessionmaker[Session],
+    queue: JobQueue,
+    *,
+    now: datetime,
+    older_than: timedelta,
+    pending: Callable[[str], bool],
+) -> list[str]:
+    """Queue again the documents that have sat in `received` for longer than
+    `older_than`: their job was lost (a worker that died, a queue that was
+    down at upload). Documents whose job is still waiting or running are left
+    alone, so nothing is processed twice. Raises QueueUnavailable if the queue
+    is down; the documents stay `received` for the next sweep."""
+    with session_factory() as session:
+        candidates = session.execute(
+            select(db.DocumentRow.id, db.DocumentRow.created_at).where(
+                db.DocumentRow.status == DocumentStatus.RECEIVED.value,
+                db.DocumentRow.created_at < now - older_than,
+            )
+        ).all()
+    queued = []
+    for document_id, created_at in candidates:
+        if pending(document_id):
+            continue
+        queue.enqueue(document_id)
+        if created_at.tzinfo is None:  # SQLite returns naive UTC datetimes
+            created_at = created_at.replace(tzinfo=UTC)
+        with session_factory.begin() as session:
+            db.record_queued_again(
+                session.get(db.DocumentRow, document_id),
+                waited_minutes=int((now - created_at).total_seconds() // 60),
+            )
+        queued.append(document_id)
+    return queued

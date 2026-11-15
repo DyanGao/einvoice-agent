@@ -57,7 +57,8 @@ db-check: migrate
 # Same test suite against Postgres instead of in-memory SQLite.
 test-pg:
 	docker compose exec -T postgres psql -U einvoice -d einvoice -qc "DROP DATABASE IF EXISTS einvoice_test" -c "CREATE DATABASE einvoice_test"
-	TEST_DATABASE_URL=postgresql+psycopg://einvoice:einvoice@127.0.0.1:5433/einvoice_test uv run pytest
+	TEST_DATABASE_URL=postgresql+psycopg://einvoice:einvoice@127.0.0.1:5433/einvoice_test \
+		TEST_REDIS_URL=redis://127.0.0.1:6380/15 uv run pytest
 
 # Real sample files through the running validator (make up).
 test-integration:
