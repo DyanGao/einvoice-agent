@@ -8,6 +8,8 @@ from pathlib import Path
 DEFAULT_VALIDATOR_URL = "http://127.0.0.1:8081"
 # Pinned so eval numbers refer to one model; change it deliberately and re-record.
 DEFAULT_EXTRACTOR_MODEL = "claude-opus-5-5"
+# PDFs longer than this go to a person unread (app/pipeline/document.py).
+DEFAULT_MAX_PAGES = 10
 DEFAULT_REDIS_URL = "redis://127.0.0.1:6380/0"
 DEFAULT_DATABASE_URL = "postgresql+psycopg://einvoice:einvoice@127.0.0.1:5433/einvoice"
 
@@ -24,6 +26,7 @@ class Settings:
     feedback_dir: Path
     ui_origin: str
     max_upload_bytes: int
+    max_pages: int
     # Base URL of the ERP's read API; None = no ERP connected.
     erp_url: str | None = None
     erp_timeout_seconds: float = 5.0
@@ -62,6 +65,7 @@ class Settings:
             feedback_dir=Path(os.environ.get("FEEDBACK_DIR", "data/private/feedback")),
             ui_origin=os.environ.get("UI_ORIGIN", "http://localhost:3000"),
             max_upload_bytes=int(os.environ.get("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024))),
+            max_pages=int(os.environ.get("MAX_PAGES", str(DEFAULT_MAX_PAGES))),
             erp_url=os.environ.get("ERP_URL") or None,
             erp_timeout_seconds=float(os.environ.get("ERP_TIMEOUT_SECONDS", "5")),
             bank_watch_seconds=float(os.environ.get("BANK_WATCH_SECONDS", "300")),
