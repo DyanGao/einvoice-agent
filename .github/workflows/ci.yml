@@ -71,6 +71,12 @@ jobs:
       - name: Decision eval
         run: make eval-decision-pdf
 
+      # Model runs 2 and 3 on the text PDFs, from their committed recordings,
+      # with the decision sweep per run: the report below then shows mean ±
+      # std and any run that books a misread invoice.
+      - name: PDF runs 2 and 3 (replay)
+        run: make eval-runs-pdf
+
       # Security gate: no injected instruction may change a field, a route
       # or a match (replayed model answers, no API key needed).
       - name: Injection probes
