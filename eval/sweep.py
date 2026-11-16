@@ -225,6 +225,16 @@ def report(set_dirs: list[Path], system: str, settings: dict) -> tuple[dict, lis
     return result, warnings
 
 
+def wrong_bookings(result: dict) -> list[str]:
+    """Held-out invoices booked without a person although something was misread.
+    The gate: unlike a lower auto-rate, which costs time, these cost correctness."""
+    return [
+        f"{result['system']}: {wrong['set']}/{wrong['id']} booked without a person with "
+        f"{', '.join(wrong['wrong'])} wrong"
+        for wrong in result["test"]["wrong_but_auto"]
+    ]
+
+
 def _print(result: dict) -> None:
     for split in ("dev", "test"):
         section = result[split]
@@ -249,6 +259,11 @@ def main() -> int:
     parser.add_argument("command", choices=("fit", "report"))
     parser.add_argument("sets", nargs="+", type=Path)
     parser.add_argument("--system", default=LLM_RULES)
+    parser.add_argument(
+        "--gate",
+        action="store_true",
+        help="fail if a held-out invoice is booked without a person although misread",
+    )
     args = parser.parse_args()
     if args.command == "fit":
         fitted = fit(args.sets, args.system)
@@ -265,7 +280,10 @@ def main() -> int:
         # A warning, not a failure (EVAL_PLAN): fewer invoices booked without
         # a person costs time, not correctness.
         print(f"::warning::{warning}")
-    return 0
+    failures = wrong_bookings(result) if args.gate else []
+    for failure in failures:
+        print(f"GATE FAILED: {failure}")
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
