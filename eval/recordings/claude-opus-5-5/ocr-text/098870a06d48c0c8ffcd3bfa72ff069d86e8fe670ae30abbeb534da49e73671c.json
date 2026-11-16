@@ -1,0 +1,44 @@
+{
+ "input_tokens": 6146,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "416.71",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-03-27",
+  "gross_total": "416.71",
+  "issue_date": "2026-03-13",
+  "line_net_total": "350.18",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "350.18",
+    "quantity": "1",
+    "unit_price": "350.18",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "350.18",
+  "number": "RE-2026-70091",
+  "payment_ibans": [
+   "DE60000780168475524225"
+  ],
+  "po_ref": "PO-998004",
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE013000949",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "66.53",
+    "taxable_amount": "350.18"
+   }
+  ],
+  "vat_total": "66.53"
+ },
+ "output_tokens": 524
+}

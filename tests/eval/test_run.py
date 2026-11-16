@@ -81,3 +81,23 @@ def test_later_runs_have_their_own_recordings_and_predictions():
 
     assert recordings_dir(Path("rec"), "m", 2) == Path("rec/m/run-2")
     assert predictions_file(run_system("llm", 3)) == "predictions-llm-run3.jsonl"
+
+
+def test_ocr_text_systems_keep_their_recordings_apart():
+    from pathlib import Path
+
+    from eval.run import LLM_TEXT, recordings_dir
+
+    assert recordings_dir(Path("rec"), "m", 1, LLM_TEXT) == Path("rec/m/ocr-text")
+
+
+def test_a_run_can_be_limited_to_the_held_out_split(tmp_path):
+    from eval.run import run
+
+    write_set(tmp_path, 3)
+    gold = read_jsonl(tmp_path / GOLD_FILE)
+    for position, record in enumerate(gold):
+        record["split"] = "test" if position == 0 else "dev"
+    (tmp_path / GOLD_FILE).write_text("".join(__import__("json").dumps(r) + "\n" for r in gold))
+    out = run(tmp_path, "x", lambda data: {"invoice": None, "error": None}, split="test")
+    assert [p["id"] for p in read_jsonl(out)] == [gold[0]["id"]]

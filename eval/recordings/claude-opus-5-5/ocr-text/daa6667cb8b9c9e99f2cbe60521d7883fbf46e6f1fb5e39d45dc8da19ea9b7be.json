@@ -1,0 +1,66 @@
+{
+ "input_tokens": 6116,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "42317.95",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE600298763",
+  "currency": null,
+  "due_date": "2026-06-15",
+  "gross_total": "42317.95",
+  "issue_date": "2026-05-16",
+  "line_net_total": "36959.42",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "3661.91",
+    "quantity": "7",
+    "unit_price": "523.13",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "2",
+    "net": "13864.64",
+    "quantity": "32",
+    "unit_price": "433.27",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "3",
+    "net": "19432.87",
+    "quantity": "39.21",
+    "unit_price": "495.61",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "36959.42",
+  "number": "RE-2026-41831",
+  "payment_ibans": [
+   "DE33000087451037711430"
+  ],
+  "po_ref": "PO-898848",
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE023362443",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "4388.01",
+    "taxable_amount": "23094.78"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "970.52",
+    "taxable_amount": "13864.64"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 516
+}

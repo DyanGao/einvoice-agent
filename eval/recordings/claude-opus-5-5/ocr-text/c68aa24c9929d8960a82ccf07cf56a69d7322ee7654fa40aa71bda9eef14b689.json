@@ -1,0 +1,82 @@
+{
+ "input_tokens": 6341,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "77136.53",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE015581205",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "77136.53",
+  "issue_date": "2026-04-23",
+  "line_net_total": "66532.99",
+  "lines": [
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "42607.08",
+    "quantity": "18",
+    "unit_price": "2367.06",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "640.75",
+    "quantity": "25",
+    "unit_price": "25.63",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "3",
+    "net": "6304.08",
+    "quantity": "4",
+    "unit_price": "1576.02",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "4",
+    "net": "11084.85",
+    "quantity": "15",
+    "unit_price": "738.99",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "5",
+    "net": "5896.23",
+    "quantity": "36.12",
+    "unit_price": "163.24",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "66532.99",
+  "number": "RE-2026-66882",
+  "payment_ibans": [
+   "DE15000014022188714758"
+  ],
+  "po_ref": "PO-405166",
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE211066406",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "9414.86",
+    "taxable_amount": "49551.91"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1188.68",
+    "taxable_amount": "16981.08"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 660
+}

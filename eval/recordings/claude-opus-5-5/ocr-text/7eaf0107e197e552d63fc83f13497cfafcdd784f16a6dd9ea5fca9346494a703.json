@@ -1,0 +1,82 @@
+{
+ "input_tokens": 6620,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "147658.43",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE726824761",
+  "currency": null,
+  "due_date": "2026-09-16",
+  "gross_total": "147658.43",
+  "issue_date": "2026-09-02",
+  "line_net_total": "135900.62",
+  "lines": [
+   {
+    "description": "Anfahrt",
+    "line_id": "1",
+    "net": "38687.47",
+    "quantity": "21.77",
+    "unit_price": "1777.10",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "2",
+    "net": "17574.45",
+    "quantity": "7.13",
+    "unit_price": "2464.86",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "3",
+    "net": "1131.96",
+    "quantity": "4",
+    "unit_price": "282.99",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "4",
+    "net": "18918.89",
+    "quantity": "14.81",
+    "unit_price": "1277.44",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "5",
+    "net": "59587.85",
+    "quantity": "35",
+    "unit_price": "1702.51",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "135900.62",
+  "number": "RE-2026-76564",
+  "payment_ibans": [
+   "DE69000580176766122123"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE395104960",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "3554.22",
+    "taxable_amount": "18706.41"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "8203.59",
+    "taxable_amount": "117194.21"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 637
+}

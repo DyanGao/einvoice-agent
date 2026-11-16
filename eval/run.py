@@ -39,6 +39,7 @@ from app.extract import (
     RecordingLlm,
     ReplayLlm,
 )
+from app.extract.confidence import document_text
 from app.pipeline import Validator, process_structured
 from app.settings import Settings
 from app.validate import KositValidator
@@ -48,6 +49,10 @@ STRUCTURED = "structured"
 BASELINE = "baseline"
 LLM = "llm"
 LLM_RULES = "llm-rules"
+# EVAL_PLAN §3 ablation: the same model with the document's text in the prompt.
+LLM_TEXT = "llm-text"
+LLM_TEXT_RULES = "llm-text-rules"
+TEXT_SYSTEMS = (LLM_TEXT, LLM_TEXT_RULES)
 DEFAULT_RECORDINGS = Path("eval/recordings")
 
 
@@ -60,10 +65,12 @@ def run_system(system: str, run: int) -> str:
     return system if run == 1 else f"{system}-run{run}"
 
 
-def recordings_dir(recordings: Path, model: str, run: int) -> Path:
+def recordings_dir(recordings: Path, model: str, run: int, system: str = LLM) -> Path:
     """Recordings are found by the request's hash: each run needs its own folder,
-    or a second run would only replay the first."""
-    return recordings / model if run == 1 else recordings / model / f"run-{run}"
+    or a second run would only replay the first. The text ablation keeps its
+    own folder too, so it can be told apart from the main runs."""
+    base = recordings / model / "ocr-text" if system in TEXT_SYSTEMS else recordings / model
+    return base if run == 1 else base / f"run-{run}"
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -96,21 +103,32 @@ def predict_with_extractor(data: bytes, extractor: Extractor) -> dict:
 
 
 def build_llm_extractor(
-    mode: str, recordings: Path, model: str, effort: str | None, run: int = 1
+    mode: str,
+    recordings: Path,
+    model: str,
+    effort: str | None,
+    run: int = 1,
+    system: str = LLM,
 ) -> Extractor:
-    directory = recordings_dir(recordings, model, run)
+    directory = recordings_dir(recordings, model, run, system)
     if mode == "record":
         llm = RecordingLlm(AnthropicLlm(anthropic.Anthropic()), directory)
     else:
         llm = ReplayLlm(directory)
-    return LlmExtractor(llm, model=model, effort=effort)
+    text_of = document_text if system in TEXT_SYSTEMS else None
+    return LlmExtractor(llm, model=model, effort=effort, text_of=text_of)
 
 
-def run(set_dir: Path, system: str, predict: Callable[[bytes], dict]) -> Path:
-    """`predict` maps a document's bytes to a prediction record."""
+def run(
+    set_dir: Path, system: str, predict: Callable[[bytes], dict], split: str | None = None
+) -> Path:
+    """`predict` maps a document's bytes to a prediction record; `split` limits
+    the run to one split (the text ablation reads only the held-out documents)."""
     out = set_dir / predictions_file(system)
     with out.open("w", encoding="utf-8") as predictions:
         for record in read_jsonl(set_dir / GOLD_FILE):
+            if split is not None and record.get("split") != split:
+                continue
             started = time.perf_counter()
             prediction = predict((set_dir / record["file"]).read_bytes())
             prediction |= {"id": record["id"], "seconds": round(time.perf_counter() - started, 4)}
@@ -122,17 +140,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("set_dir", type=Path)
     parser.add_argument(
-        "--system", choices=(STRUCTURED, BASELINE, LLM, LLM_RULES), default=STRUCTURED
+        "--system",
+        choices=(STRUCTURED, BASELINE, LLM, LLM_RULES, *TEXT_SYSTEMS),
+        default=STRUCTURED,
     )
     parser.add_argument("--llm-mode", choices=("replay", "record"), default="replay")
     parser.add_argument("--recordings", type=Path, default=DEFAULT_RECORDINGS)
     parser.add_argument("--run", type=int, default=1, help="which repeated model run (1, 2, 3)")
+    parser.add_argument("--split", choices=("dev", "test"), help="run only this split")
     args = parser.parse_args()
-    if args.run != 1 and args.system not in (LLM, LLM_RULES):
+    if args.run != 1 and args.system not in (LLM, LLM_RULES, *TEXT_SYSTEMS):
         parser.error("--run applies to the model systems only")
     if args.system == BASELINE:
         predict = partial(predict_with_extractor, extractor=BaselineExtractor())
-    elif args.system in (LLM, LLM_RULES):
+    elif args.system in (LLM, LLM_RULES, *TEXT_SYSTEMS):
         settings = Settings.from_env()
         extractor = build_llm_extractor(
             args.llm_mode,
@@ -140,8 +161,9 @@ def main() -> None:
             settings.extractor_model,
             settings.extractor_effort,
             args.run,
+            args.system,
         )
-        if args.system == LLM_RULES:
+        if args.system in (LLM_RULES, LLM_TEXT_RULES):
             extractor = CompletingExtractor(extractor)
         predict = partial(predict_with_extractor, extractor=extractor)
     else:
@@ -150,7 +172,8 @@ def main() -> None:
             base_url=settings.validator_url, timeout=settings.validator_timeout_seconds
         )
         predict = partial(predict_structured, validator=KositValidator(client))
-    print(f"wrote {run(args.set_dir, run_system(args.system, args.run), predict)}")
+    out = run(args.set_dir, run_system(args.system, args.run), predict, split=args.split)
+    print(f"wrote {out}")
 
 
 if __name__ == "__main__":

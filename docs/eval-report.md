@@ -22,7 +22,8 @@ state of 2026-11-14 (thresholds `2026-11-14.1`, model `claude-opus-5-5`).
 | Calibration (ECE) | 0.0013 on held-out | trivial: one wrong field in 7,849 on dev |
 | Cost and latency per document | 0.034 USD per PDF or scan; 5–6 s | cost reproducible; latency measured once, not by the replay |
 | 3 runs, mean ± std | done: runs 2 and 3 recorded 2026-11-15 (17.11 USD) | met |
-| Ablations (hosted vs. local model, with/without OCR text) | not done | missed: paid, and no local model set up |
+| Ablation: with/without the document's text in the prompt | with text: PDF 100.00 %, scans 99.90 % (without: 99.96 ± 0.04 % / 100.00 ± 0.00 %), held-out, 1 run, 2.16 USD | done: no measurable gain on this data |
+| Ablation: hosted vs. local model | not done | missed: no local vision model set up |
 | Anonymized real invoices (30–50) | not done | missed: no real invoices available (O4) |
 
 The four regression gates of EVAL_PLAN §7 run in CI on every push: structured field accuracy below
@@ -83,11 +84,15 @@ in exactly one extra document, the one wrong scan, because 1 in 157 fits the bud
 | pdf | baseline | 36 | 44.99 % | 0.0 % |
 | pdf | llm | 36 | 98.07 % | 33.3 % |
 | pdf | llm-rules | 36 | 100.00 % | 100.0 % |
+| pdf | llm-text | 36 | 98.07 % | 33.3 % |
+| pdf | llm-text-rules | 36 | 100.00 % | 100.0 % |
 | scans | baseline | 24 | 31.47 % | 0.0 % |
 | scans | llm | 24 | 98.22 % | 37.5 % |
 | scans | llm-rules | 24 | 100.00 % | 100.0 % |
+| scans | llm-text | 24 | 98.13 % | 37.5 % |
+| scans | llm-text-rules | 24 | 99.90 % | 95.8 % |
 
-`baseline`: rules and templates over the text layer (OCR for scans). `llm`: the model alone. `llm-rules`: the model followed by the completion rules, which is what the application runs.
+`baseline`: rules and templates over the text layer (OCR for scans). `llm`: the model alone. `llm-rules`: the model followed by the completion rules, which is what the application runs. `llm-text`, `llm-text-rules`: the same with the document's text (text layer, or OCR for scans) added to the prompt, run 1 of the model only (ablation).
 
 Fields the model alone got wrong most often (pdf):
 
@@ -258,6 +263,11 @@ first. A wrong booking ranks above a needless review.
 - **Confidence built from checks and grounding is cheap and explainable, but not independent of the
   reading.** It catches values that fail a check or are absent from the page, and misses right values in
   the wrong field (cases 1 and 2).
+- **Giving the model the OCR text did not help here.** With the document's text (text layer, or OCR for
+  scans) added to the prompt, the held-out PDFs read the same (100.00 %) and the scans slightly worse
+  (99.90 %: `scan-0095` lost its buyer reference, where the OCR text is garbled, "Client ref. ‚02.2028").
+  The sets are nearly saturated, so this cannot show a gain; it does show that badly recognised text is
+  not free help. The decision held the one error back (assumed currency, printed-but-not-read).
 - **Record and replay made the model eval a CI gate.** Free, deterministic, and any change to prompt,
   schema, model or document shows up as a missing recording, not as a silent drift.
 - **Rules were enough for matching** ([D11](../ARCHITECTURE.md#5-design-decisions-adr-log)). They reach 100 % held-out and 99.5 % on two seeds never looked
@@ -290,5 +300,5 @@ first. A wrong booking ranks above a needless review.
   and OCR for grounding adds time on scans.
 - **Not drawn:** the reliability diagram (one populated bin) and a confusion matrix for exceptions (no
   confusions to show). The auto-rate vs. error curve is the table above.
-- **Ablations not run:** no local vision model is set up, and the with/without-OCR-text comparison needs
-  new paid recordings.
+- **Ablations:** the OCR-text comparison ran once, on the held-out split only (60 documents); the
+  hosted vs. local model comparison is not run (no local vision model set up).

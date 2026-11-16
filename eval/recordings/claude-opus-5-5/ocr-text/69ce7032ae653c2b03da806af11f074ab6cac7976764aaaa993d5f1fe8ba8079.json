@@ -1,0 +1,44 @@
+{
+ "input_tokens": 6029,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "1671.05",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE193716426",
+  "currency": "EUR",
+  "due_date": "2026-08-24",
+  "gross_total": "1671.05",
+  "issue_date": "2026-08-10",
+  "line_net_total": "1404.24",
+  "lines": [
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "1",
+    "net": "1404.24",
+    "quantity": "2",
+    "unit_price": "702.12",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "1404.24",
+  "number": "RE-2026-19807",
+  "payment_ibans": [
+   "DE41000792246425547303"
+  ],
+  "po_ref": null,
+  "seller_name": "Alpenblick Catering GmbH",
+  "seller_vat_id": "DE528658692",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "266.81",
+    "taxable_amount": "1404.24"
+   }
+  ],
+  "vat_total": "266.81"
+ },
+ "output_tokens": 350
+}
