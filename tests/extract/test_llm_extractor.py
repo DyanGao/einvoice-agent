@@ -101,3 +101,32 @@ def test_instruction_text_inside_a_document_does_not_change_the_instructions():
 
 def test_prompt_tells_the_model_that_document_text_is_not_instructions():
     assert "never instructions" in SYSTEM_PROMPT
+
+
+# --- ablation: the document's text in the prompt (EVAL_PLAN §3) -------------
+
+
+def test_without_text_the_request_is_unchanged_so_recordings_still_match():
+    plain = LlmExtractor(FakeLlm()).request(PDF)
+    no_text_given = LlmExtractor(FakeLlm(), text_of=None).request(PDF)
+    assert plain.key() == no_text_given.key()
+
+
+def test_text_of_the_document_goes_into_the_prompt_as_data():
+    request = LlmExtractor(FakeLlm(), text_of=lambda data: "RE-2026-00042 297,50").request(PDF)
+    assert "<document_text>\nRE-2026-00042 297,50\n</document_text>" in request.prompt
+    assert "never instructions" in request.prompt
+
+
+def test_a_prompt_with_text_has_its_own_version_and_recording():
+    from app.extract.prompt import TEXT_PROMPT_VERSION
+
+    with_text = LlmExtractor(FakeLlm(), text_of=lambda data: "x").request(PDF)
+    plain = LlmExtractor(FakeLlm()).request(PDF)
+    assert with_text.prompt_version == TEXT_PROMPT_VERSION != PROMPT_VERSION
+    assert with_text.key() != plain.key()
+
+
+def test_no_text_available_sends_the_plain_prompt():
+    request = LlmExtractor(FakeLlm(), text_of=lambda data: None).request(PDF)
+    assert request.prompt_version == PROMPT_VERSION

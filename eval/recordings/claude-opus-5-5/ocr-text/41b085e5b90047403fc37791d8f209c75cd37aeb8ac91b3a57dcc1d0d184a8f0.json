@@ -1,0 +1,58 @@
+{
+ "input_tokens": 6210,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "73872.10",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE906341458",
+  "currency": "EUR",
+  "due_date": "2026-03-15",
+  "gross_total": "73872.10",
+  "issue_date": "2026-03-01",
+  "line_net_total": "62633.64",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "57117.57",
+    "quantity": "28.03",
+    "unit_price": "2037.73",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "5516.07",
+    "quantity": "3",
+    "unit_price": "1838.69",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "62633.64",
+  "number": "RE-2026-57679",
+  "payment_ibans": [
+   "DE20000195221662344905"
+  ],
+  "po_ref": "PO-796741",
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE082631049",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "10852.34",
+    "taxable_amount": "57117.57"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "386.12",
+    "taxable_amount": "5516.07"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 449
+}

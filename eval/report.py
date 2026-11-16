@@ -30,6 +30,8 @@ from eval.run import (
     DEFAULT_RECORDINGS,
     LLM,
     LLM_RULES,
+    LLM_TEXT,
+    LLM_TEXT_RULES,
     STRUCTURED,
     predictions_file,
     read_jsonl,
@@ -42,7 +44,9 @@ from eval.sweep import THRESHOLDS_FILE, documents
 PRICES = {"claude-opus-5-5": (4.0, 20.0)}
 SETS = ("pdf", "scans")
 MAX_RUNS = 3  # EVAL_PLAN §5: 3 runs on the model paths
-EXTRACTORS = (BASELINE, LLM, LLM_RULES)
+# The last two: the same model with the document's text in the prompt (EVAL_PLAN §3
+# ablation), recorded on the held-out split only.
+EXTRACTORS = (BASELINE, LLM, LLM_RULES, LLM_TEXT, LLM_TEXT_RULES)
 NOT_RUN = "not run"
 README = Path("README.md")
 EVAL_REPORT = Path("docs/eval-report.md")
@@ -159,6 +163,19 @@ def runs(set_dir: Path, system: str) -> list[dict]:
     return found
 
 
+def same_sets(decisions: list[dict]) -> list[dict]:
+    """Repeated decision sweeps must cover the same sets: a PDF-only sweep next
+    to PDF-and-scan ones (left by `make eval-decision-pdf` after `make
+    eval-decision`) would mix numbers on different documents."""
+    covered = {tuple(d["test"]["by_set"]) for d in decisions}
+    if len(covered) > 1:
+        raise ValueError(
+            f"decision sweeps cover different sets {sorted(covered)}: run the same sweep for "
+            "every run (make eval-decision and make eval-runs, or the -pdf targets)"
+        )
+    return decisions
+
+
 def _read(path: Path) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
@@ -192,11 +209,13 @@ def collect(out: Path, recordings: Path, model: str, effort: str | None) -> dict
         "runs": {
             name: {system: runs(out / name, system) for system in (LLM, LLM_RULES)} for name in SETS
         },
-        "decision_runs": [
-            found
-            for run in range(1, MAX_RUNS + 1)
-            if (found := _read(out / f"decision-{run_system(LLM_RULES, run)}.json")) is not None
-        ],
+        "decision_runs": same_sets(
+            [
+                found
+                for run in range(1, MAX_RUNS + 1)
+                if (found := _read(out / f"decision-{run_system(LLM_RULES, run)}.json")) is not None
+            ]
+        ),
         "probes": _read(out / "probes" / "report.json"),
         "residual_errors": residual_errors(out),
     }
@@ -391,7 +410,8 @@ def details(results: dict) -> str:
     parts.append(
         "`baseline`: rules and templates over the text layer (OCR for scans). `llm`: the model "
         "alone. `llm-rules`: the model followed by the completion rules, which is what the "
-        "application runs."
+        "application runs. `llm-text`, `llm-text-rules`: the same with the document's text (text "
+        "layer, or OCR for scans) added to the prompt, run 1 of the model only (ablation)."
     )
     for name in SETS:
         alone = results["extraction"][name][LLM]

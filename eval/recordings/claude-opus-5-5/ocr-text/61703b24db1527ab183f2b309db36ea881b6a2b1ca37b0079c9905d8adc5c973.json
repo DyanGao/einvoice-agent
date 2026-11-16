@@ -1,0 +1,66 @@
+{
+ "input_tokens": 6217,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "72880.02",
+  "buyer_name": "Bäckerei Sonnenschein",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": "DE982463046",
+  "currency": "EUR",
+  "due_date": "2026-05-11",
+  "gross_total": "72880.02",
+  "issue_date": "2026-04-27",
+  "line_net_total": "63234.38",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "41695.06",
+    "quantity": "22",
+    "unit_price": "1895.23",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "1798.50",
+    "quantity": "5",
+    "unit_price": "359.70",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "3",
+    "net": "19740.82",
+    "quantity": "22",
+    "unit_price": "897.31",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "63234.38",
+  "number": "RE-2026-66107",
+  "payment_ibans": [
+   "DE02000416756783864070"
+  ],
+  "po_ref": null,
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE728685417",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "8263.78",
+    "taxable_amount": "43493.56"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1381.86",
+    "taxable_amount": "19740.82"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 495
+}

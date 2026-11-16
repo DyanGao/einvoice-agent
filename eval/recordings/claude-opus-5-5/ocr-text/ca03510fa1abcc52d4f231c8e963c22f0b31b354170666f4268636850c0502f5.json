@@ -1,0 +1,44 @@
+{
+ "input_tokens": 5989,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "67058.02",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-03-09",
+  "gross_total": "67058.02",
+  "issue_date": "2026-02-07",
+  "line_net_total": "62671.05",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "62671.05",
+    "quantity": "27",
+    "unit_price": "2321.15",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "62671.05",
+  "number": "RE-2026-54270",
+  "payment_ibans": [
+   "DE03000287923401003787"
+  ],
+  "po_ref": null,
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE717297773",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "4386.97",
+    "taxable_amount": "62671.05"
+   }
+  ],
+  "vat_total": "4386.97"
+ },
+ "output_tokens": 342
+}

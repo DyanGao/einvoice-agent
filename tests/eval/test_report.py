@@ -240,3 +240,13 @@ def test_readme_says_one_run_when_there_is_only_one(pdf_set):
     table = readme_table(collect(pdf_set.parent, pdf_set.parent / "r", MODEL, None))
     assert "one model run" in table
     assert "±" not in table
+
+
+def test_decision_sweeps_over_different_sets_are_refused():
+    from eval.report import same_sets
+
+    pdf_only = {"test": {"by_set": {"pdf": {}}}}
+    both = {"test": {"by_set": {"pdf": {}, "scans": {}}}}
+    assert same_sets([both, both]) == [both, both]
+    with pytest.raises(ValueError, match="different sets"):
+        same_sets([pdf_only, both])

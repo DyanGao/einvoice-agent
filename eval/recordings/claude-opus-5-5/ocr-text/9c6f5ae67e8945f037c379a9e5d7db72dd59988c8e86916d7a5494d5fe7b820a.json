@@ -1,0 +1,44 @@
+{
+ "input_tokens": 6070,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "4592.91",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-06-25",
+  "gross_total": "4592.91",
+  "issue_date": "2026-06-11",
+  "line_net_total": "3859.59",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "3859.59",
+    "quantity": "3.23",
+    "unit_price": "1194.92",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "3859.59",
+  "number": "RE-2026-78028",
+  "payment_ibans": [
+   "DE29000921744875174524"
+  ],
+  "po_ref": "PO-873233",
+  "seller_name": "Süddeutsche Papierwerke GmbH",
+  "seller_vat_id": "DE292194062",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "733.32",
+    "taxable_amount": "3859.59"
+   }
+  ],
+  "vat_total": "733.32"
+ },
+ "output_tokens": 360
+}

@@ -1,0 +1,66 @@
+{
+ "input_tokens": 6278,
+ "model": "claude-opus-5-5",
+ "output": {
+  "amount_due": "119333.46",
+  "buyer_name": "Praxis Dr. Äpfelmann",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-06-21",
+  "gross_total": "119333.46",
+  "issue_date": "2026-05-22",
+  "line_net_total": "101470.18",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "6974.19",
+    "quantity": "13.65",
+    "unit_price": "510.93",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "2",
+    "net": "11800.44",
+    "quantity": "9",
+    "unit_price": "1311.16",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "3",
+    "net": "82695.55",
+    "quantity": "35",
+    "unit_price": "2362.73",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "101470.18",
+  "number": "RE-2026-05455",
+  "payment_ibans": [
+   "DE03000118224216121896"
+  ],
+  "po_ref": null,
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE594337120",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "17037.25",
+    "taxable_amount": "89669.74"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "826.03",
+    "taxable_amount": "11800.44"
+   }
+  ],
+  "vat_total": null
+ },
+ "output_tokens": 528
+}

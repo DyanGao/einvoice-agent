@@ -1,11 +1,18 @@
 import logging
+from collections.abc import Callable
 
 from pydantic import ValidationError
 
 from app.detect import detect
 from app.extract.draft import InvoiceDraft
 from app.extract.llm import ExtractionError, LlmClient, LlmRequest
-from app.extract.prompt import PROMPT_VERSION, SYSTEM_PROMPT, USER_PROMPT
+from app.extract.prompt import (
+    PROMPT_VERSION,
+    SYSTEM_PROMPT,
+    TEXT_PROMPT_VERSION,
+    USER_PROMPT,
+    user_prompt_with_text,
+)
 from app.extract.wire import WireInvoice, to_draft
 from app.models import DocumentFormat
 from app.settings import DEFAULT_EXTRACTOR_MODEL
@@ -34,11 +41,18 @@ class LlmExtractor:
     """
 
     def __init__(
-        self, llm: LlmClient, model: str = DEFAULT_MODEL, effort: str | None = None
+        self,
+        llm: LlmClient,
+        model: str = DEFAULT_MODEL,
+        effort: str | None = None,
+        text_of: Callable[[bytes], str | None] | None = None,
     ) -> None:
+        """`text_of` (the eval's ablation only) adds the document's text to the
+        prompt; without it, or without text, the request is the plain one."""
         self._llm = llm
         self._model = model
         self._effort = effort
+        self._text_of = text_of
 
     def request(self, data: bytes) -> LlmRequest:
         """What is sent to the model for this document. Also used by the eval
@@ -48,11 +62,12 @@ class LlmExtractor:
             raise ExtractionError(
                 f"{fmt.value} is a structured e-invoice; it is parsed, not extracted"
             )
+        text = self._text_of(data) if self._text_of is not None else None
         return LlmRequest(
             model=self._model,
             system=SYSTEM_PROMPT,
-            prompt=USER_PROMPT,
-            prompt_version=PROMPT_VERSION,
+            prompt=USER_PROMPT if not text else user_prompt_with_text(text),
+            prompt_version=PROMPT_VERSION if not text else TEXT_PROMPT_VERSION,
             document=data,
             media_type=_media_type(data, fmt),
             schema=WireInvoice.model_json_schema(),
