@@ -35,7 +35,7 @@ from app.db import Base, DocumentRow, DraftRow
 from app.db.review import ReviewState
 from app.extract.base import Extractor
 from app.extract.complete import CompletingExtractor
-from app.extract.confidence import Calibration, ScoringExtractor
+from app.extract.confidence import Calibration, LastDocumentText, ScoringExtractor
 from app.extract.draft import InvoiceDraft
 from app.matching import Match
 from app.models import DocumentFormat, Invoice
@@ -94,7 +94,10 @@ def production_chain(mode: str, recordings: Path) -> Extractor:
     recorded model answers instead of live calls."""
     settings = Settings.from_env()
     llm = build_llm_extractor(mode, recordings, settings.extractor_model, settings.extractor_effort)
-    return ScoringExtractor(CompletingExtractor(llm), Calibration.load())
+    text_of = LastDocumentText()  # as in the application (app/extract/factory.py)
+    return ScoringExtractor(
+        CompletingExtractor(llm, text_of=text_of), Calibration.load(), text_of=text_of
+    )
 
 
 def _extracted(key: str, draft: InvoiceDraft) -> DocumentRow:

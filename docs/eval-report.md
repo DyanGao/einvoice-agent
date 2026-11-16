@@ -208,12 +208,12 @@ Opus run on this set was not paid for.
 
 | Belege sample, 40 documents | Fields | Field accuracy | Documents read without error |
 |---|---:|---:|---:|
-| All | 941 | **97.0 %** | 23 of 40 |
-| Scan | 459 | 98.3 % | 15 of 20 |
-| Photo | 447 | 95.5 % | 6 of 18 |
+| All | 941 | **98.0 %** | 25 of 40 |
+| Scan | 459 | 98.9 % | 16 of 20 |
+| Photo | 447 | 96.9 % | 7 of 18 |
 | Clean | 35 | 100.0 % | 2 of 2 |
 | Regular VAT (19 %, 7 %) | 617 | 98.4 % | 19 of 28 |
-| §19 UStG small business, no VAT | 128 | 89.8 % | 0 of 5 |
+| §19 UStG small business, no VAT | 128 | 96.9 % | 2 of 5 |
 | §13b UStG reverse charge, no VAT | 83 | 98.8 % | 2 of 3 |
 | Credit notes | 113 | 96.5 % | 2 of 4 |
 
@@ -225,8 +225,10 @@ What was misread, and what would have stopped it:
 - **No-VAT invoices:** no VAT was invented on any of the 8. On the 3 reverse-charge invoices the model
   read the category (`AE`) but no tax line, since none is printed; the completion rules now fill in VAT 0
   and gross = net, marked as derived (before: 92.8 %, 0 of 3). On the 5 §19 invoices it read no VAT
-  category at all, so nothing says "no VAT": VAT and gross stay empty and a person checks them. Fixing
-  that needs a prompt change, and with it new recordings of every model answer.
+  category at all; the rules now find the small-business note in the document's own text (OCR, which
+  renders it as "$ 19 USIG" and the like) and record the invoice as exempt with VAT 0, again only when
+  no VAT was read (before: 89.8 %, 0 of 5). One of them keeps an empty gross total, because its net
+  total was not read either.
 - **Seller VAT ID, 7 documents:** 3 not read, 4 with one digit wrong. All 4 fail the German check digit.
 - **Net total, 1 document:** left empty.
 

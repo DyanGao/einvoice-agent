@@ -164,7 +164,8 @@ def main() -> None:
             args.system,
         )
         if args.system in (LLM_RULES, LLM_TEXT_RULES):
-            extractor = CompletingExtractor(extractor)
+            # As in the application: the rules see the document's own text.
+            extractor = CompletingExtractor(extractor, text_of=document_text)
         predict = partial(predict_with_extractor, extractor=extractor)
     else:
         settings = Settings.from_env()

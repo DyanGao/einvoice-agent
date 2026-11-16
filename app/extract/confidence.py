@@ -270,6 +270,21 @@ def document_text(data: bytes) -> str | None:
         return None
 
 
+class LastDocumentText:
+    """`document_text` for the document seen last, kept so that two steps
+    reading the same document (the completion rules, then scoring) run OCR
+    once."""
+
+    def __init__(self, text_of: Callable[[bytes], str | None] = document_text) -> None:
+        self._text_of = text_of
+        self._last: tuple[bytes, str | None] | None = None
+
+    def __call__(self, data: bytes) -> str | None:
+        if self._last is None or self._last[0] != data:
+            self._last = (data, self._text_of(data))
+        return self._last[1]
+
+
 class ScoringExtractor:
     """An extractor whose drafts carry a confidence per field."""
 

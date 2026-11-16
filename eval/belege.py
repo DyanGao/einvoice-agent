@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any
 
 from app.extract import CompletingExtractor, ExtractionError, InvoiceDraft
+from app.extract.confidence import document_text
 from eval.run import build_llm_extractor
 
 DEFAULT_OUT = Path("data/private/belege")
@@ -155,7 +156,8 @@ def summarize(results: list[dict]) -> dict:
 
 def evaluate(dataset: Path, extractor, rules: bool) -> list[dict]:
     if rules:
-        extractor = CompletingExtractor(extractor)
+        # As in the application: the rules see the document's own text (OCR).
+        extractor = CompletingExtractor(extractor, text_of=document_text)
     results = []
     for entry in (json.loads(line) for line in (dataset / "manifest.jsonl").open()):
         label = json.loads((dataset / entry["label"]).read_text(encoding="utf-8"))

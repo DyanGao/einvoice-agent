@@ -274,3 +274,13 @@ def test_scoring_still_works_when_the_document_has_no_text():
 def test_shipped_calibration_loads_and_distrusts_a_failed_check_on_a_scan():
     shipped = Calibration.load()
     assert shipped.probabilities["image/failed/not_found"] < 0.5 < shipped.fallback + 0.01
+
+
+def test_document_text_is_computed_once_for_two_steps_on_the_same_document():
+    from app.extract.confidence import LastDocumentText
+
+    calls = []
+    text_of = LastDocumentText(lambda data: calls.append(data) or f"text of {data!r}")
+    assert text_of(b"a") == text_of(b"a") == "text of b'a'"
+    assert text_of(b"b") == "text of b'b'"
+    assert calls == [b"a", b"b"]

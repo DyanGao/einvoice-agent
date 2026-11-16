@@ -121,3 +121,61 @@ def test_reverse_charge_invoice_gets_vat_zero_and_gross_equal_to_net():
 )
 def test_gross_total_is_derived_only_from_both_parts_and_never_replaced(draft):
     assert complete(draft).gross_total == draft.gross_total
+
+
+# --- § 19 UStG: small businesses charge no VAT, and say so on the invoice -----
+
+SMALL_BUSINESS_NOTES = [
+    "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.",
+    "Gemäß $ 19 USIG wird keine Umsatzsteuer berechnet.",  # as OCR reads it
+    "Kein Ausweis der Umsatzsteuer aufgrund der Kleinunternehmerregelung.",
+    "Steuerfrei nach § 19 Abs. 1 UStG",
+]
+
+
+@pytest.mark.parametrize("note", SMALL_BUSINESS_NOTES)
+def test_small_business_note_without_vat_read_means_exempt_with_no_tax(note):
+    draft = InvoiceDraft(net_total=Decimal("250.00"))
+    completed = complete(draft, text=f"Rechnung\nSumme 250,00\n{note}\n")
+    (exempt,) = completed.vat_breakdown
+    assert (exempt.category, exempt.rate, exempt.taxable_amount, exempt.tax_amount) == (
+        "E",
+        Decimal("0"),
+        Decimal("250.00"),
+        Decimal("0"),
+    )
+    assert (completed.vat_total, completed.gross_total) == (Decimal("0"), Decimal("250.00"))
+    assert "vat_breakdown" in completed.derived_fields
+
+
+@pytest.mark.parametrize(
+    "draft",
+    [
+        InvoiceDraft(net_total=Decimal("100.00"), vat_total=Decimal("19.00")),
+        InvoiceDraft(net_total=Decimal("100.00"), vat_breakdown=(group("19.00"),)),
+    ],
+    ids=["vat-total-read", "vat-group-read"],
+)
+def test_small_business_note_never_overrides_vat_that_was_read(draft):
+    completed = complete(draft, text=SMALL_BUSINESS_NOTES[0])
+    assert completed.vat_breakdown == draft.vat_breakdown
+    assert completed.vat_total == (draft.vat_total or Decimal("19.00"))
+
+
+@pytest.mark.parametrize(
+    "text",
+    [None, "Rechnung\nNetto 100,00\nUSt 19 % 19,00\n", "Zahlbar innerhalb von 19 Tagen"],
+    ids=["no-text", "ordinary-invoice", "unrelated-19"],
+)
+def test_without_a_small_business_note_nothing_is_assumed(text):
+    completed = complete(InvoiceDraft(net_total=Decimal("100.00")), text=text)
+    assert (completed.vat_breakdown, completed.vat_total) == ((), None)
+
+
+def test_completing_extractor_reads_the_note_from_the_document_text():
+    class Fixed:
+        def extract(self, data):
+            return InvoiceDraft(net_total=Decimal("80.00"))
+
+    extractor = CompletingExtractor(Fixed(), text_of=lambda data: SMALL_BUSINESS_NOTES[0])
+    assert extractor.extract(b"%PDF").vat_total == Decimal("0")
