@@ -9,6 +9,7 @@ from decimal import Decimal
 from app.checks import arithmetic
 from app.checks.context import CheckContext, KnownInvoice, MasterData
 from app.checks.finding import Finding, FindingType, Severity
+from app.extract.complete import ZERO_RATE_CATEGORIES
 from app.extract.draft import InvoiceDraft
 
 Check = Callable[[InvoiceDraft, CheckContext], list[Finding]]
@@ -42,7 +43,6 @@ def totals(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
 _GERMAN_RATES = frozenset({Decimal(7), Decimal(19)})
 # Temporary reduction, 1 July to 31 December 2020.
 _GERMAN_RATES_2020_H2 = frozenset({Decimal(5), Decimal(16)})
-_ZERO_RATE_CATEGORIES = frozenset({"Z", "E", "AE", "K", "G", "O"})
 
 
 def _german_rates(on: date | None) -> frozenset[Decimal]:
@@ -60,7 +60,7 @@ def vat_rates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
     a foreign seller's rates follow rules this check does not know."""
     findings = []
     for index, group in enumerate(draft.vat_breakdown):
-        if group.rate is not None and group.category in _ZERO_RATE_CATEGORIES and group.rate != 0:
+        if group.rate is not None and group.category in ZERO_RATE_CATEGORIES and group.rate != 0:
             findings.append(
                 Finding(
                     type=FindingType.VAT_RATE_IMPLAUSIBLE,

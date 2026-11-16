@@ -208,13 +208,13 @@ Opus run on this set was not paid for.
 
 | Belege sample, 40 documents | Fields | Field accuracy | Documents read without error |
 |---|---:|---:|---:|
-| All | 941 | **96.5 %** | 21 of 40 |
+| All | 941 | **97.0 %** | 23 of 40 |
 | Scan | 459 | 98.3 % | 15 of 20 |
-| Photo | 447 | 94.4 % | 4 of 18 |
+| Photo | 447 | 95.5 % | 6 of 18 |
 | Clean | 35 | 100.0 % | 2 of 2 |
 | Regular VAT (19 %, 7 %) | 617 | 98.4 % | 19 of 28 |
 | §19 UStG small business, no VAT | 128 | 89.8 % | 0 of 5 |
-| §13b UStG reverse charge, no VAT | 83 | 92.8 % | 0 of 3 |
+| §13b UStG reverse charge, no VAT | 83 | 98.8 % | 2 of 3 |
 | Credit notes | 113 | 96.5 % | 2 of 4 |
 
 What was misread, and what would have stopped it:
@@ -222,8 +222,11 @@ What was misread, and what would have stopped it:
 - **IBAN, 10 documents:** 6 photos where none was read; 4 where a digit was dropped, added or changed
   inside the long run of 9s that Belege's invented bank code produces. Each of the 4 fails the IBAN
   checksum.
-- **No-VAT invoices, 8 of 8:** the VAT total, and on 7 of them the gross total, were left empty. No VAT
-  was invented on any of them. Empty totals send the invoice to a person.
+- **No-VAT invoices:** no VAT was invented on any of the 8. On the 3 reverse-charge invoices the model
+  read the category (`AE`) but no tax line, since none is printed; the completion rules now fill in VAT 0
+  and gross = net, marked as derived (before: 92.8 %, 0 of 3). On the 5 §19 invoices it read no VAT
+  category at all, so nothing says "no VAT": VAT and gross stay empty and a person checks them. Fixing
+  that needs a prompt change, and with it new recordings of every model answer.
 - **Seller VAT ID, 7 documents:** 3 not read, 4 with one digit wrong. All 4 fail the German check digit.
 - **Net total, 1 document:** left empty.
 
