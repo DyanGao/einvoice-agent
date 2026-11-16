@@ -85,7 +85,7 @@ eval-runs:
 			uv run python -m eval.run eval/out/$$set --system llm --llm-mode replay --run $$run || exit 1; \
 			uv run python -m eval.run eval/out/$$set --system llm-rules --llm-mode replay --run $$run || exit 1; \
 		done; \
-		uv run python -m eval.sweep report eval/out/pdf eval/out/scans --system llm-rules-run$$run > /dev/null || exit 1; \
+		uv run python -m eval.sweep report eval/out/pdf eval/out/scans --system llm-rules-run$$run --gate || exit 1; \
 	done
 
 # The same for the text PDFs only: what CI can replay (scan recordings replay
@@ -94,7 +94,7 @@ eval-runs-pdf:
 	for run in 2 3; do \
 		uv run python -m eval.run eval/out/pdf --system llm --llm-mode replay --run $$run || exit 1; \
 		uv run python -m eval.run eval/out/pdf --system llm-rules --llm-mode replay --run $$run || exit 1; \
-		uv run python -m eval.sweep report eval/out/pdf --system llm-rules-run$$run > /dev/null || exit 1; \
+		uv run python -m eval.sweep report eval/out/pdf --system llm-rules-run$$run --gate || exit 1; \
 	done
 
 # Every eval, then the report: README results table and docs/eval-report.md.
@@ -239,11 +239,11 @@ decide-fit:
 	uv run python -m eval.sweep fit eval/out/pdf eval/out/scans
 
 eval-decision:
-	uv run python -m eval.sweep report eval/out/pdf eval/out/scans
+	uv run python -m eval.sweep report eval/out/pdf eval/out/scans --gate
 	uv run python -m eval.sweep report eval/out/pdf eval/out/scans --system baseline
 
 eval-decision-pdf:
-	uv run python -m eval.sweep report eval/out/pdf
+	uv run python -m eval.sweep report eval/out/pdf --gate
 
 # Injection probes: 20 invoices with text that tries to steer the extraction
 # model, each next to a control without it, through the application's own

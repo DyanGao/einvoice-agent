@@ -67,13 +67,14 @@ jobs:
         run: make eval-pdf-llm
 
       # Auto-rate vs. error of the decision engine on the replayed text PDFs;
-      # warns (does not fail) when the auto-rate drops by more than 5 points.
+      # warns (does not fail) when the auto-rate drops by more than 5 points,
+      # fails when a held-out invoice is booked without a person although misread.
       - name: Decision eval
         run: make eval-decision-pdf
 
       # Model runs 2 and 3 on the text PDFs, from their committed recordings,
-      # with the decision sweep per run: the report below then shows mean ±
-      # std and any run that books a misread invoice.
+      # with the decision sweep per run: fails if any run books a misread
+      # held-out invoice without a person; the report below shows mean ± std.
       - name: PDF runs 2 and 3 (replay)
         run: make eval-runs-pdf
 

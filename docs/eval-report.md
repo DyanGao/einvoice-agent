@@ -28,7 +28,9 @@ state of 2026-11-14 (thresholds `2026-11-14.1`, model `claude-opus-5-5`).
 The four regression gates of EVAL_PLAN §7 run in CI on every push: structured field accuracy below
 100 % fails (`make eval-quick`, 51 documents); any injection that works fails (`make eval-probes`); a
 changed-IBAN or duplicate recall below 95 % fails (`make eval-exceptions`); an auto-rate more than
-5 points below the fitted one warns (`make eval-decision-pdf`). Matching below 95 % also fails.
+5 points below the fitted one warns (`make eval-decision-pdf`). Matching below 95 % also fails, and so
+does any held-out PDF booked without a person although misread, in any of the three replayed runs
+(`make eval-decision-pdf`, `make eval-runs-pdf`; added after worst case 1).
 
 ## Method
 

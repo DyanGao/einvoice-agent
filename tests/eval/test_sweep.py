@@ -48,3 +48,38 @@ def test_upper_bound_of_the_error_rate_is_the_one_sided_clopper_pearson_bound(er
 
 def test_no_upper_bound_without_invoices():
     assert upper_bound(0, 0) is None
+
+
+# --- gate: a replayed run must not book a misread invoice ----------------------
+
+
+def test_wrong_automatic_booking_on_the_held_out_split_fails_the_gate():
+    from eval.sweep import wrong_bookings
+
+    result = {
+        "system": "llm-rules-run2",
+        "test": {
+            "wrong_but_auto": [{"set": "pdf", "id": "pdf-0142", "wrong": ["buyer_reference"]}]
+        },
+    }
+    (failure,) = wrong_bookings(result)
+    assert "pdf-0142" in failure
+    assert "buyer_reference" in failure
+
+
+def test_no_wrong_automatic_booking_passes_the_gate():
+    from eval.sweep import wrong_bookings
+
+    assert wrong_bookings({"system": "llm-rules", "test": {"wrong_but_auto": []}}) == []
+
+
+def test_wrong_bookings_on_the_dev_split_are_not_the_gate():
+    """Dev is where the threshold is fitted; the gate guards the reported split."""
+    from eval.sweep import wrong_bookings
+
+    result = {
+        "system": "llm-rules",
+        "dev": {"wrong_but_auto": [{"set": "scans", "id": "scan-0000", "wrong": ["iban"]}]},
+        "test": {"wrong_but_auto": []},
+    }
+    assert wrong_bookings(result) == []
