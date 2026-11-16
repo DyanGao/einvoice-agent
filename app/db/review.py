@@ -23,14 +23,9 @@ READ_ONLY_FIELDS = {"source_format", "field_confidence", "derived_fields"}
 class ReviewState(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
+    # Set only by the decision engine (app/checks/service.py) when it routes a
+    # document `auto`: nothing skips review without a decision on record.
     NOT_REQUIRED = "not_required"
-
-    @classmethod
-    def after_processing(cls, status: DocumentStatus) -> "ReviewState":
-        """Before the decision engine has looked at it (app/decide, run with
-        the checks), and wherever no checks are configured: only a structured
-        invoice the validator accepted skips review."""
-        return cls.NOT_REQUIRED if status is DocumentStatus.VALID else cls.PENDING
 
 
 class ReviewError(ValueError):

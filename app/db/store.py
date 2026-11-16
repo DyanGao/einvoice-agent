@@ -56,7 +56,10 @@ def apply_outcome(session: Session, document: DocumentRow, outcome: Outcome) -> 
     document.format = outcome.format.value
     document.status = outcome.status.value
     document.error = outcome.error
-    document.review_state = ReviewState.after_processing(outcome.status).value
+    # Waits for a person until the checks decide otherwise. Without checks
+    # (no ERP configured) nothing decides, so a person has to look: showing
+    # "no review needed" there would leave an invoice nothing ever books.
+    document.review_state = ReviewState.PENDING.value
     document.audit_events.append(_event("format_detected", format=outcome.format.value))
 
     if outcome.validation is not None:

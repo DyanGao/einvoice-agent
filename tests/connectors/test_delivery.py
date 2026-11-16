@@ -117,11 +117,12 @@ def test_approved_invoice_is_delivered(session_factory, world, checker, connecto
 
 
 def test_no_delivery_without_a_recorded_decision(session_factory, world, connector, erp_http):
-    """Processed without checks, a valid e-invoice skips review but has no
-    decision: it is not delivered."""
+    """Processed without checks, a valid e-invoice has no decision: it waits
+    for a person instead of being shown as needing no review, and is not
+    delivered until approved."""
     document_id = process(session_factory, entry_of(world, PO_EXACT), checker=None)
     with session_factory() as session:
-        assert session.get(db.DocumentRow, document_id).review_state == "not_required"
+        assert session.get(db.DocumentRow, document_id).review_state == "pending"
     deliver_due(session_factory, [connector], NOW)
     assert bookings(erp_http) == []
 
