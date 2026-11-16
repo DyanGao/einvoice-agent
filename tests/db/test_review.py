@@ -44,9 +44,11 @@ def test_extracted_pdf_waits_for_review(session_factory):
     )
 
 
-def test_accepted_structured_invoice_needs_no_review(session_factory):
+def test_accepted_structured_invoice_without_checks_waits_for_review(session_factory):
+    """Without the checks nothing decided it may skip review, and nothing
+    but a decision or a person's approval lets it be booked."""
     document_id = processed(session_factory, XML)
-    assert load(session_factory, document_id, lambda d: d.review_state) == "not_required"
+    assert load(session_factory, document_id, lambda d: d.review_state) == "pending"
 
 
 def test_rejected_structured_invoice_waits_for_review(session_factory):

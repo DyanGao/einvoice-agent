@@ -51,11 +51,11 @@ def test_uploaded_pdf_is_extracted_and_waits_for_review(client):
     )
 
 
-def test_uploaded_valid_xrechnung_needs_no_review(client):
+def test_uploaded_valid_xrechnung_without_checks_waits_for_review(client):
     detail = client.get(f"/documents/{uploaded(client, XML, 'r.xml')}").json()
     assert (detail["status"], detail["review_state"], detail["validation"]["valid"]) == (
         "valid",
-        "not_required",
+        "pending",
         True,
     )
 
@@ -112,7 +112,8 @@ def test_list_shows_summaries_newest_first(client):
 
 
 def test_list_can_be_filtered_to_the_review_queue(client):
-    uploaded(client, XML, "r.xml")
+    approved = uploaded(client, XML, "r.xml")
+    assert client.post(f"/documents/{approved}/approve", headers=REVIEWER).status_code == 200
     pending = uploaded(client)
     documents = client.get("/documents", params={"review_state": "pending"}).json()["documents"]
     assert [d["id"] for d in documents] == [pending]
