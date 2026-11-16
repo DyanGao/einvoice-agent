@@ -191,6 +191,47 @@ Held back at the operating point, by reason: assumed_value 15.
 List price of `claude-opus-5-5` in November 2026; one call per document. E-invoices are parsed without a model and cost nothing.
 <!-- eval:details:end -->
 
+### Third-party set: Belege sample (Immineal, 2026)
+
+Reading only, on 40 invoice images from a generator that is not ours: the free sample of
+[Belege](https://zenodo.org/records/22182045), synthetic German invoices and credit notes, clean,
+scanned or photographed, in three page layouts. It is licensed for evaluation but not for
+redistribution, so the files, the recorded answers and the per-document results stay out of the
+repository (`data/private/belege/`); `make eval-belege` reruns it on a local copy. Only what its
+labels hold is scored (15–37 fields per document: number, dates, type, names, seller VAT ID, IBAN,
+totals, every line's quantity, price and amount). Amounts are compared unsigned, since Belege prints
+credit notes with minus signs and XRechnung does not.
+
+**Model: `claude-haiku-5-5`** (default effort), with the completion rules, one run, 0.062 USD for all 40
+(278k input, 68k output tokens). That is not the configuration measured above (`claude-opus-5-5`): the
+Opus run on this set was not paid for.
+
+| Belege sample, 40 documents | Fields | Field accuracy | Documents read without error |
+|---|---:|---:|---:|
+| All | 941 | **96.5 %** | 21 of 40 |
+| Scan | 459 | 98.3 % | 15 of 20 |
+| Photo | 447 | 94.4 % | 4 of 18 |
+| Clean | 35 | 100.0 % | 2 of 2 |
+| Regular VAT (19 %, 7 %) | 617 | 98.4 % | 19 of 28 |
+| §19 UStG small business, no VAT | 128 | 89.8 % | 0 of 5 |
+| §13b UStG reverse charge, no VAT | 83 | 92.8 % | 0 of 3 |
+| Credit notes | 113 | 96.5 % | 2 of 4 |
+
+What was misread, and what would have stopped it:
+
+- **IBAN, 10 documents:** 6 photos where none was read; 4 where a digit was dropped, added or changed
+  inside the long run of 9s that Belege's invented bank code produces. Each of the 4 fails the IBAN
+  checksum.
+- **No-VAT invoices, 8 of 8:** the VAT total, and on 7 of them the gross total, were left empty. No VAT
+  was invented on any of them. Empty totals send the invoice to a person.
+- **Seller VAT ID, 7 documents:** 3 not read, 4 with one digit wrong. All 4 fail the German check digit.
+- **Net total, 1 document:** left empty.
+
+So on this set every wrong value fails a checksum or leaves a field empty, and the decision sends all of
+them to review. That is 40 documents and one run: it shows where reading breaks (photos, the zero-VAT
+cases), not that a misread can never pass. Matching and the decision were not measured here; none of
+the suppliers exist in the mock ERP.
+
 ## Worst 10 cases
 
 The ten cases, from every eval and both splits, that did or could have done the most damage, worst
@@ -278,7 +319,8 @@ first. A wrong booking ranks above a needless review.
 
 ## Known limits
 
-- **Synthetic only.** No real invoice has been run; real layouts, handwriting, multi-page scans, foreign
+- **Synthetic only.** No real invoice has been run (the Belege sample above is synthetic too, from another
+  generator); real layouts, handwriting, multi-page scans, foreign
   formats and messy ERP data are untested. The realism set (EVAL_PLAN §2) needs real invoices to
   anonymize.
 - **Three runs.** The model is not deterministic; three runs give a mean and a spread, not a
