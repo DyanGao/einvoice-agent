@@ -61,3 +61,63 @@ def test_filled_in_fields_are_named_so_nobody_takes_them_for_read_values():
 
 def test_read_values_are_not_named_as_filled_in():
     assert complete(InvoiceDraft(currency="EUR", vat_total=Decimal("1.00"))).derived_fields == ()
+
+
+# --- zero-rate categories and the gross total -------------------------------
+
+
+def zero_rated(category: str = "AE", tax_amount: str | None = None) -> VatBreakdownDraft:
+    return VatBreakdownDraft(
+        category=category,
+        taxable_amount=Decimal("500.00"),
+        tax_amount=None if tax_amount is None else Decimal(tax_amount),
+    )
+
+
+@pytest.mark.parametrize("category", ["Z", "E", "AE", "K", "G", "O"])
+def test_zero_rate_category_without_a_tax_amount_carries_no_tax(category):
+    completed = complete(InvoiceDraft(vat_breakdown=(zero_rated(category),)))
+    assert completed.vat_breakdown[0].tax_amount == Decimal("0")
+    assert completed.vat_total == Decimal("0")
+
+
+def test_tax_filled_in_for_a_zero_rate_category_is_marked_derived():
+    completed = complete(InvoiceDraft(vat_breakdown=(zero_rated(),)))
+    assert "vat_breakdown.0.tax_amount" in completed.derived_fields
+    assert "vat_total" in completed.derived_fields
+
+
+def test_standard_rate_without_a_tax_amount_stays_unread():
+    standard = group(None)
+    assert complete(InvoiceDraft(vat_breakdown=(standard,))).vat_breakdown[0].tax_amount is None
+
+
+def test_printed_tax_amount_of_a_zero_rate_category_is_kept():
+    completed = complete(InvoiceDraft(vat_breakdown=(zero_rated("E", "3.00"),)))
+    assert completed.vat_breakdown[0].tax_amount == Decimal("3.00")
+
+
+def test_gross_total_not_read_is_net_plus_vat():
+    draft = InvoiceDraft(net_total=Decimal("100.00"), vat_total=Decimal("19.00"))
+    completed = complete(draft)
+    assert completed.gross_total == Decimal("119.00")
+    assert "gross_total" in completed.derived_fields
+
+
+def test_reverse_charge_invoice_gets_vat_zero_and_gross_equal_to_net():
+    draft = InvoiceDraft(net_total=Decimal("500.00"), vat_breakdown=(zero_rated("AE"),))
+    completed = complete(draft)
+    assert (completed.vat_total, completed.gross_total) == (Decimal("0"), Decimal("500.00"))
+
+
+@pytest.mark.parametrize(
+    "draft",
+    [
+        InvoiceDraft(net_total=Decimal("100.00")),
+        InvoiceDraft(vat_total=Decimal("19.00")),
+        InvoiceDraft(net_total=Decimal("1"), vat_total=Decimal("1"), gross_total=Decimal("5")),
+    ],
+    ids=["no-vat", "no-net", "printed-gross"],
+)
+def test_gross_total_is_derived_only_from_both_parts_and_never_replaced(draft):
+    assert complete(draft).gross_total == draft.gross_total
