@@ -85,10 +85,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Roadmap
 - [x] v0.1 structured path: parse + validate XRechnung/ZUGFeRD
-- [ ] v0.2 PDF/scan extraction + review UI _(built; held-out synthetic data 99.96 % / 100.00 % over 3 model runs, third-party Belege images 98.0 % with a smaller model; open: real invoices)_
+- [x] v0.2 PDF/scan extraction + review UI _(held-out synthetic data 99.96 % / 100.00 % over 3 model runs, third-party Belege images 98.0 % with a smaller model; not measured on real invoices — none to test on)_
 - [x] v0.3 matching + checks + decision engine _(rule-based matching instead of a model agent)_
 - [x] v0.4 connectors (export, webhook, mock ERP, Playwright fallback) and the whole stack in Docker
-- [ ] v0.5 eval report published _([docs/eval-report.md](docs/eval-report.md); done: 3-run variance, OCR-text and hosted vs. local ablations, third-party set, hardening; open: real-invoice set)_
+- [x] v0.5 eval report published _([docs/eval-report.md](docs/eval-report.md): 3-run variance, OCR-text and hosted vs. local ablations, third-party set, hardening; synthetic data only, and it says so)_
 - [ ] v1.0 multi-tenant, IMAP ingest, German/English UI
 
 ## Tech stack
