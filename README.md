@@ -3,8 +3,10 @@
 > An agent that turns incoming German invoices (XRechnung, ZUGFeRD, PDF, scans) into booked, matched and checked entries — and only asks a human when it's unsure.
 
 <!-- eval:badges:start -->
-[![CI](https://github.com/DyanGao/einvoice-agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DyanGao/einvoice-agent/actions/workflows/ci.yml) [![Field accuracy on synthetic held-out invoices](https://img.shields.io/badge/field%20accuracy%20%28synthetic%29-PDF%2099.96%20%25%20%2F%20scans%20100.00%20%25-blue)](docs/eval-report.md) [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE) ![Python 3.12](https://img.shields.io/badge/python-3.12-blue) ![EN 16931 / XRechnung](https://img.shields.io/badge/EN%2016931-XRechnung%20%C2%B7%20ZUGFeRD-blue)
+[![CI](https://github.com/DyanGao/einvoice-agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DyanGao/einvoice-agent/actions/workflows/ci.yml) [![Field accuracy on synthetic held-out invoices](https://img.shields.io/badge/field%20accuracy%20%28synthetic%29-PDF%2099.96%20%25%20%2F%20scans%20100.00%20%25-blue)](docs/eval-report.md) [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE) ![EN 16931 / XRechnung](https://img.shields.io/badge/EN%2016931-XRechnung%20%C2%B7%20ZUGFeRD-blue)
 <!-- eval:badges:end -->
+
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white) ![FastAPI 0.115+](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white) ![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white) ![SQLAlchemy 2](https://img.shields.io/badge/SQLAlchemy-2-D71F00?logo=sqlalchemy&logoColor=white) ![PostgreSQL 17](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white) ![Redis 7 · RQ](https://img.shields.io/badge/Redis-7%20%C2%B7%20RQ-DC382D?logo=redis&logoColor=white) ![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white) ![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white) ![TypeScript 5.9](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white) ![Playwright 1.65](https://img.shields.io/badge/Playwright-1.65-2EAD33) ![Tesseract OCR](https://img.shields.io/badge/Tesseract-OCR-5A5A5A) ![Claude Opus 5.5](https://img.shields.io/badge/Claude-Opus%205.5-D97757?logo=claude&logoColor=white) ![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
 Since 2025 every German business must be able to receive e-invoices; issuing becomes mandatory in 2027 (turnover > €800k) and 2028 (all). Structured XML makes *reading* invoices easy — the remaining work is **matching** them to purchase orders, delivery notes and bank transactions, catching **exceptions** (wrong VAT, price deviations, duplicates), handling **non-structured invoices** from foreign suppliers, and getting the result into **systems without an API**.
 
@@ -36,14 +38,15 @@ On a third-party synthetic set, 40 photographed and scanned invoices from [Beleg
 - [ ] Ingest: email inbox (IMAP), folder watch, upload UI, API _(built: folder watch, upload in the review UI, `POST /documents`; IMAP is not built)_
 - [x] Format detection: XRechnung (UBL/CII), ZUGFeRD/Factur-X (PDF/A-3 with embedded XML), plain PDF, scan
 - [x] Structured path: parse + validate (KoSIT validator / Mustang) — no LLM needed _(KoSIT only so far: ZUGFeRD profiles outside EN 16931 and PDF/A-3 conformance are not validated)_
-- [x] Unstructured path: OCR + vision LLM → schema-constrained extraction (EN 16931 fields) _(the model transcribes, rules fill only what is not printed and mark it; per-field confidence from checks and OCR grounding)_
+- [x] Unstructured path: OCR + vision LLM → schema-constrained extraction (EN 16931 fields) _(the model transcribes, rules fill only what is not printed and mark it — e.g. VAT 0 for reverse-charge (§13b) and small-business (§19) invoices from their printed category or note; per-field confidence from checks and OCR grounding)_
 - [x] Matching: invoice ↔ PO ↔ delivery note ↔ bank transaction (3-way match + fuzzy) _(rule-based, including typos, missing references, partial and combined payments; matched again when new invoices or transfers arrive. The planned model agent was not built: on the eval world the rules leave open only what no reader could decide, and an agent would add cost and a place for injected text to act)_
-- [x] Checks: VAT rate/ID plausibility, totals, duplicates, IBAN changes (fraud signal), price/quantity deviations _(against the ERP's suppliers and orders; quantity deviation is unit-tested but not in the exception eval)_
+- [x] Checks: VAT rate/ID plausibility, totals, duplicates, IBAN changes (fraud signal), price/quantity deviations _(against the ERP's suppliers and orders; a document is only ever a duplicate of an earlier one; quantity deviation is unit-tested but not in the exception eval)_
 - [x] Human-in-the-loop review UI for low-confidence fields and exceptions _(upload, queue, "why a person needs to look", unsure fields marked, correct, approve or reject with a reason (and reopen a mistaken rejection), reject plain duplicates together, history, where each document was booked)_
 - [x] Decision engine: books an invoice without a person only when it was read with confidence, nothing was assumed and no check raised a finding _(75 % of held-out documents on synthetic data; ≤ 1 % error not yet shown, see Results)_
 - [x] Output connectors: CSV/DATEV-style export, REST webhook, mock ERP via API, Playwright fallback for UI-only systems _(each invoice delivered once per connector, retried with backoff; the browser connector reads every booking back)_
 - [x] Audit trail per document (source, extracted values, who approved or rejected and why) _(the reviewer's name comes from the UI and is not authenticated: the API has no login and is meant for localhost)_
-- [x] Eval harness: labeled synthetic sets, rule-based baseline, held-out split, recorded model answers, CI gates — `make eval-full` _(no real invoices yet)_
+- [x] Eval harness: labeled synthetic sets, rule-based baseline, held-out split, 3 recorded model runs, CI gates — `make eval-full` _(no real invoices yet; a third-party synthetic set, [Belege](docs/eval-report.md#third-party-set-belege-sample-immineal-2026), is measured locally)_
+- [x] Running it: one bank watch and one delivery loop per database, stuck documents re-queued, a page limit before any model call, configurable database password with a warning on the development default
 
 ## Quickstart
 ```bash
@@ -82,14 +85,14 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Roadmap
 - [x] v0.1 structured path: parse + validate XRechnung/ZUGFeRD
-- [ ] v0.2 PDF/scan extraction + review UI _(built and on held-out synthetic data at 100 %; open: mean of 3 model runs, real invoices)_
+- [ ] v0.2 PDF/scan extraction + review UI _(built; held-out synthetic data 99.96 % / 100.00 % over 3 model runs, third-party Belege images 98.0 % with a smaller model; open: real invoices)_
 - [x] v0.3 matching + checks + decision engine _(rule-based matching instead of a model agent)_
 - [x] v0.4 connectors (export, webhook, mock ERP, Playwright fallback) and the whole stack in Docker
-- [ ] v0.5 eval report published _(written: [docs/eval-report.md](docs/eval-report.md); open: 3-run variance, model ablations, real-invoice set, hardening)_
+- [ ] v0.5 eval report published _([docs/eval-report.md](docs/eval-report.md); done: 3-run variance, OCR-text ablation, third-party set, hardening; open: real-invoice set, hosted vs. local model)_
 - [ ] v1.0 multi-tenant, IMAP ingest, German/English UI
 
 ## Tech stack
-Python (FastAPI, Pydantic, lxml) · KoSIT validator / Mustang (Java, via container) · factur-x / pypdf · OCR (Tesseract or docTR) + vision LLM · Postgres · Celery/RQ · Playwright · Next.js review UI · Docker Compose · pytest
+Python 3.12 (FastAPI, Pydantic, SQLAlchemy + Alembic, lxml) · KoSIT validator (Java, in a container) · factur-x / pypdf · Tesseract OCR + Claude (vision, structured output) · PostgreSQL · Redis + RQ · Playwright (browser connector and UI tests) · Next.js / React / TypeScript review UI · Docker Compose · pytest, ruff, uv
 
 ## References
 - German e-invoicing mandate (Wachstumschancengesetz, §14 UStG); EN 16931
