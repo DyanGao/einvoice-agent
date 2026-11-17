@@ -3,7 +3,9 @@
 Drives the real review UI and the mock ERP's booking screens through the
 README's story with a browser: the five files in sample_invoices/ are dropped
 on the review UI, four are booked without review, one is flagged for its
-price, a person approves it, and the mock ERP holds five bookings. Each step
+price, a person approves it; then the first invoice arrives again in another
+file, is held as a duplicate and rejected, and the mock ERP holds five
+bookings, each once. Each step
 is a screenshot with a caption; Pillow joins them into docs/demo.gif.
 
 Needs the whole application on an empty database (`make stack` on a fresh
@@ -16,6 +18,7 @@ adds invoices to a database in use.
 import argparse
 import io
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -24,6 +27,8 @@ from PIL import Image, ImageDraw, ImageFont
 from playwright.sync_api import Page, expect, sync_playwright
 
 SAMPLES = sorted(Path("sample_invoices").glob("0*"))
+# Sent again: the same e-invoice in another file (other bytes, so not the same upload).
+RESENT = SAMPLES[0] if SAMPLES else None
 FLAGGED = "RE-2026-03563"
 REVIEWER = "Demo Reviewer"
 VIEWPORT = {"width": 1280, "height": 800}
@@ -84,6 +89,22 @@ def record(ui: str, erp: str) -> list[tuple[Image.Image, float]]:
             page.evaluate("window.scrollTo(0, 0)")
             frames.append(_shot(page, "A reviewer checks it and approves", 3.0))
 
+            with tempfile.TemporaryDirectory() as folder:
+                again = Path(folder) / f"{RESENT.stem}-again{RESENT.suffix}"
+                again.write_bytes(RESENT.read_bytes() + b"\n<!-- sent again -->\n")
+                page.goto(ui)
+                page.get_by_label("Invoice files").set_input_files(str(again))
+            page.get_by_role("button", name="To review").click()
+            duplicates = page.get_by_role("button", name="Reject 1 plain duplicate…")
+            expect(duplicates).to_be_visible(timeout=60_000)
+            duplicates.click()
+            frames.append(_shot(page, "The first invoice arrives again: held as a duplicate", 3.5))
+
+            page.get_by_placeholder("Your name").fill(REVIEWER)
+            page.get_by_role("button", name="Reject this copy").click()
+            expect(page.get_by_text("1 copy rejected.")).to_be_visible()
+            frames.append(_shot(page, "Rejected as a duplicate: it is never booked", 2.5))
+
             deadline = time.monotonic() + 90
             while True:
                 page.goto(f"{erp}/ui/bookings")
@@ -94,7 +115,7 @@ def record(ui: str, erp: str) -> list[tuple[Image.Image, float]]:
                 time.sleep(2)
             # The ERP's screens are plain, small HTML: enlarged so the five rows read.
             page.evaluate("document.body.style.zoom = '2'")
-            frames.append(_shot(page, "All five are booked in the ERP, each exactly once", 4.0))
+            frames.append(_shot(page, "Five bookings in the ERP, each exactly once", 4.0))
         finally:
             browser.close()
     return frames
