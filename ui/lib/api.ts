@@ -3,6 +3,13 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000
 export type ReviewState = "pending" | "approved" | "not_required" | "rejected";
 export type RejectReason = "duplicate" | "not_addressed_to_us" | "replaced_or_cancelled" | "other";
 
+/** Where a document was booked, or is waiting to be: one per system. */
+export type Booking = {
+  connector: string;
+  status: "pending" | "delivered" | "failed";
+  external_ref: string | null;
+};
+
 export type Summary = {
   id: string;
   filename: string | null;
@@ -15,6 +22,7 @@ export type Summary = {
   seller_name: string | null;
   gross_total: string | null;
   currency: string | null;
+  bookings: Booking[];
 };
 
 export type Fields = Record<string, unknown>;
@@ -182,16 +190,7 @@ export function rejectDocument(
 }
 
 /** A plain copy of an earlier invoice (app/db/duplicates.py). */
-export type CopySummary = {
-  id: string;
-  number: string | null;
-  seller_name: string | null;
-  gross_total: string | null;
-  currency: string | null;
-  created_at: string;
-  review_state: ReviewState;
-};
-export type DuplicateCopy = CopySummary & { original: CopySummary };
+export type DuplicateCopy = Summary & { original: Summary };
 
 export function listDuplicateCopies(): Promise<{ copies: DuplicateCopy[] }> {
   return request("/review/duplicates");

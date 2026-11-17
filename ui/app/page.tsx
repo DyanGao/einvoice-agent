@@ -12,7 +12,7 @@ import {
   type DuplicateCopy,
   type Summary,
 } from "@/lib/api";
-import { formatLabel, money, reviewLabel, statusLabel, when } from "@/lib/labels";
+import { bookingLabel, formatLabel, money, reviewLabel, statusLabel, when } from "@/lib/labels";
 
 type View = "pending" | "all";
 type UploadNote = { file: string; text: string; id?: string; failed: boolean };
@@ -220,6 +220,9 @@ export default function QueuePage() {
                           {copy.original.number ?? copy.original.id}
                         </Link>
                         , {when(copy.original.created_at)}
+                        {bookingLabel(copy.original.bookings) && (
+                          <span className="booked"> · {bookingLabel(copy.original.bookings)}</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -273,6 +276,7 @@ export default function QueuePage() {
                 <th>Kind</th>
                 <th>Result</th>
                 <th>Review</th>
+                <th>Booked</th>
                 <th>Received</th>
               </tr>
             </thead>
@@ -299,6 +303,7 @@ export default function QueuePage() {
                       </span>
                     )}
                   </td>
+                  <td className="booked">{bookingLabel(document.bookings) || "–"}</td>
                   <td>{when(document.created_at)}</td>
                 </tr>
               ))}

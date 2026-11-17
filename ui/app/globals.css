@@ -347,6 +347,12 @@ th {
   text-align: right;
 }
 
+.booked {
+  color: var(--muted);
+  font-size: var(--step--1);
+  white-space: nowrap;
+}
+
 .state-rejected {
   color: var(--muted);
   text-decoration: line-through;

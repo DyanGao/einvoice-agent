@@ -1,4 +1,4 @@
-import type { RejectReason, ReviewState } from "./api";
+import type { Booking, RejectReason, ReviewState } from "./api";
 
 const STATUS: Record<string, string> = {
   received: "Waiting to be read",
@@ -97,6 +97,25 @@ const CONNECTOR: Record<string, string> = {
 
 export const connectorLabel = (connector: string) =>
   CONNECTOR[connector] ?? connector.replaceAll("_", " ");
+
+const SHORT_CONNECTOR: Record<string, string> = {
+  erp: "ERP",
+  csv_export: "Booking list",
+  webhook: "Webhook",
+};
+
+/** For the queue: "ERP no. 5", "Waiting to be booked", "Booking failed", or "". */
+export function bookingLabel(bookings: Booking[]): string {
+  return bookings
+    .map((booking) => {
+      const where = SHORT_CONNECTOR[booking.connector] ?? connectorLabel(booking.connector);
+      if (booking.status === "delivered") {
+        return booking.external_ref ? `${where} no. ${booking.external_ref}` : `${where}: booked`;
+      }
+      return booking.status === "failed" ? `${where}: booking failed` : `${where}: waiting`;
+    })
+    .join(", ");
+}
 
 const BASIS: Record<string, string> = {
   exact_reference: "quoted exactly",
