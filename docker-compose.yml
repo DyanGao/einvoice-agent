@@ -13,7 +13,7 @@ x-app: &app
     - path: .env
       required: false
   environment:
-    DATABASE_URL: postgresql+psycopg://einvoice:einvoice@postgres:5432/einvoice
+    DATABASE_URL: postgresql+psycopg://einvoice:${POSTGRES_PASSWORD:-einvoice}@postgres:5432/einvoice
     REDIS_URL: redis://redis:6379/0
     VALIDATOR_URL: http://validator:8080
     ERP_URL: http://mock-erp:8100
@@ -28,9 +28,11 @@ services:
   postgres:
     image: postgres:17
     environment:
-      # Local development only; the port is bound to localhost.
+      # Set POSTGRES_PASSWORD in .env for anything beyond local development;
+      # "einvoice" is the development default and the port is bound to localhost.
+      # It takes effect when the database is first created (an empty pgdata).
       POSTGRES_USER: einvoice
-      POSTGRES_PASSWORD: einvoice
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-einvoice}
       POSTGRES_DB: einvoice
     ports:
       - "127.0.0.1:5433:5432"
@@ -171,7 +173,7 @@ services:
     <<: *app
     command: ["python", "-m", "eval.demo"]
     environment:
-      DATABASE_URL: postgresql+psycopg://einvoice:einvoice@postgres:5432/einvoice
+      DATABASE_URL: postgresql+psycopg://einvoice:${POSTGRES_PASSWORD:-einvoice}@postgres:5432/einvoice
       VALIDATOR_URL: http://validator:8080
       DEMO_IN_DOCKER: "1"
     profiles: ["demo"]

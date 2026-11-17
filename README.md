@@ -54,6 +54,7 @@ To see the same story there, drop the five files from `sample_invoices/` onto th
 booked without review, the fifth waits under "To review" until you enter your name and approve it.
 
 PDFs and scans are read by a model: put `ANTHROPIC_API_KEY` in `.env` (see `.env.example`). E-invoices need no key.
+The database password `einvoice` is a local development default (every port is bound to localhost): set `POSTGRES_PASSWORD` in `.env` before running this anywhere else. It applies when the database is first created; the services log a warning while the default is used on a database that is not on this machine.
 Reseed the mock ERP: `docker compose run --rm mock-erp python -m mock_erp.seed --out /tmp/world`.
 
 For development, the same runs from source with uv and pnpm (stop the compose app services first, they use the same ports):

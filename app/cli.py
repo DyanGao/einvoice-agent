@@ -13,10 +13,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import httpx
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import db
+from app.db.engine import database_engine
 from app.ingest import requeue_received, scan_folder
 from app.pipeline import DocumentStatus, Outcome, Validator, process_structured
 from app.queue import JobQueue, RqQueue
@@ -45,7 +45,7 @@ def main(
 
     settings = Settings.from_env()
     if args.command in ("watch", "requeue"):
-        session_factory = session_factory or sessionmaker(create_engine(settings.database_url))
+        session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
         queue = queue or RqQueue(settings.redis_url)
         if args.command == "requeue":
             print(f"queued {requeue_received(session_factory, queue)} documents")
@@ -59,7 +59,7 @@ def main(
             )
         )
     if session_factory is None and not args.no_store:
-        session_factory = sessionmaker(create_engine(settings.database_url))
+        session_factory = sessionmaker(database_engine(settings.database_url))
 
     all_valid = True
     for path in args.paths:
