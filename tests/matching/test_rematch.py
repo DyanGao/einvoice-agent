@@ -284,3 +284,21 @@ def test_provisional_payment_is_dropped_when_an_invoice_of_the_same_total_arrive
         [twin.payments[0].bank_transaction_id],
         [],
     )
+
+
+def test_matching_a_supplier_again_leaves_a_rejected_invoice_alone(session_factory, world):
+    entry = paid_once(world, PO_MISSING)
+    erp = Erp(world, set())
+    checker = Checker(erp)
+    document_id = process(session_factory, entry, checker)
+    with session_factory.begin() as session:
+        document = session.get(db.DocumentRow, document_id)
+        supplier_id = document.match.supplier_id
+        db.reject(session, document, "anna", "duplicate")
+        events = len(document.audit_events)
+    with session_factory.begin() as session:
+        touched = rematch_supplier(session, checker, supplier_id, trigger="test")
+    with session_factory() as session:
+        document = session.get(db.DocumentRow, document_id)
+        assert (document.review_state, len(document.audit_events)) == ("rejected", events)
+    assert document_id not in touched

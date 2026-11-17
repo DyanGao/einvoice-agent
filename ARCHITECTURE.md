@@ -24,7 +24,7 @@ flowchart TD
   MA --> CHK
   CHK --> DEC{Decision engine<br/>read with confidence, nothing<br/>assumed, no finding?}
   DEC -->|yes: auto| OUT[Delivery outbox<br/>once per connector, retried]
-  DEC -->|no: review| HR[Review UI<br/>correct, approve]
+  DEC -->|no: review| HR[Review UI<br/>correct, approve or reject]
   HR --> OUT
   BANK[Bank watch<br/>new transfers in the ERP] --> MA
   OUT --> E1[CSV / DATEV-style export]
@@ -53,7 +53,7 @@ extractor interface.
 | Re-matching | Match open invoices again when a new invoice or a new bank transfer arrives | `app/rematch.py`, `app/watch.py` | amount-only payments stay provisional; one bank watch per database, enforced by a Postgres advisory lock (`app/db/instance_lock.py`) |
 | Rule checks | Deterministic business rules, each a small tested function | `app/checks` | findings with severity; compared with the ERP's supplier and order |
 | Decision engine | Combine confidence, assumed values, values printed but not read (Leitweg-ID, IBAN, German VAT ID with valid check digits) and findings → auto / review, with every reason | `app/decide` | threshold fitted on the eval set (3); version stored with each decision |
-| Review UI | Document beside its fields, unsure fields marked, why it needs a person, correct, approve, history, delivery status | `ui/` (Next.js) | corrections are kept as future eval cases in `data/private/feedback/` (outside git) |
+| Review UI | Document beside its fields, unsure fields marked, why it needs a person, correct, approve, reject with a reason (final: never delivered, checked again or matched to payments), history, delivery status | `ui/` (Next.js) | corrections are kept as future eval cases in `data/private/feedback/` (outside git) |
 | Delivery outbox | Deliver approved or auto-decided invoices once per connector; frozen booking, idempotency key, backoff | `app/delivery.py`, `app/deliver.py` | only type 380 (D9); one delivery loop per database, enforced like the bank watch |
 | Connectors | CSV/DATEV-style export, signed webhook, ERP booking API, ERP screens with a browser | `app/connectors` | the browser runs only on allowlisted host and port, logs every action, reads every booking back (4) |
 | Mock ERP | Suppliers, orders, deliveries, bank transfers, bookings; API and German HTML screens | `mock_erp/` | the eval world's data; seeds itself in Docker |

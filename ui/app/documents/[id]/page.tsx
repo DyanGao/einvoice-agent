@@ -11,9 +11,11 @@ import {
   correctFields,
   getDocument,
   recheckDocument,
+  rejectDocument,
   type AuditEvent,
   type Delivery,
   type Detail,
+  type RejectReason,
   type Violation,
 } from "@/lib/api";
 import {
@@ -33,6 +35,7 @@ import {
   connectorLabel,
   findingLabel,
   formatLabel,
+  REJECT_REASONS,
   statusLabel,
   when,
 } from "@/lib/labels";
@@ -133,6 +136,10 @@ function auditText(event: AuditEvent): string {
     return `${labelFor(String(detail.field))} changed from ${shown(detail.old)} to ${shown(detail.new)}`;
   }
   if (event.event === "approved") return "Approved";
+  if (event.event === "rejected") {
+    const reason = REJECT_REASONS[detail.reason as RejectReason] ?? String(detail.reason);
+    return detail.note ? `Rejected: ${reason} (${String(detail.note)})` : `Rejected: ${reason}`;
+  }
   const name = event.event.replaceAll("_", " ");
   const text = name.charAt(0).toUpperCase() + name.slice(1);
   // A re-match says what set it off: a later invoice or a new bank transfer.
@@ -147,6 +154,8 @@ export default function ReviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rejectReason, setRejectReason] = useState<RejectReason | "">("");
+  const [rejectNote, setRejectNote] = useState("");
 
   const show = useCallback((next: Detail) => {
     setDetail(next);
@@ -201,6 +210,8 @@ export default function ReviewPage() {
   const approved = detail.review_state === "approved";
   const editable = detail.review_state === "pending" && !waiting;
   const approval = detail.audit.findLast((event) => event.event === "approved");
+  const rejected = detail.review_state === "rejected";
+  const rejection = detail.audit.findLast((event) => event.event === "rejected");
 
   async function run(action: () => Promise<Detail>) {
     setBusy(true);
@@ -216,6 +227,14 @@ export default function ReviewPage() {
 
   const save = () => run(() => correctFields(id, changes, reviewer.name.trim()));
   const approve = () => run(() => approveDocument(id, reviewer.name.trim()));
+  const reject = () =>
+    rejectReason !== "" &&
+    run(() => rejectDocument(id, reviewer.name.trim(), rejectReason, rejectNote));
+
+  // The name is asked for once, above; this says only what the rejection lacks.
+  let rejectNeeds: string | null = null;
+  if (rejectReason === "") rejectNeeds = "Choose why it is rejected.";
+  else if (rejectReason === "other" && rejectNote.trim() === "") rejectNeeds = "Say which reason.";
 
   const setScalar = (path: string, value: string) =>
     setForm({ ...form, scalars: { ...form.scalars, [path]: value } });
@@ -271,12 +290,24 @@ export default function ReviewPage() {
               <span>{when(approval.created_at)}</span>
             </p>
           )}
+          {rejected && rejection && (
+            <p className="stamp stamp-rejected" data-testid="stamp">
+              <strong>Rejected</strong>
+              <span>{rejection.actor}</span>
+              <span>{when(rejection.created_at)}</span>
+            </p>
+          )}
         </header>
 
         {waiting && <p className="notice">This document is still being read. The page updates by itself.</p>}
         {detail.error && (
           <p className="notice notice-problem">
             <strong>Reading stopped:</strong> {detail.error}
+          </p>
+        )}
+        {rejected && rejection && (
+          <p className="notice">
+            Rejected, so it is not booked: {auditText(rejection).replace(/^Rejected: /, "").toLowerCase()}.
           </p>
         )}
         {detail.review_state === "not_required" && (
@@ -353,7 +384,7 @@ export default function ReviewPage() {
                 <li key={index}>{line}</li>
               ))}
             </ul>
-            {!approved && (
+            {!approved && !rejected && (
               <button
                 type="button"
                 className="button button-quiet"
@@ -553,6 +584,44 @@ export default function ReviewPage() {
                 </button>
               </div>
               {blocked && <p className="blocked">{blocked}</p>}
+              <details className="reject">
+                <summary>Reject instead…</summary>
+                <p className="reject-hint">
+                  A rejected document is never booked, and the decision is final.
+                </p>
+                <label>
+                  Reason
+                  <select
+                    value={rejectReason}
+                    onChange={(event) => setRejectReason(event.target.value as RejectReason | "")}
+                  >
+                    <option value="">Choose…</option>
+                    {(Object.keys(REJECT_REASONS) as RejectReason[]).map((reason) => (
+                      <option key={reason} value={reason}>
+                        {REJECT_REASONS[reason]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Note {rejectReason === "other" ? "" : "(optional)"}
+                  <input
+                    type="text"
+                    value={rejectNote}
+                    maxLength={500}
+                    onChange={(event) => setRejectNote(event.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="button button-danger"
+                  disabled={busy || rejectNeeds !== null || reviewer.problem !== null}
+                  onClick={() => void reject()}
+                >
+                  Reject document
+                </button>
+                {rejectNeeds && <p className="blocked">{rejectNeeds}</p>}
+              </details>
             </div>
           )}
         </form>

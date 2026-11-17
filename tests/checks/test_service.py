@@ -418,3 +418,16 @@ def test_delivery_billed_again_under_a_new_number_and_date_goes_to_review(
         second,
         lambda d: ([(f.type, f.detail["document_id"]) for f in d.findings], d.review_state),
     ) == ([("delivery_already_billed", first)], "pending")
+
+
+def test_checking_again_leaves_a_rejected_document_rejected(session_factory, erp, entry):
+    xml = render_ubl(entry.invoice, XRECHNUNG)
+    checker = Checker(erp)
+    document_id = process(session_factory, xml, checker)
+    with session_factory.begin() as session:
+        document = session.get(db.DocumentRow, document_id)
+        document.review_state = "pending"
+        db.reject(session, document, "anna", "not_addressed_to_us")
+    with session_factory.begin() as session:
+        assert checker.check(session, session.get(db.DocumentRow, document_id)) == []
+    assert read(session_factory, document_id, lambda d: d.review_state) == "rejected"

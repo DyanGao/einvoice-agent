@@ -40,6 +40,8 @@ from app.extract.draft import InvoiceDraft
 from app.matching import Basis, Match, MatchingData, PeerInvoice, match_candidates
 from app.pipeline import DocumentStatus
 
+_DECIDED_BY_A_PERSON = frozenset({ReviewState.APPROVED.value, ReviewState.REJECTED.value})
+
 logger = logging.getLogger(__name__)
 
 CHECKS_ACTOR = "system"
@@ -254,14 +256,15 @@ class Checker:
 
         The decision sets the review state: an extracted PDF read with
         confidence can skip review, a structured invoice the validator
-        accepted can still need it. An approved document is left alone: its
-        findings are what the reviewer saw (see `match_payments`).
+        accepted can still need it. A document a person approved or rejected
+        is left alone: its findings are what the reviewer saw (see
+        `match_payments`).
 
         `trigger` says why it runs again, for the audit trail; a run that
         `erp_must_answer` raises ErpUnavailable and changes nothing when the
         ERP does not answer, instead of noting the outage on the document.
         """
-        if document.draft is None or document.review_state == ReviewState.APPROVED.value:
+        if document.draft is None or document.review_state in _DECIDED_BY_A_PERSON:
             return []
         draft = InvoiceDraft.model_validate(document.draft.data)
         context, match = self.context(session, document, draft, erp_must_answer=erp_must_answer)

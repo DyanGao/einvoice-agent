@@ -197,3 +197,58 @@ def test_document_without_draft_cannot_be_approved(session_factory):
     document_id = processed(session_factory, extractor=FailingExtractor())
     with pytest.raises(db.NotReviewable, match="no draft"):
         approve(session_factory, document_id)
+
+
+# --- rejecting: a person decides the document is not to be booked -----------
+
+
+def reject(session_factory, document_id, reason="duplicate", note=None, actor="anna"):
+    with session_factory.begin() as session:
+        db.reject(session, session.get(db.DocumentRow, document_id), actor, reason, note)
+
+
+def test_rejected_document_is_marked_and_audited_with_reason_and_reviewer(session_factory):
+    document_id = processed(session_factory)
+    reject(session_factory, document_id, "duplicate", "same as RE-1 from Monday")
+    state, event = load(
+        session_factory, document_id, lambda d: (d.review_state, d.audit_events[-1])
+    )
+    assert state == "rejected"
+    assert (event.event, event.actor, event.detail) == (
+        "rejected",
+        "anna",
+        {"reason": "duplicate", "note": "same as RE-1 from Monday"},
+    )
+
+
+def test_unknown_reason_is_refused(session_factory):
+    document_id = processed(session_factory)
+    with pytest.raises(db.ReviewError, match="reason"):
+        reject(session_factory, document_id, "dont_like_it")
+
+
+def test_other_reason_needs_a_note(session_factory):
+    document_id = processed(session_factory)
+    with pytest.raises(db.ReviewError, match="note"):
+        reject(session_factory, document_id, "other", "  ")
+
+
+def test_approved_document_cannot_be_rejected(session_factory):
+    document_id = processed(session_factory, XML)
+    approve(session_factory, document_id)
+    with pytest.raises(db.NotReviewable, match="approved"):
+        reject(session_factory, document_id)
+
+
+def test_rejected_document_can_be_neither_corrected_nor_approved_nor_rejected_again(
+    session_factory,
+):
+    document_id = processed(session_factory)
+    reject(session_factory, document_id)
+    for action in (
+        lambda: correct(session_factory, document_id, {"number": "X"}),
+        lambda: approve(session_factory, document_id),
+        lambda: reject(session_factory, document_id),
+    ):
+        with pytest.raises(db.NotReviewable, match="rejected"):
+            action()

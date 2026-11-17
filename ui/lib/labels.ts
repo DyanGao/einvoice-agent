@@ -1,4 +1,4 @@
-import type { ReviewState } from "./api";
+import type { RejectReason, ReviewState } from "./api";
 
 const STATUS: Record<string, string> = {
   received: "Waiting to be read",
@@ -25,6 +25,14 @@ const REVIEW: Record<ReviewState, string> = {
   pending: "To review",
   approved: "Approved",
   not_required: "No review needed",
+  rejected: "Rejected",
+};
+
+export const REJECT_REASONS: Record<RejectReason, string> = {
+  duplicate: "Duplicate of an invoice already on file",
+  not_addressed_to_us: "Not addressed to us",
+  replaced_or_cancelled: "Replaced or cancelled by the supplier",
+  other: "Other reason (say which)",
 };
 
 export const statusLabel = (status: string) => STATUS[status] ?? status;
