@@ -267,7 +267,10 @@ model (0.975), 9 of 60 local readings would be booked without a person, and **4 
 (descriptions; a buyer reference and order number on two). The confidence scores were calibrated on the
 hosted model's answers; the local model's errors fall where those scores look for none. So the local model
 is a way to keep every document on the machine with a person reviewing every one of them, not a drop-in
-for booking without review. Using it for that would need its own calibration on its own answers.
+for booking without review. Using it for that would need its own calibration on its own answers. The
+application enforces this: with `EXTRACTOR_MODEL=ollama/…`, everything the model reads goes to review
+(`reader_not_calibrated`); e-invoices, which no model reads, are decided as before. The table above is
+what the threshold alone would do.
 
 ## Worst 10 cases
 

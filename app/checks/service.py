@@ -8,7 +8,7 @@ letter. Match and findings replace the document's previous ones.
 """
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 
@@ -37,8 +37,10 @@ from app.db.tables import (
 from app.decide import Decision, DecisionSettings, Route, decide
 from app.erp.client import ErpUnavailable
 from app.extract.draft import InvoiceDraft
+from app.extract.ollama import is_local
 from app.matching import Basis, Match, MatchingData, PeerInvoice, match_candidates
 from app.pipeline import DocumentStatus
+from app.settings import Settings
 
 _DECIDED_BY_A_PERSON = frozenset({ReviewState.APPROVED.value, ReviewState.REJECTED.value})
 
@@ -189,7 +191,7 @@ class Checker:
 
     erp: MatchingData | None = None
     settings: CheckSettings = field(default_factory=CheckSettings)
-    decisions: DecisionSettings = field(default_factory=DecisionSettings.load)
+    decisions: DecisionSettings = field(default_factory=lambda: installation_decisions())
 
     def context(
         self,
@@ -376,6 +378,15 @@ class Checker:
         )
         session.flush()
         return True
+
+
+def installation_decisions() -> DecisionSettings:
+    """The fitted thresholds, and whether this installation reads PDFs and
+    scans with a model they were not calibrated on (a local one). Every
+    checker takes these: worker, API and bank watch alike."""
+    decisions = DecisionSettings.load()
+    model = Settings.from_env().extractor_model
+    return replace(decisions, uncalibrated_reader=model) if is_local(model) else decisions
 
 
 def build_checker(erp_url: str | None, timeout_seconds: float) -> Checker:

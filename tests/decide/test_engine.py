@@ -234,3 +234,28 @@ def test_every_reason_says_why_in_words():
 def test_shipped_thresholds_load_and_name_their_version():
     settings = DecisionSettings.load()
     assert (0 < settings.min_field_confidence <= 1, bool(settings.version)) == (True, True)
+
+
+# --- a reader the threshold was not calibrated on ---------------------------
+
+LOCAL = DecisionSettings(min_field_confidence=0.9, uncalibrated_reader="ollama/qwen2.5vl:7b")
+
+
+def test_invoice_read_by_an_uncalibrated_model_always_goes_to_a_person():
+    decision = run(
+        invoice(source_format=DocumentFormat.PDF_TEXT),
+        status=DocumentStatus.EXTRACTED,
+        settings=LOCAL,
+    )
+    assert decision.route is Route.REVIEW
+    assert causes(decision) == [Cause.READER_NOT_CALIBRATED]
+    assert "ollama/qwen2.5vl:7b" in decision.reasons[0].message
+
+
+def test_e_invoice_needs_no_model_so_the_reader_does_not_matter():
+    assert run(status=DocumentStatus.VALID, settings=LOCAL).route is Route.AUTO
+
+
+def test_the_calibrated_model_is_not_held_back():
+    decision = run(invoice(source_format=DocumentFormat.PDF_TEXT), status=DocumentStatus.EXTRACTED)
+    assert decision.route is Route.AUTO
