@@ -3,6 +3,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
+from app import db
 from app.api.main import create_app
 from tests.conftest import REJECT, StubValidator
 from tests.support import PDF, PDF_DOCUMENT, XML, BrokenQueue, inline_queue, settings_for
@@ -354,3 +355,34 @@ def test_reopening_needs_a_reviewer_a_note_and_a_rejected_document(client):
     no_name = client.post(f"/documents/{document_id}/reopen", json={"note": "x"})
     no_note = client.post(f"/documents/{document_id}/reopen", headers=REVIEWER, json={"note": ""})
     assert (not_rejected.status_code, no_name.status_code, no_note.status_code) == (409, 400, 422)
+
+
+# --- booking status in the list --------------------------------------------
+
+
+def booked(session_factory, document_id, status="delivered", ref="7"):
+    from datetime import UTC, datetime
+
+    with session_factory.begin() as session:
+        session.add(
+            db.DeliveryRow(
+                document_id=document_id,
+                connector="erp",
+                idempotency_key=f"key-{document_id}",
+                status=status,
+                booking={},
+                next_attempt_at=datetime.now(UTC),
+                external_ref=ref if status == "delivered" else None,
+            )
+        )
+
+
+def test_list_says_where_each_document_was_booked(client, session_factory):
+    document_id = uploaded(client, XML, "r.xml")
+    other = uploaded(client)
+    booked(session_factory, document_id)
+    documents = {d["id"]: d for d in client.get("/documents").json()["documents"]}
+    assert documents[document_id]["bookings"] == [
+        {"connector": "erp", "status": "delivered", "external_ref": "7"}
+    ]
+    assert documents[other]["bookings"] == []

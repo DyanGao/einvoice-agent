@@ -80,6 +80,15 @@ def _summary(document: db.DocumentRow) -> dict:
         "seller_name": (fields.get("seller") or {}).get("name"),
         "gross_total": fields.get("gross_total"),
         "currency": fields.get("currency"),
+        # Where it was booked, or is waiting to be: the delivery per system.
+        "bookings": [
+            {
+                "connector": delivery.connector,
+                "status": delivery.status,
+                "external_ref": delivery.external_ref,
+            }
+            for delivery in sorted(document.deliveries, key=lambda d: d.connector)
+        ],
     }
 
 
@@ -316,21 +325,9 @@ def create_app(
         """Plain copies of an earlier invoice, waiting for review only for being
         copies (app/db/duplicates.py): what "reject all duplicates" would reject."""
 
-        def summary(row: db.DocumentRow) -> dict:
-            data = row.draft.data if row.draft else {}
-            return {
-                "id": row.id,
-                "number": data.get("number"),
-                "seller_name": (data.get("seller") or {}).get("name"),
-                "gross_total": data.get("gross_total"),
-                "currency": data.get("currency"),
-                "created_at": row.created_at.isoformat(),
-                "review_state": row.review_state,
-            }
-
         return {
             "copies": [
-                {**summary(copy.document), "original": summary(copy.original)}
+                {**_summary(copy.document), "original": _summary(copy.original)}
                 for copy in redundant_copies(active)
             ]
         }
