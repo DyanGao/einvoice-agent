@@ -459,3 +459,29 @@ def test_queue_lists_copies_and_rejects_them_together(session_factory, erp, entr
     ).json()
     assert (done["rejected"], done["skipped"]) == ([copy], [original])
     assert client.get("/review/duplicates").json()["copies"] == []
+
+
+def test_a_copy_arriving_later_does_not_send_the_original_back_to_review(
+    session_factory, erp, entry
+):
+    """The supplier's open invoices are checked again when a new one arrives;
+    the copy is the duplicate, not the invoice it copies."""
+    checker = Checker(erp)
+    original = process(session_factory, render_ubl(entry.invoice, XRECHNUNG), checker)
+    copy = process(session_factory, render_cii(entry.invoice, XRECHNUNG), checker)
+    assert read(session_factory, original, lambda d: (d.review_state, d.findings)) == (
+        "not_required",
+        [],
+    )
+    assert finding_types(session_factory, copy) == ["duplicate"]
+
+
+def test_checking_the_original_again_does_not_call_it_a_copy_of_a_later_one(
+    session_factory, erp, entry
+):
+    checker = Checker(erp)
+    original = process(session_factory, render_ubl(entry.invoice, XRECHNUNG), checker)
+    process(session_factory, render_cii(entry.invoice, XRECHNUNG), checker)
+    with session_factory.begin() as session:
+        checker.check(session, session.get(db.DocumentRow, original))
+    assert finding_types(session_factory, original) == []

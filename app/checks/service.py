@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 
-from sqlalchemy import select
+from sqlalchemy import literal, select, tuple_
 from sqlalchemy.orm import Session
 
 from app.checks.context import (
@@ -47,25 +47,47 @@ logger = logging.getLogger(__name__)
 CHECKS_ACTOR = "system"
 
 
-def _known_invoices(session: Session, document: DocumentRow) -> tuple[KnownInvoice, ...]:
-    """Every other document's invoice, as far as duplicate detection needs it.
-    Reads all drafts; fine for thousands of documents, not for millions."""
-    rows = session.execute(
-        select(DraftRow.document_id, DraftRow.data).where(DraftRow.document_id != document.id)
+def _received_before(document: DocumentRow):
+    """Documents received before this one. Only an earlier invoice makes this
+    one a duplicate: checked again when a copy arrives, the original must not
+    become a copy of its own copy."""
+    return tuple_(DocumentRow.created_at, DocumentRow.id) < tuple_(
+        literal(document.created_at), literal(document.id)
     )
-    return _as_known(rows)
+
+
+def _known_invoices(
+    session: Session, document: DocumentRow, *, earlier_only: bool = False
+) -> tuple[KnownInvoice, ...]:
+    """Every other document's invoice: all of them for payment matching (a
+    combined transfer pays later invoices too), only the earlier ones for
+    duplicate detection. Reads all drafts; fine for thousands of documents,
+    not for millions."""
+    query = (
+        select(DraftRow.document_id, DraftRow.data)
+        .join(DocumentRow, DocumentRow.id == DraftRow.document_id)
+        .where(DraftRow.document_id != document.id)
+    )
+    if earlier_only:
+        query = query.where(_received_before(document))
+    return _as_known(session.execute(query))
 
 
 def _billed_before(
     session: Session, document: DocumentRow, match: Match
 ) -> tuple[KnownInvoice, ...]:
-    """The other documents matched to the delivery this one was matched to."""
+    """The earlier documents matched to the delivery this one was matched to."""
     if match.delivery_id is None:
         return ()
     rows = session.execute(
         select(DraftRow.document_id, DraftRow.data)
         .join(MatchRow, MatchRow.document_id == DraftRow.document_id)
-        .where(MatchRow.delivery_id == match.delivery_id, MatchRow.document_id != document.id)
+        .join(DocumentRow, DocumentRow.id == DraftRow.document_id)
+        .where(
+            MatchRow.delivery_id == match.delivery_id,
+            MatchRow.document_id != document.id,
+            _received_before(document),
+        )
         .order_by(DraftRow.document_id)
     )
     return _as_known(rows)
@@ -181,11 +203,12 @@ class Checker:
         ERP could not be asked). With `erp_must_answer`, an ERP that does not
         answer raises ErpUnavailable instead of being noted."""
         known = _known_invoices(session, document)
+        earlier = _known_invoices(session, document, earlier_only=True)
         if self.erp is None:
             return (
                 CheckContext(
                     master_data=MasterData.NOT_CONFIGURED,
-                    known_invoices=known,
+                    known_invoices=earlier,
                     settings=self.settings,
                 ),
                 None,
@@ -214,7 +237,7 @@ class Checker:
                 CheckContext(
                     master_data=MasterData.UNAVAILABLE,
                     master_data_problem=str(exc),
-                    known_invoices=known,
+                    known_invoices=earlier,
                     settings=self.settings,
                 ),
                 None,
@@ -235,7 +258,7 @@ class Checker:
                 ),
                 purchase_order_note=_order_note(draft, match),
                 purchase_order_problem=match.explanation[0] if undecided else None,
-                known_invoices=known,
+                known_invoices=earlier,
                 delivery_id=match.delivery_id,
                 delivery_billed_by=_billed_before(session, document, match),
                 settings=self.settings,

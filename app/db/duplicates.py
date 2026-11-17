@@ -7,8 +7,8 @@ rejected in one go, but only where nothing else is in doubt:
 - it waits for review only because it is a duplicate (same supplier, same
   number): no other finding and no other reason, such as an unsure field;
 - the invoice it copies was received earlier and is not rejected, so the
-  earliest copy always stays; checked again, an older copy can point at a
-  newer one too, and neither must take the other with it;
+  earliest copy always stays (the duplicate check itself only compares with
+  earlier documents; this keeps it so for findings recorded before that);
 - both have the same gross total: the same number with another total may be
   a corrected invoice, which a person has to look at.
 
