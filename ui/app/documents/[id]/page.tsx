@@ -12,6 +12,7 @@ import {
   getDocument,
   recheckDocument,
   rejectDocument,
+  reopenDocument,
   type AuditEvent,
   type Delivery,
   type Detail,
@@ -140,6 +141,7 @@ function auditText(event: AuditEvent): string {
     const reason = REJECT_REASONS[detail.reason as RejectReason] ?? String(detail.reason);
     return detail.note ? `Rejected: ${reason} (${String(detail.note)})` : `Rejected: ${reason}`;
   }
+  if (event.event === "reopened") return `Reopened for review: ${String(detail.note)}`;
   const name = event.event.replaceAll("_", " ");
   const text = name.charAt(0).toUpperCase() + name.slice(1);
   // A re-match says what set it off: a later invoice or a new bank transfer.
@@ -156,6 +158,7 @@ export default function ReviewPage() {
   const [busy, setBusy] = useState(false);
   const [rejectReason, setRejectReason] = useState<RejectReason | "">("");
   const [rejectNote, setRejectNote] = useState("");
+  const [reopenNote, setReopenNote] = useState("");
 
   const show = useCallback((next: Detail) => {
     setDetail(next);
@@ -230,6 +233,11 @@ export default function ReviewPage() {
   const reject = () =>
     rejectReason !== "" &&
     run(() => rejectDocument(id, reviewer.name.trim(), rejectReason, rejectNote));
+
+  const reopen = () =>
+    run(() => reopenDocument(id, reviewer.name.trim(), reopenNote.trim())).then(() =>
+      setReopenNote(""),
+    );
 
   // The name is asked for once, above; this says only what the rejection lacks.
   let rejectNeeds: string | null = null;
@@ -309,6 +317,38 @@ export default function ReviewPage() {
           <p className="notice">
             Rejected, so it is not booked: {auditText(rejection).replace(/^Rejected: /, "").toLowerCase()}.
           </p>
+        )}
+        {rejected && (
+          <details className="reject">
+            <summary>Reopen…</summary>
+            <p className="reject-hint">
+              If the rejection was a mistake, the document goes back to review. Nothing is booked
+              until it is approved.
+            </p>
+            <label>
+              Why it is reopened
+              <input
+                type="text"
+                value={reopenNote}
+                maxLength={500}
+                onChange={(event) => setReopenNote(event.target.value)}
+              />
+            </label>
+            {actionError && (
+              <p className="problem" role="alert">
+                {actionError}
+              </p>
+            )}
+            <button
+              type="button"
+              className="button"
+              disabled={busy || reopenNote.trim() === "" || reviewer.problem !== null}
+              onClick={() => void reopen()}
+            >
+              Reopen for review
+            </button>
+            {reviewer.problem && <p className="blocked">{reviewer.problem}</p>}
+          </details>
         )}
         {detail.review_state === "not_required" && (
           <p className="notice">
@@ -587,7 +627,7 @@ export default function ReviewPage() {
               <details className="reject">
                 <summary>Reject instead…</summary>
                 <p className="reject-hint">
-                  A rejected document is never booked, and the decision is final.
+                  A rejected document is not booked unless someone reopens it.
                 </p>
                 <label>
                   Reason

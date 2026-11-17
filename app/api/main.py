@@ -40,6 +40,10 @@ class CopiesToReject(BaseModel):
     ids: list[str]
 
 
+class Reopening(BaseModel):
+    note: str
+
+
 class Rejection(BaseModel):
     reason: str  # one of db.RejectReason
     note: str | None = None
@@ -344,6 +348,17 @@ def create_app(
         someone else, one replaced by a correction. Final, and never delivered."""
         try:
             db.reject(active, row, who, body.reason, body.note)
+        except db.NotReviewable as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except db.ReviewError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return _detail(row)
+
+    @app.post("/documents/{document_id}/reopen")
+    def reopen(row: Doc, body: Reopening, active: Db, who: Reviewer) -> dict:
+        """A rejection was a mistake: back to review, with a note saying why."""
+        try:
+            db.reopen(active, row, who, body.note)
         except db.NotReviewable as exc:
             raise HTTPException(409, str(exc)) from exc
         except db.ReviewError as exc:

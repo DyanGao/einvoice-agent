@@ -167,3 +167,23 @@ test("plain duplicates are rejected together after a confirmation", async ({ pag
   await expect(page.getByText("1 copy rejected.")).toBeVisible();
   await expect(page.getByRole("region", { name: "Duplicates" })).toHaveCount(0);
 });
+
+test("a mistaken rejection is reopened for review, with a note", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /All documents/ }).click();
+  await page
+    .locator("tr", { has: page.locator(".state-rejected") })
+    .getByRole("link", { name: NUMBER })
+    .click();
+  await page.getByPlaceholder("Your name").fill("ben");
+
+  await page.getByText("Reopen…").click();
+  const reopen = page.getByRole("button", { name: "Reopen for review" });
+  await expect(reopen).toBeDisabled();
+  await page.getByLabel("Why it is reopened").fill("not a copy after all");
+  await reopen.click();
+
+  await expect(page.getByText("Reopened for review: not a copy after all")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
+  await expect(page.getByTestId("stamp")).toHaveCount(0);
+});

@@ -252,3 +252,49 @@ def test_rejected_document_can_be_neither_corrected_nor_approved_nor_rejected_ag
     ):
         with pytest.raises(db.NotReviewable, match="rejected"):
             action()
+
+
+# --- reopening: a rejection was a mistake ---------------------------------
+
+
+def reopen(session_factory, document_id, note="rejected by mistake", actor="ben"):
+    with session_factory.begin() as session:
+        db.reopen(session, session.get(db.DocumentRow, document_id), actor, note)
+
+
+def test_reopened_document_waits_for_review_again_and_says_who_and_why(session_factory):
+    document_id = processed(session_factory)
+    reject(session_factory, document_id)
+    reopen(session_factory, document_id, "it is ours after all")
+    state, event = load(
+        session_factory, document_id, lambda d: (d.review_state, d.audit_events[-1])
+    )
+    assert state == "pending"
+    assert (event.event, event.actor, event.detail) == (
+        "reopened",
+        "ben",
+        {"note": "it is ours after all"},
+    )
+
+
+def test_reopening_needs_a_note(session_factory):
+    document_id = processed(session_factory)
+    reject(session_factory, document_id)
+    with pytest.raises(db.ReviewError, match="note"):
+        reopen(session_factory, document_id, " ")
+
+
+def test_only_a_rejected_document_can_be_reopened(session_factory):
+    document_id = processed(session_factory)
+    with pytest.raises(db.NotReviewable, match="not rejected"):
+        reopen(session_factory, document_id)
+
+
+def test_reopened_document_can_be_approved(session_factory):
+    document_id = processed(session_factory, XML)
+    with session_factory.begin() as session:
+        session.get(db.DocumentRow, document_id).review_state = "pending"
+    reject(session_factory, document_id)
+    reopen(session_factory, document_id)
+    approve(session_factory, document_id)
+    assert load(session_factory, document_id, lambda d: d.review_state) == "approved"

@@ -7,6 +7,7 @@ from app.db.review import (
     correct_fields,
     missing_for_approval,
     reject,
+    reopen,
 )
 from app.db.store import (
     apply_outcome,
@@ -53,6 +54,7 @@ __all__ = [
     "find_document",
     "missing_for_approval",
     "reject",
+    "reopen",
     "record_duplicate",
     "record_queued_again",
     "store_outcome",

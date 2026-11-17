@@ -333,3 +333,24 @@ def test_rejected_document_is_not_checked_again(session_factory, settings):
     document_id = uploaded(client)
     client.post(f"/documents/{document_id}/reject", headers=REVIEWER, json={"reason": "duplicate"})
     assert client.post(f"/documents/{document_id}/recheck").status_code == 409
+
+
+def test_rejected_document_is_reopened_with_a_note(client):
+    document_id = uploaded(client)
+    client.post(f"/documents/{document_id}/reject", headers=REVIEWER, json={"reason": "duplicate"})
+    response = client.post(
+        f"/documents/{document_id}/reopen", headers=REVIEWER, json={"note": "not a copy"}
+    )
+    assert (response.status_code, response.json()["review_state"]) == (200, "pending")
+    assert response.json()["audit"][-1]["event"] == "reopened"
+
+
+def test_reopening_needs_a_reviewer_a_note_and_a_rejected_document(client):
+    document_id = uploaded(client)
+    not_rejected = client.post(
+        f"/documents/{document_id}/reopen", headers=REVIEWER, json={"note": "x"}
+    )
+    client.post(f"/documents/{document_id}/reject", headers=REVIEWER, json={"reason": "duplicate"})
+    no_name = client.post(f"/documents/{document_id}/reopen", json={"note": "x"})
+    no_note = client.post(f"/documents/{document_id}/reopen", headers=REVIEWER, json={"note": ""})
+    assert (not_rejected.status_code, no_name.status_code, no_note.status_code) == (409, 400, 422)
