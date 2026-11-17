@@ -250,3 +250,44 @@ def test_decision_sweeps_over_different_sets_are_refused():
     assert same_sets([both, both]) == [both, both]
     with pytest.raises(ValueError, match="different sets"):
         same_sets([pdf_only, both])
+
+
+# --- README badges -----------------------------------------------------------
+
+
+def test_badge_text_is_escaped_for_shields():
+    from eval.report import shield
+
+    assert shield("field accuracy", "PDF 99.96 % / scans 100 %", "blue") == (
+        "https://img.shields.io/badge/field%20accuracy-PDF%2099.96%20%25%20%2F%20scans%20100%20%25-blue"
+    )
+
+
+def test_badge_with_a_dash_doubles_it():
+    from eval.report import shield
+
+    assert "a--b-c" in shield("a-b", "c", "blue")
+
+
+def test_badges_show_the_eval_numbers_of_the_readme(tmp_path):
+    from eval.report import readme_badges
+
+    folder = tmp_path / "pdf"
+    folder.mkdir()
+    records = [gold("a", "test"), gold("b", "test")]
+    write_jsonl(folder / "gold.jsonl", records)
+    for record in records:
+        (folder / record["file"]).write_bytes(b"%PDF-1.4\n%" + record["id"].encode() + b"\n")
+    write_run(folder, "llm-rules", 1, records, {})
+    badges = readme_badges(collect(tmp_path, tmp_path / "recordings", MODEL, None))
+    assert "actions/workflows/ci.yml/badge.svg" in badges
+    assert "Apache--2.0" in badges or "Apache%202.0" in badges or "Apache-2.0" in badges
+    assert "PDF%20100.00%20%25" in badges
+    assert "docs/eval-report.md" in badges
+
+
+def test_badges_say_not_run_when_there_are_no_results(tmp_path):
+    from eval.report import readme_badges
+
+    badges = readme_badges(collect(tmp_path, tmp_path / "recordings", MODEL, None))
+    assert "not%20run" in badges

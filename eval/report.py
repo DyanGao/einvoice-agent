@@ -19,6 +19,7 @@ import json
 import re
 import statistics
 from pathlib import Path
+from urllib.parse import quote
 
 from app.extract import LlmExtractor, ReplayLlm
 from app.extract.confidence import Calibration
@@ -306,6 +307,45 @@ def cost_per_document(results: dict) -> float | None:
 
 def _recall(exceptions: dict, kind: str) -> str:
     return pct(exceptions["by_kind"][kind]["recall"])
+
+
+# --- README badges -------------------------------------------------------------
+# The eval badge is generated with the results table, so it never shows a
+# number the table does not. Shields renders static badges from the URL alone.
+
+REPOSITORY = "DyanGao/einvoice-agent"  # change when the repository moves
+
+
+def shield(label: str, message: str, color: str) -> str:
+    def part(text: str) -> str:
+        return quote(text.replace("-", "--").replace("_", "__"), safe="")
+
+    return f"https://img.shields.io/badge/{part(label)}-{part(message)}-{color}"
+
+
+def _accuracy_short(results: dict, name: str) -> str | None:
+    repeated = results.get("runs", {}).get(name, {}).get(LLM_RULES, [])
+    if repeated:
+        return f"{statistics.mean(r['field_accuracy'] for r in repeated) * 100:.2f} %"
+    cell = results["extraction"][name][LLM_RULES]
+    return None if cell is None else f"{cell['field_accuracy'] * 100:.2f} %"
+
+
+def readme_badges(results: dict) -> str:
+    pdf, scans = _accuracy_short(results, "pdf"), _accuracy_short(results, "scans")
+    found = [f"{label} {value}" for label, value in (("PDF", pdf), ("scans", scans)) if value]
+    message, color = (" / ".join(found), "blue") if found else ("not run", "lightgrey")
+    accuracy = shield("field accuracy (synthetic)", message, color)
+    ci = f"https://github.com/{REPOSITORY}/actions/workflows/ci.yml"
+    return " ".join(
+        [
+            f"[![CI]({ci}/badge.svg?branch=main)]({ci})",
+            f"[![Field accuracy on synthetic held-out invoices]({accuracy})](docs/eval-report.md)",
+            f"[![License: Apache 2.0]({shield('license', 'Apache-2.0', 'blue')})](LICENSE)",
+            f"![Python 3.12]({shield('python', '3.12', 'blue')})",
+            f"![EN 16931 / XRechnung]({shield('EN 16931', 'XRechnung · ZUGFeRD', 'blue')})",
+        ]
+    )
 
 
 def readme_table(results: dict) -> str:
@@ -627,6 +667,7 @@ def main() -> int:
     print(table)
     if args.write:
         _rewrite(README, "results", table)
+        _rewrite(README, "badges", readme_badges(results))
         _rewrite(EVAL_REPORT, "details", details(results))
         print(f"rewrote {README} and {EVAL_REPORT}")
     return 0

@@ -2,7 +2,9 @@
 
 > An agent that turns incoming German invoices (XRechnung, ZUGFeRD, PDF, scans) into booked, matched and checked entries — and only asks a human when it's unsure.
 
-<!-- badges: CI | license | eval score -->
+<!-- eval:badges:start -->
+[![CI](https://github.com/DyanGao/einvoice-agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DyanGao/einvoice-agent/actions/workflows/ci.yml) [![Field accuracy on synthetic held-out invoices](https://img.shields.io/badge/field%20accuracy%20%28synthetic%29-PDF%2099.96%20%25%20%2F%20scans%20100.00%20%25-blue)](docs/eval-report.md) [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE) ![Python 3.12](https://img.shields.io/badge/python-3.12-blue) ![EN 16931 / XRechnung](https://img.shields.io/badge/EN%2016931-XRechnung%20%C2%B7%20ZUGFeRD-blue)
+<!-- eval:badges:end -->
 
 Since 2025 every German business must be able to receive e-invoices; issuing becomes mandatory in 2027 (turnover > €800k) and 2028 (all). Structured XML makes *reading* invoices easy — the remaining work is **matching** them to purchase orders, delivery notes and bank transactions, catching **exceptions** (wrong VAT, price deviations, duplicates), handling **non-structured invoices** from foreign suppliers, and getting the result into **systems without an API**.
 
