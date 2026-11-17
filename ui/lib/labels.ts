@@ -85,6 +85,7 @@ const CAUSE: Record<string, string> = {
   order_by_content: "Order not quoted",
   not_delivered: "Nothing delivered",
   corrected: "Changed by a reviewer",
+  reader_not_calibrated: "Read by a model not trusted to book alone",
 };
 
 export const causeLabel = (cause: string) => CAUSE[cause] ?? cause.replaceAll("_", " ");

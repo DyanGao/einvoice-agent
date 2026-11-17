@@ -1,0 +1,66 @@
+{
+ "input_tokens": 3388,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "48877.64",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "PO-487888",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "51391.05",
+  "issue_date": "2026-10-04",
+  "line_net_total": "44368.23",
+  "lines": [
+   {
+    "description": "24,57 kg Brötchen & Gebäck",
+    "line_id": "1",
+    "net": "9433.41",
+    "quantity": "24.57",
+    "unit_price": "383.94",
+    "vat_rate": "7"
+   },
+   {
+    "description": "7,62 km Anfahrt",
+    "line_id": "2",
+    "net": "11696.93",
+    "quantity": "7.62",
+    "unit_price": "1535.03",
+    "vat_rate": "19"
+   },
+   {
+    "description": "25,60 kg Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "23237.89",
+    "quantity": "25.60",
+    "unit_price": "907.73",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "48877.64",
+  "number": "RE-2026-42468",
+  "payment_ibans": [
+   "DE50000747501572652764"
+  ],
+  "po_ref": null,
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE234981298",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "2286.99",
+    "taxable_amount": "32671.30"
+   },
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "2222.42",
+    "taxable_amount": "11696.93"
+   }
+  ],
+  "vat_total": "2513.41"
+ },
+ "output_tokens": 586
+}

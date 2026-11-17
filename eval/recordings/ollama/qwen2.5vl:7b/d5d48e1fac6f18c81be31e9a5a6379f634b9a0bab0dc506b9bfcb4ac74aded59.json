@@ -1,0 +1,59 @@
+{
+ "input_tokens": 3388,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "5493.84",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": null,
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "5990.30",
+  "issue_date": "2026-05-11",
+  "line_net_total": "4977.38",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "1400.29",
+    "quantity": "17",
+    "unit_price": "82.37",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "3577.09",
+    "quantity": "31",
+    "unit_price": "115.39",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "5493.84",
+  "number": "RE-2026-50164",
+  "payment_ibans": [
+   "DE14 0002 0757 5484 8347 93",
+   "DE57 0004 3424 5182 2009 70"
+  ],
+  "po_ref": "PO-511381",
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE109451567",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "266.06",
+    "taxable_amount": "1400.29"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "250.40",
+    "taxable_amount": "3577.09"
+   }
+  ],
+  "vat_total": "516.46"
+ },
+ "output_tokens": 532
+}

@@ -485,3 +485,14 @@ def test_checking_the_original_again_does_not_call_it_a_copy_of_a_later_one(
     with session_factory.begin() as session:
         checker.check(session, session.get(db.DocumentRow, original))
     assert finding_types(session_factory, original) == []
+
+
+@pytest.mark.parametrize(
+    ("model", "held_back"),
+    [("ollama/qwen2.5vl:7b", "ollama/qwen2.5vl:7b"), ("claude-opus-5-5", None)],
+)
+def test_every_checker_knows_whether_the_installation_reads_with_an_uncalibrated_model(
+    monkeypatch, model, held_back
+):
+    monkeypatch.setenv("EXTRACTOR_MODEL", model)
+    assert Checker().decisions.uncalibrated_reader == held_back

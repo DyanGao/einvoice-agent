@@ -1,0 +1,90 @@
+{
+ "input_tokens": 2860,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "197615.58",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE33000564547368506211",
+  "currency": "EUR",
+  "due_date": "2026-03-13",
+  "gross_total": "220281.27",
+  "issue_date": "2026-02-11",
+  "line_net_total": "197615.58",
+  "lines": [
+   {
+    "description": "Schrauben M8 x 40, verzinkt",
+    "line_id": "1",
+    "net": "2995.10",
+    "quantity": "2",
+    "unit_price": "1497.55",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "2",
+    "net": "6943.23",
+    "quantity": "7.24",
+    "unit_price": "959.01",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kopierpapier A4, 500 Blatt",
+    "line_id": "3",
+    "net": "11398.57",
+    "quantity": "23",
+    "unit_price": "495.59",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "4",
+    "net": "32295.46",
+    "quantity": "21.94",
+    "unit_price": "1471.99",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "5",
+    "net": "33194.34",
+    "quantity": "18",
+    "unit_price": "1844.13",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "6",
+    "net": "88123.19",
+    "quantity": "38.42",
+    "unit_price": "2293.68",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "197615.58",
+  "number": "RE-2026-70227",
+  "payment_ibans": [
+   "DE47000841391506513475"
+  ],
+  "po_ref": "PO-939666",
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE770338752",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "16497.07",
+    "taxable_amount": "86826.70"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "6168.62",
+    "taxable_amount": "88123.19"
+   }
+  ],
+  "vat_total": "22665.69"
+ },
+ "output_tokens": 846
+}

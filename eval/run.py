@@ -20,6 +20,7 @@ the plain folder and file, as before.
 
 import argparse
 import json
+import os
 import time
 from collections.abc import Callable
 from functools import partial
@@ -40,6 +41,7 @@ from app.extract import (
     ReplayLlm,
 )
 from app.extract.confidence import document_text
+from app.extract.ollama import OllamaLlm, is_local
 from app.pipeline import Validator, process_structured
 from app.settings import Settings
 from app.validate import KositValidator
@@ -53,6 +55,11 @@ LLM_RULES = "llm-rules"
 LLM_TEXT = "llm-text"
 LLM_TEXT_RULES = "llm-text-rules"
 TEXT_SYSTEMS = (LLM_TEXT, LLM_TEXT_RULES)
+# EVAL_PLAN §3 ablation: a local vision model (Ollama) in place of the hosted one.
+LOCAL = "local"
+LOCAL_RULES = "local-rules"
+LOCAL_SYSTEMS = (LOCAL, LOCAL_RULES)
+DEFAULT_LOCAL_MODEL = "ollama/qwen2.5vl:7b"
 DEFAULT_RECORDINGS = Path("eval/recordings")
 
 
@@ -112,7 +119,8 @@ def build_llm_extractor(
 ) -> Extractor:
     directory = recordings_dir(recordings, model, run, system)
     if mode == "record":
-        llm = RecordingLlm(AnthropicLlm(anthropic.Anthropic()), directory)
+        client = OllamaLlm() if is_local(model) else AnthropicLlm(anthropic.Anthropic())
+        llm = RecordingLlm(client, directory)
     else:
         llm = ReplayLlm(directory)
     text_of = document_text if system in TEXT_SYSTEMS else None
@@ -141,7 +149,7 @@ def main() -> None:
     parser.add_argument("set_dir", type=Path)
     parser.add_argument(
         "--system",
-        choices=(STRUCTURED, BASELINE, LLM, LLM_RULES, *TEXT_SYSTEMS),
+        choices=(STRUCTURED, BASELINE, LLM, LLM_RULES, *TEXT_SYSTEMS, *LOCAL_SYSTEMS),
         default=STRUCTURED,
     )
     parser.add_argument("--llm-mode", choices=("replay", "record"), default="replay")
@@ -149,21 +157,24 @@ def main() -> None:
     parser.add_argument("--run", type=int, default=1, help="which repeated model run (1, 2, 3)")
     parser.add_argument("--split", choices=("dev", "test"), help="run only this split")
     args = parser.parse_args()
-    if args.run != 1 and args.system not in (LLM, LLM_RULES, *TEXT_SYSTEMS):
+    if args.run != 1 and args.system not in (LLM, LLM_RULES, *TEXT_SYSTEMS, *LOCAL_SYSTEMS):
         parser.error("--run applies to the model systems only")
     if args.system == BASELINE:
         predict = partial(predict_with_extractor, extractor=BaselineExtractor())
-    elif args.system in (LLM, LLM_RULES, *TEXT_SYSTEMS):
+    elif args.system in (LLM, LLM_RULES, *TEXT_SYSTEMS, *LOCAL_SYSTEMS):
         settings = Settings.from_env()
+        local = args.system in LOCAL_SYSTEMS
         extractor = build_llm_extractor(
             args.llm_mode,
             args.recordings,
-            settings.extractor_model,
-            settings.extractor_effort,
+            os.environ.get("LOCAL_MODEL", DEFAULT_LOCAL_MODEL)
+            if local
+            else settings.extractor_model,
+            None if local else settings.extractor_effort,
             args.run,
             args.system,
         )
-        if args.system in (LLM_RULES, LLM_TEXT_RULES):
+        if args.system in (LLM_RULES, LLM_TEXT_RULES, LOCAL_RULES):
             # As in the application: the rules see the document's own text.
             extractor = CompletingExtractor(extractor, text_of=document_text)
         predict = partial(predict_with_extractor, extractor=extractor)

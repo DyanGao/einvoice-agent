@@ -53,6 +53,7 @@ class Cause(StrEnum):
     ORDER_BY_CONTENT = "order_by_content"
     NOT_DELIVERED = "not_delivered"
     CORRECTED = "corrected"
+    READER_NOT_CALIBRATED = "reader_not_calibrated"
 
 
 @dataclass(frozen=True)
@@ -83,6 +84,11 @@ class DecisionSettings:
     # nobody quoted is confirmed by a person before money follows it.
     auto_on_order_found_by_content: bool = False
     version: str = "unversioned"
+    # The model reading PDFs and scans, when the threshold was not calibrated
+    # on its answers: everything it reads goes to a person. A local model's
+    # misreads fall where the hosted model's confidence looks for none (4 of
+    # 9 booked without a person were misread, docs/eval-report.md).
+    uncalibrated_reader: str | None = None
 
     @classmethod
     def load(cls, path: Path = THRESHOLDS_FILE) -> "DecisionSettings":
@@ -202,6 +208,14 @@ def decide(
         ]
     else:
         reasons = reading_causes(draft, settings) + business_causes(findings, match, settings)
+    if status is DocumentStatus.EXTRACTED and settings.uncalibrated_reader is not None:
+        reasons.append(
+            Reason(
+                Cause.READER_NOT_CALIBRATED,
+                f"read by {settings.uncalibrated_reader}, a model the decision is not "
+                "calibrated for: a person checks everything it reads",
+            )
+        )
     if corrected:
         reasons.append(Reason(Cause.CORRECTED, "a reviewer changed it; it waits for approval"))
     return Decision(

@@ -1,0 +1,66 @@
+{
+ "input_tokens": 3388,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "54473.68",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "991-33333TEST-33",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-07-16",
+  "gross_total": "61472.06",
+  "issue_date": "2026-07-02",
+  "line_net_total": "47465.70",
+  "lines": [
+   {
+    "description": "Schrauben M8 × 40, verzinkt",
+    "line_id": "1",
+    "net": "16754.24",
+    "quantity": "16",
+    "unit_price": "1.04714",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "11460.36",
+    "quantity": "6",
+    "unit_price": "1.91006",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "3",
+    "net": "19251.10",
+    "quantity": "11",
+    "unit_price": "1.75010",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "54473.68",
+  "number": "RE-2026-04654",
+  "payment_ibans": [
+   "DE77 0002 0242 2590 9821 37"
+  ],
+  "po_ref": "PO-456496",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE055836041",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "5835.18",
+    "taxable_amount": "30711.46"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1172.80",
+    "taxable_amount": "16754.24"
+   }
+  ],
+  "vat_total": "6998.38"
+ },
+ "output_tokens": 604
+}

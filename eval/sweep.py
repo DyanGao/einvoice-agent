@@ -62,12 +62,17 @@ class Document:
         return not self.causes(threshold)
 
 
-def documents(set_dirs: list[Path], system: str, calibration: Calibration) -> list[Document]:
-    """Every document of the sets, scored with confidence as the application does."""
+def documents(
+    set_dirs: list[Path], system: str, calibration: Calibration, split: str | None = None
+) -> list[Document]:
+    """Every document of the sets, scored with confidence as the application does;
+    with `split`, only that split's (a run made with `eval.run --split`)."""
     found = []
     for set_dir in set_dirs:
         predictions = {p["id"]: p for p in read_jsonl(set_dir / predictions_file(system))}
         for gold in read_jsonl(set_dir / GOLD_FILE):
+            if split is not None and gold.get("split") != split:
+                continue
             prediction = predictions[gold["id"]]
             truth = Invoice.model_validate(gold["invoice"])
             draft = None
@@ -191,12 +196,14 @@ def _row(p: dict) -> str:
     )
 
 
-def report(set_dirs: list[Path], system: str, settings: dict) -> tuple[dict, list[str]]:
-    docs = documents(set_dirs, system, Calibration.load())
+def report(
+    set_dirs: list[Path], system: str, settings: dict, only: str | None = None
+) -> tuple[dict, list[str]]:
+    docs = documents(set_dirs, system, Calibration.load(), only)
     threshold = settings["min_field_confidence"]
     result = {"system": system, "threshold": threshold, "version": settings["version"]}
     warnings = []
-    for split in ("dev", "test"):
+    for split in ("dev", "test") if only is None else (only,):
         members = _split(docs, split)
         result[split] = {
             "curve": curve(members),
@@ -216,7 +223,7 @@ def report(set_dirs: list[Path], system: str, settings: dict) -> tuple[dict, lis
             ],
         }
     for name, reference in settings.get("reference_auto_rate", {}).items():
-        found = result["test"]["by_set"].get(name)
+        found = result.get("test", {}).get("by_set", {}).get(name)
         if system == LLM_RULES and found and found["auto_rate"] < reference - WARN_DROP:
             warnings.append(
                 f"auto-rate on {name} (test) is {found['auto_rate']:.1%}, "
@@ -231,12 +238,14 @@ def wrong_bookings(result: dict) -> list[str]:
     return [
         f"{result['system']}: {wrong['set']}/{wrong['id']} booked without a person with "
         f"{', '.join(wrong['wrong'])} wrong"
-        for wrong in result["test"]["wrong_but_auto"]
+        for wrong in result.get("test", {}).get("wrong_but_auto", [])
     ]
 
 
 def _print(result: dict) -> None:
     for split in ("dev", "test"):
+        if split not in result:
+            continue
         section = result[split]
         print(f"== {result['system']}, {split} split: auto-rate vs. error")
         print(
@@ -260,6 +269,9 @@ def main() -> int:
     parser.add_argument("sets", nargs="+", type=Path)
     parser.add_argument("--system", default=LLM_RULES)
     parser.add_argument(
+        "--split", choices=("dev", "test"), help="only this split (a run made with --split)"
+    )
+    parser.add_argument(
         "--gate",
         action="store_true",
         help="fail if a held-out invoice is booked without a person although misread",
@@ -272,7 +284,7 @@ def main() -> int:
         print(json.dumps(fitted["dev"], indent=1))
         return 0
     settings = json.loads(THRESHOLDS_FILE.read_text(encoding="utf-8"))
-    result, warnings = report(args.sets, args.system, settings)
+    result, warnings = report(args.sets, args.system, settings, args.split)
     out = args.sets[0].parent / f"decision-{args.system}.json"
     out.write_text(json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8")
     _print(result)

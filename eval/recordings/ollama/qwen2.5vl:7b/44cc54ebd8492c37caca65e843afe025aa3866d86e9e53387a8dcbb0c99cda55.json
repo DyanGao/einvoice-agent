@@ -1,0 +1,90 @@
+{
+ "input_tokens": 3580,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "86265.94",
+  "buyer_name": "Köhler <Maschinenbau> AG",
+  "buyer_reference": "PO-484773",
+  "buyer_vat_id": null,
+  "currency": "EUR",
+  "due_date": "2026-04-26",
+  "gross_total": "100689.57",
+  "issue_date": "2026-04-19",
+  "line_net_total": "86265.94",
+  "lines": [
+   {
+    "description": "17 Stk Software-Lizenz, 1 Jahr",
+    "line_id": "1",
+    "net": "20631.37",
+    "quantity": "17",
+    "unit_price": "1213.61",
+    "vat_rate": "19"
+   },
+   {
+    "description": "1 Stk Software-Lizenz, 1 Jahr",
+    "line_id": "2",
+    "net": "1988.44",
+    "quantity": "1",
+    "unit_price": "1988.44",
+    "vat_rate": "19"
+   },
+   {
+    "description": "15 Stk Software-Lizenz, 1 Jahr",
+    "line_id": "3",
+    "net": "31107.75",
+    "quantity": "15",
+    "unit_price": "2073.85",
+    "vat_rate": "19"
+   },
+   {
+    "description": "6 Stk Blumenerde 40 l",
+    "line_id": "4",
+    "net": "3470.04",
+    "quantity": "6",
+    "unit_price": "578.34",
+    "vat_rate": "7"
+   },
+   {
+    "description": "38 Stk Blumenerde 40 l",
+    "line_id": "5",
+    "net": "5947.00",
+    "quantity": "38",
+    "unit_price": "156.50",
+    "vat_rate": "19"
+   },
+   {
+    "description": "4,52 kg Brötchen & Gebäck",
+    "line_id": "6",
+    "net": "9697.71",
+    "quantity": "1",
+    "unit_price": "2145.51",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "86265.94",
+  "number": "RE-2026-34307",
+  "payment_ibans": [
+   "DE16000932892527853110"
+  ],
+  "po_ref": null,
+  "seller_name": "Böttcher IT-Service UG (haftungsbeschränkt)",
+  "seller_vat_id": "DE299054876",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "13180.73",
+    "taxable_amount": "69372.27"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "242.90",
+    "taxable_amount": "3470.04"
+   }
+  ],
+  "vat_total": "13423.63"
+ },
+ "output_tokens": 817
+}

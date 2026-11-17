@@ -1,0 +1,44 @@
+{
+ "input_tokens": 2860,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "75207.21",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE55000236856634649833",
+  "currency": "EUR",
+  "due_date": "2026-05-06",
+  "gross_total": "75207.21",
+  "issue_date": "2026-04-06",
+  "line_net_total": "70287.11",
+  "lines": [
+   {
+    "description": "Anfahrt",
+    "line_id": "1",
+    "net": "70287.11",
+    "quantity": "31.08",
+    "unit_price": "2261.49",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "70287.11",
+  "number": "RE-2026-79145",
+  "payment_ibans": [
+   "DE55000236856634649833"
+  ],
+  "po_ref": null,
+  "seller_name": "Grünwald Gartenbau e.K.",
+  "seller_vat_id": "DE540978636",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "4920.10",
+    "taxable_amount": "70287.11"
+   }
+  ],
+  "vat_total": "4920.10"
+ },
+ "output_tokens": 417
+}

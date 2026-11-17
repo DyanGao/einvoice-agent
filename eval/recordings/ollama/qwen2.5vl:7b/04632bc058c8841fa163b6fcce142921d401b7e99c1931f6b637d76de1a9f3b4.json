@@ -1,0 +1,58 @@
+{
+ "input_tokens": 3186,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "115585.70",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "PO-655611",
+  "buyer_vat_id": "DE584053112",
+  "currency": "EUR",
+  "due_date": "2026-04-11",
+  "gross_total": "132093.19",
+  "issue_date": "2026-04-04",
+  "line_net_total": "99078.21",
+  "lines": [
+   {
+    "description": "40 Stk Druckerpatrone schwarz",
+    "line_id": "1",
+    "net": "79766.80",
+    "quantity": "40",
+    "unit_price": "1994.17",
+    "vat_rate": "19"
+   },
+   {
+    "description": "37 Stk Blumenerde 40 l",
+    "line_id": "2",
+    "net": "19311.41",
+    "quantity": "37",
+    "unit_price": "521.93",
+    "vat_rate": "7"
+   }
+  ],
+  "net_total": "115585.70",
+  "number": "RE-2026-04810",
+  "payment_ibans": [
+   "DE55000710771661589591"
+  ],
+  "po_ref": "991-33333TEST-33",
+  "seller_name": "Rheintal Logistik AG",
+  "seller_vat_id": "DE738871106",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "15155.69",
+    "taxable_amount": "79766.80"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1351.80",
+    "taxable_amount": "19311.41"
+   }
+  ],
+  "vat_total": "16507.49"
+ },
+ "output_tokens": 545
+}

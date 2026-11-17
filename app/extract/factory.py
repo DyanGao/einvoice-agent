@@ -9,6 +9,7 @@ from app.extract.confidence import Calibration, LastDocumentText, ScoringExtract
 from app.extract.draft import InvoiceDraft
 from app.extract.llm import AnthropicLlm, ExtractionError
 from app.extract.llm_extractor import LlmExtractor
+from app.extract.ollama import OllamaLlm, is_local
 from app.settings import Settings
 
 
@@ -39,7 +40,10 @@ def _llm_extractor(settings: Settings) -> Extractor:
     return ScoringExtractor(
         CompletingExtractor(
             LlmExtractor(
-                AnthropicLlm(anthropic.Anthropic()),
+                # A model named "ollama/…" runs locally; any other is Claude.
+                OllamaLlm(base_url=settings.ollama_url)
+                if is_local(settings.extractor_model)
+                else AnthropicLlm(anthropic.Anthropic()),
                 model=settings.extractor_model,
                 effort=settings.extractor_effort,
             ),

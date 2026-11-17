@@ -1,0 +1,44 @@
+{
+ "input_tokens": 3388,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "17247.82",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE10000944307551828501",
+  "currency": "EUR",
+  "due_date": "2026-06-16",
+  "gross_total": "17247.82",
+  "issue_date": "2026-06-09",
+  "line_net_total": "14493.97",
+  "lines": [
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "1",
+    "net": "14493.97",
+    "quantity": "7.12",
+    "unit_price": "2035.67",
+    "vat_rate": "19.00"
+   }
+  ],
+  "net_total": "14493.97",
+  "number": "RE-2026-64307",
+  "payment_ibans": [
+   "DE10000944307551828501"
+  ],
+  "po_ref": "PO-852304",
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE211171205",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19.00",
+    "tax_amount": "2753.85",
+    "taxable_amount": "14493.97"
+   }
+  ],
+  "vat_total": "2753.85"
+ },
+ "output_tokens": 446
+}
