@@ -8,6 +8,7 @@ no model calls. It also writes the sample invoice the browser test uploads.
 """
 
 import argparse
+import asyncio
 import tempfile
 import threading
 import time
@@ -129,10 +130,17 @@ def main() -> None:
     )
     app = create_app(session_factory, queue, settings, checker)
 
+    # One SQLite connection (StaticPool) serves every request, and it cannot be
+    # used from two threads at once: the UI loads two lists in parallel, so
+    # requests are handled one at a time here. The application itself runs on
+    # Postgres with a connection pool.
+    one_at_a_time = asyncio.Lock()
+
     @app.middleware("http")
     async def release_held(request, call_next):
-        queue.release_due()
-        return await call_next(request)
+        async with one_at_a_time:
+            queue.release_due()
+            return await call_next(request)
 
     uvicorn.run(app, host="127.0.0.1", port=args.port)
 

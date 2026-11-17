@@ -37,7 +37,11 @@ export default function QueuePage() {
     try {
       // A document that is still being read is not in the review queue yet,
       // so "all" is always fetched and filtered here.
-      const [result, duplicates] = await Promise.all([listDocuments(), listDuplicateCopies()]);
+      const [result, duplicates] = await Promise.all([
+        listDocuments(),
+        // An extra: if it cannot be listed, the queue still shows and refreshes.
+        listDuplicateCopies().catch(() => ({ copies: [] })),
+      ]);
       setDocuments(result.documents);
       setCopies(duplicates.copies);
       setError(null);
