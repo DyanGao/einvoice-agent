@@ -342,7 +342,6 @@ def readme_badges(results: dict) -> str:
             f"[![CI]({ci}/badge.svg?branch=main)]({ci})",
             f"[![Field accuracy on synthetic held-out invoices]({accuracy})](docs/eval-report.md)",
             f"[![License: Apache 2.0]({shield('license', 'Apache-2.0', 'blue')})](LICENSE)",
-            f"![Python 3.12]({shield('python', '3.12', 'blue')})",
             f"![EN 16931 / XRechnung]({shield('EN 16931', 'XRechnung · ZUGFeRD', 'blue')})",
         ]
     )
