@@ -80,7 +80,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 ## Data & privacy
 - Repo contains **only synthetic or fully anonymized** invoices
 - E-invoices (XRechnung, ZUGFeRD) are parsed and validated on the machine; no model sees them
-- PDFs and scans are sent to the Anthropic API to be read (`EXTRACTOR=llm`, the default). To keep every document on the machine, set `EXTRACTOR=baseline` (rule-based, far less accurate: see Results) or `EXTRACTOR=none` (PDFs and scans are not read; they are marked "extraction failed: no extractor configured"). A local vision model is not built yet; it would sit behind the same extractor interface
+- PDFs and scans are sent to the Anthropic API to be read (`EXTRACTOR=llm`, the default). To keep every document on the machine, set `EXTRACTOR=baseline` (rule-based, far less accurate: see Results) or `EXTRACTOR=none` (PDFs and scans are not read; they are marked "extraction failed: no extractor configured"). Or read them with a local vision model through Ollama, `EXTRACTOR_MODEL=ollama/qwen2.5vl:7b`: nothing leaves the machine, but it reads about 91 % of fields against Opus's 100 %, and its misreads are not held back by the decision engine, so every document needs a person ([comparison](docs/eval-report.md#hosted-vs-local-model-held-out-split))
 - Not tax advice; archiving rules (GoBD) are out of scope for v1 and documented as such
 
 ## Roadmap
@@ -88,7 +88,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 - [ ] v0.2 PDF/scan extraction + review UI _(built; held-out synthetic data 99.96 % / 100.00 % over 3 model runs, third-party Belege images 98.0 % with a smaller model; open: real invoices)_
 - [x] v0.3 matching + checks + decision engine _(rule-based matching instead of a model agent)_
 - [x] v0.4 connectors (export, webhook, mock ERP, Playwright fallback) and the whole stack in Docker
-- [ ] v0.5 eval report published _([docs/eval-report.md](docs/eval-report.md); done: 3-run variance, OCR-text ablation, third-party set, hardening; open: real-invoice set, hosted vs. local model)_
+- [ ] v0.5 eval report published _([docs/eval-report.md](docs/eval-report.md); done: 3-run variance, OCR-text and hosted vs. local ablations, third-party set, hardening; open: real-invoice set)_
 - [ ] v1.0 multi-tenant, IMAP ingest, German/English UI
 
 ## Tech stack

@@ -83,3 +83,23 @@ def test_wrong_bookings_on_the_dev_split_are_not_the_gate():
         "test": {"wrong_but_auto": []},
     }
     assert wrong_bookings(result) == []
+
+
+def test_a_run_of_one_split_is_scored_on_that_split_only(tmp_path):
+    """A model run made with `eval.run --split test` has no dev predictions."""
+    import json
+
+    from app.extract.confidence import Calibration
+    from eval.generators.structured import generate
+    from eval.sweep import documents
+
+    record = next(generate(1)).gold_record()
+    gold = [record | {"id": "a", "split": "dev"}, record | {"id": "b", "split": "test"}]
+    (tmp_path / "gold.jsonl").write_text("".join(json.dumps(g) + "\n" for g in gold))
+    prediction = {"id": "b", "invoice": None, "error": "not read"}
+    (tmp_path / "predictions-local-rules.jsonl").write_text(json.dumps(prediction) + "\n")
+
+    found = documents([tmp_path], "local-rules", Calibration.load(), split="test")
+    assert [d.id for d in found] == ["b"]
+    with pytest.raises(KeyError):
+        documents([tmp_path], "local-rules", Calibration.load())

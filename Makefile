@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif eval-belege
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif eval-belege eval-local
 
 # The README demo in Docker: sample_invoices/ through processing, checks,
 # decision and delivery into a fresh mock ERP, in a database of its own. Needs
@@ -271,3 +271,14 @@ BELEGE ?= $(HOME)/Downloads/belege-sample-40
 BELEGE_MODEL ?= claude-haiku-5-5
 eval-belege:
 	uv run python -m eval.belege $(BELEGE) --model $(BELEGE_MODEL)
+
+# EVAL_PLAN §3: a local vision model (Ollama) instead of the hosted one, held-out
+# split. Replays the recorded answers; to record again, start Ollama with the
+# model pulled and use --llm-mode record. LOCAL_MODEL picks another ollama/… model.
+eval-local:
+	for set in pdf scans; do \
+		uv run python -m eval.run eval/out/$$set --system local --llm-mode replay --split test || exit 1; \
+		uv run python -m eval.run eval/out/$$set --system local-rules --llm-mode replay --split test || exit 1; \
+		uv run python -m eval.score eval/out/$$set --system local-rules --split test || exit 1; \
+	done
+	uv run python -m eval.sweep report eval/out/pdf eval/out/scans --system local-rules --split test

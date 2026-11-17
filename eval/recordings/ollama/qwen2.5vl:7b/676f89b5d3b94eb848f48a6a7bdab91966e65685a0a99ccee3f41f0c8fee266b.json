@@ -1,0 +1,91 @@
+{
+ "input_tokens": 3186,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "179632.32",
+  "buyer_name": "Ingenieurbüro Weiß + Partner",
+  "buyer_reference": "PO-918941",
+  "buyer_vat_id": "DE709381587",
+  "currency": "EUR",
+  "due_date": null,
+  "gross_total": "206768.66",
+  "issue_date": "2026-05-27",
+  "line_net_total": "152495.98",
+  "lines": [
+   {
+    "description": "Beratung vor Ort",
+    "line_id": "1",
+    "net": "25828.79",
+    "quantity": "12.29",
+    "unit_price": "2.10161",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Wartungspauschale",
+    "line_id": "2",
+    "net": "41530.58",
+    "quantity": "19",
+    "unit_price": "2.18582",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Kabel NYM-J 3x1,5 mm²",
+    "line_id": "3",
+    "net": "15315.78",
+    "quantity": "36.71",
+    "unit_price": "417.21",
+    "vat_rate": "7"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "4",
+    "net": "48797.62",
+    "quantity": "38.08",
+    "unit_price": "1.28145",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Anfahrt",
+    "line_id": "5",
+    "net": "3688.97",
+    "quantity": "7.69",
+    "unit_price": "479.71",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "6",
+    "net": "17334.24",
+    "quantity": "16",
+    "unit_price": "1.08339",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "179632.32",
+  "number": "RE-2026-48259",
+  "payment_ibans": [
+   "DE09 0004 8169 8024 3055 24",
+   "DE55 0005 6406 5344 7009 43"
+  ],
+  "po_ref": null,
+  "seller_name": "Hansa Werkzeughandel GmbH & Co. KG",
+  "seller_vat_id": "DE138778888",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "26064.24",
+    "taxable_amount": "137180.20"
+   },
+   {
+    "category": "S",
+    "rate": "7",
+    "tax_amount": "1072.10",
+    "taxable_amount": "15315.78"
+   }
+  ],
+  "vat_total": "27136.34"
+ },
+ "output_tokens": 841
+}

@@ -21,6 +21,8 @@ class Settings:
     validator_timeout_seconds: float
     extractor_model: str
     extractor_effort: str | None
+    # Only for EXTRACTOR_MODEL=ollama/…: where the local Ollama server listens.
+    ollama_url: str
     extractor: str
     redis_url: str
     feedback_dir: Path
@@ -58,6 +60,7 @@ class Settings:
             extractor_model=os.environ.get("EXTRACTOR_MODEL", DEFAULT_EXTRACTOR_MODEL),
             # Unset = the model's own default effort.
             extractor_effort=os.environ.get("EXTRACTOR_EFFORT") or None,
+            ollama_url=os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434"),
             # llm | baseline | none
             extractor=os.environ.get("EXTRACTOR", "llm"),
             redis_url=os.environ.get("REDIS_URL", DEFAULT_REDIS_URL),

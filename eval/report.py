@@ -33,6 +33,8 @@ from eval.run import (
     LLM_RULES,
     LLM_TEXT,
     LLM_TEXT_RULES,
+    LOCAL,
+    LOCAL_RULES,
     STRUCTURED,
     predictions_file,
     read_jsonl,
@@ -47,7 +49,7 @@ SETS = ("pdf", "scans")
 MAX_RUNS = 3  # EVAL_PLAN §5: 3 runs on the model paths
 # The last two: the same model with the document's text in the prompt (EVAL_PLAN §3
 # ablation), recorded on the held-out split only.
-EXTRACTORS = (BASELINE, LLM, LLM_RULES, LLM_TEXT, LLM_TEXT_RULES)
+EXTRACTORS = (BASELINE, LLM, LLM_RULES, LLM_TEXT, LLM_TEXT_RULES, LOCAL, LOCAL_RULES)
 NOT_RUN = "not run"
 README = Path("README.md")
 EVAL_REPORT = Path("docs/eval-report.md")

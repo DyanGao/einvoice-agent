@@ -86,11 +86,15 @@ in exactly one extra document, the one wrong scan, because 1 in 157 fits the bud
 | pdf | llm-rules | 36 | 100.00 % | 100.0 % |
 | pdf | llm-text | 36 | 98.07 % | 33.3 % |
 | pdf | llm-text-rules | 36 | 100.00 % | 100.0 % |
+| pdf | local | 36 | 91.51 % | 16.7 % |
+| pdf | local-rules | 36 | 91.51 % | 16.7 % |
 | scans | baseline | 24 | 31.47 % | 0.0 % |
 | scans | llm | 24 | 98.22 % | 37.5 % |
 | scans | llm-rules | 24 | 100.00 % | 100.0 % |
 | scans | llm-text | 24 | 98.13 % | 37.5 % |
 | scans | llm-text-rules | 24 | 99.90 % | 95.8 % |
+| scans | local | 24 | 90.53 % | 12.5 % |
+| scans | local-rules | 24 | 90.53 % | 12.5 % |
 
 `baseline`: rules and templates over the text layer (OCR for scans). `llm`: the model alone. `llm-rules`: the model followed by the completion rules, which is what the application runs. `llm-text`, `llm-text-rules`: the same with the document's text (text layer, or OCR for scans) added to the prompt, run 1 of the model only (ablation).
 
@@ -237,6 +241,34 @@ them to review. That is 40 documents and one run: it shows where reading breaks 
 cases), not that a misread can never pass. Matching and the decision were not measured here; none of
 the suppliers exist in the mock ERP.
 
+### Hosted vs. local model (held-out split)
+
+The same prompt and schema, read by `qwen2.5vl:7b` (8.3B parameters, 4-bit) through Ollama on the
+machine itself (Apple M4 Pro, 24 GB), instead of `claude-opus-5-5` through the API. Ollama takes images,
+so each PDF page goes as a PNG; and the formats the prompt asks for (amounts as `1234.56`, dates as
+`2026-01-25`) are written into the schema as patterns, because the 7B model otherwise copies the printed
+`1.234,56`: on the first two test documents that took it from 20 to 33 of 34 fields. Recorded once, held-out
+split only: `make eval-local` replays it.
+
+| Held-out, field accuracy | Rule-based baseline | Local `qwen2.5vl:7b` | Hosted `claude-opus-5-5` |
+|---|---:|---:|---:|
+| PDF (36) | 44.99 % | **91.51 %** | 100.00 % |
+| Scan (24) | 31.47 % | **90.53 %** | 100.00 % |
+| Documents read without error | 0 of 60 | 9 of 60 | 60 of 60 |
+| Time per document | < 1 s | about 29 s | 5–6 s |
+| Cost per document | 0 | 0 (local) | 0.034 USD |
+
+Where it misreads: line descriptions (48 times over 60 documents), the net and gross totals (38 and 27),
+the buyer's reference and the order number (17 and 16). Unlike IBANs or VAT IDs, descriptions and
+references have no check digit to catch a misread.
+
+**The decision engine does not hold its errors back.** At the operating point calibrated on the hosted
+model (0.975), 9 of 60 local readings would be booked without a person, and **4 of those 9 are misread**
+(descriptions; a buyer reference and order number on two). The confidence scores were calibrated on the
+hosted model's answers; the local model's errors fall where those scores look for none. So the local model
+is a way to keep every document on the machine with a person reviewing every one of them, not a drop-in
+for booking without review. Using it for that would need its own calibration on its own answers.
+
 ## Worst 10 cases
 
 The ten cases, from every eval and both splits, that did or could have done the most damage, worst
@@ -347,5 +379,5 @@ first. A wrong booking ranks above a needless review.
   and OCR for grounding adds time on scans.
 - **Not drawn:** the reliability diagram (one populated bin) and a confusion matrix for exceptions (no
   confusions to show). The auto-rate vs. error curve is the table above.
-- **Ablations:** the OCR-text comparison ran once, on the held-out split only (60 documents); the
-  hosted vs. local model comparison is not run (no local vision model set up).
+- **Ablations:** the OCR-text and the hosted vs. local comparisons each ran once, on the held-out split
+  only (60 documents); the local model was not calibrated on its own answers, nor run on the Belege set.

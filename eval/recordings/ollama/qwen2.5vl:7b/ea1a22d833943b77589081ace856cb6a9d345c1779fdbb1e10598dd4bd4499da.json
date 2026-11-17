@@ -1,0 +1,68 @@
+{
+ "input_tokens": 3388,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "96390.25",
+  "buyer_name": "Stadtwerke Beispielstadt GmbH",
+  "buyer_reference": "90000000-03083-72",
+  "buyer_vat_id": "DE916244063",
+  "currency": "EUR",
+  "due_date": "2026-03-09",
+  "gross_total": "96390.25",
+  "issue_date": "2026-02-07",
+  "line_net_total": "96390.25",
+  "lines": [
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "1",
+    "net": "4748.08",
+    "quantity": "2",
+    "unit_price": "2374.04",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Blumenerde 40 l",
+    "line_id": "2",
+    "net": "57783.30",
+    "quantity": "30",
+    "unit_price": "1926.11",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Brötchen & Gebäck",
+    "line_id": "3",
+    "net": "172.79",
+    "quantity": "2.89",
+    "unit_price": "59.79",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "4",
+    "net": "18296.04",
+    "quantity": "14",
+    "unit_price": "1306.86",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "96390.25",
+  "number": "RE-2026-36834",
+  "payment_ibans": [
+   "DE46 0005 9621 5349 7799 21"
+  ],
+  "po_ref": "PO-812611",
+  "seller_name": "Müller & Söhne Elektrotechnik KG",
+  "seller_vat_id": "DE338047780",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "15390.04",
+    "taxable_amount": "81000.21"
+   }
+  ],
+  "vat_total": "15390.04"
+ },
+ "output_tokens": 634
+}

@@ -1,0 +1,52 @@
+{
+ "input_tokens": 3388,
+ "model": "ollama/qwen2.5vl:7b",
+ "output": {
+  "amount_due": "114164.32",
+  "buyer_name": "Schreinerei Holzwurm OHG",
+  "buyer_reference": "04011000-12345-03",
+  "buyer_vat_id": "DE770198753",
+  "currency": "EUR",
+  "due_date": "2026-03-11",
+  "gross_total": "114164.32",
+  "issue_date": "2026-02-25",
+  "line_net_total": "95936.40",
+  "lines": [
+   {
+    "description": "Wartungspauschale",
+    "line_id": "1",
+    "net": "10861.20",
+    "quantity": "20",
+    "unit_price": "543.06",
+    "vat_rate": "19"
+   },
+   {
+    "description": "Druckerpatrone schwarz",
+    "line_id": "2",
+    "net": "85075.20",
+    "quantity": "40",
+    "unit_price": "2126.88",
+    "vat_rate": "19"
+   }
+  ],
+  "net_total": "95936.40",
+  "number": "RE-2026-38105",
+  "payment_ibans": [
+   "DE21000246218968182566"
+  ],
+  "po_ref": null,
+  "seller_name": "Nordlicht Bürobedarf GmbH",
+  "seller_vat_id": "DE810599016",
+  "type_code": "380",
+  "vat_breakdown": [
+   {
+    "category": "S",
+    "rate": "19",
+    "tax_amount": "18227.92",
+    "taxable_amount": "95936.40"
+   }
+  ],
+  "vat_total": "18227.92"
+ },
+ "output_tokens": 488
+}
