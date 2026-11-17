@@ -6,6 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 const PDF = path.join(__dirname, ".tmp", "rechnung.pdf");
 const XML = path.join(__dirname, ".tmp", "rechnung.xml");
 const WAITING = path.join(__dirname, ".tmp", "waiting-rechnung.pdf");
+const AGAIN = path.join(__dirname, ".tmp", "again-rechnung.pdf");
 const NUMBER = "RE-2026-17234";
 
 test.describe.configure({ mode: "serial" });
@@ -86,6 +87,35 @@ test("upload, correct, approve: every step is in the history", async ({ page }) 
   await expect(page.getByText("Nothing is waiting for review.")).toBeVisible();
   await page.getByRole("button", { name: /All documents/ }).click();
   await expect(page.getByRole("row", { name: /RE-KORRIGIERT/ })).toContainText("Approved");
+});
+
+test("the same invoice sent again is rejected as a duplicate and never booked", async ({
+  page,
+}) => {
+  await upload(page, AGAIN);
+  await page.getByRole("button", { name: /To review/ }).click();
+  await page.getByRole("link", { name: NUMBER }).click();
+  await page.getByPlaceholder("Your name").fill("anna");
+
+  await page.getByText("Reject instead…").click();
+  const reject = page.getByRole("button", { name: "Reject document" });
+  await expect(reject).toBeDisabled();
+  await page.getByLabel("Reason").selectOption("other");
+  await expect(page.getByText("Say which reason.")).toBeVisible();
+  await page.getByLabel("Reason").selectOption("duplicate");
+  await page.getByLabel(/Note/).fill("sent twice");
+  await reject.click();
+
+  await expect(page.getByTestId("stamp")).toContainText("Rejected");
+  await expect(page.getByText("Rejected, so it is not booked")).toBeVisible();
+  await expect(
+    page.getByText("Rejected: Duplicate of an invoice already on file (sent twice)"),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Incoming invoices" }).click();
+  await page.getByRole("button", { name: /All documents/ }).click();
+  await expect(page.locator(".state-rejected")).toHaveText("Rejected");
 });
 
 test("a valid e-invoice needs no review and has no page to show", async ({ page }) => {

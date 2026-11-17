@@ -1,6 +1,7 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
-export type ReviewState = "pending" | "approved" | "not_required";
+export type ReviewState = "pending" | "approved" | "not_required" | "rejected";
+export type RejectReason = "duplicate" | "not_addressed_to_us" | "replaced_or_cancelled" | "other";
 
 export type Summary = {
   id: string;
@@ -164,5 +165,18 @@ export function approveDocument(id: string, reviewer: string): Promise<Detail> {
   return request(`/documents/${encodeURIComponent(id)}/approve`, {
     method: "POST",
     headers: { "X-Reviewer": reviewer },
+  });
+}
+
+export function rejectDocument(
+  id: string,
+  reviewer: string,
+  reason: RejectReason,
+  note: string,
+): Promise<Detail> {
+  return request(`/documents/${encodeURIComponent(id)}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Reviewer": reviewer },
+    body: JSON.stringify({ reason, note: note.trim() || null }),
   });
 }

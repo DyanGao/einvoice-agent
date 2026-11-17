@@ -39,10 +39,10 @@ On a third-party synthetic set, 40 photographed and scanned invoices from [Beleg
 - [x] Unstructured path: OCR + vision LLM → schema-constrained extraction (EN 16931 fields) _(the model transcribes, rules fill only what is not printed and mark it; per-field confidence from checks and OCR grounding)_
 - [x] Matching: invoice ↔ PO ↔ delivery note ↔ bank transaction (3-way match + fuzzy) _(rule-based, including typos, missing references, partial and combined payments; matched again when new invoices or transfers arrive. The planned model agent was not built: on the eval world the rules leave open only what no reader could decide, and an agent would add cost and a place for injected text to act)_
 - [x] Checks: VAT rate/ID plausibility, totals, duplicates, IBAN changes (fraud signal), price/quantity deviations _(against the ERP's suppliers and orders; quantity deviation is unit-tested but not in the exception eval)_
-- [x] Human-in-the-loop review UI for low-confidence fields and exceptions _(upload, queue, "why a person needs to look", unsure fields marked, correct, approve, history, delivery status)_
+- [x] Human-in-the-loop review UI for low-confidence fields and exceptions _(upload, queue, "why a person needs to look", unsure fields marked, correct, approve or reject with a reason, history, delivery status)_
 - [x] Decision engine: books an invoice without a person only when it was read with confidence, nothing was assumed and no check raised a finding _(75 % of held-out documents on synthetic data; ≤ 1 % error not yet shown, see Results)_
 - [x] Output connectors: CSV/DATEV-style export, REST webhook, mock ERP via API, Playwright fallback for UI-only systems _(each invoice delivered once per connector, retried with backoff; the browser connector reads every booking back)_
-- [x] Audit trail per document (source, extracted values, who approved) _(the reviewer's name comes from the UI and is not authenticated: the API has no login and is meant for localhost)_
+- [x] Audit trail per document (source, extracted values, who approved or rejected and why) _(the reviewer's name comes from the UI and is not authenticated: the API has no login and is meant for localhost)_
 - [x] Eval harness: labeled synthetic sets, rule-based baseline, held-out split, recorded model answers, CI gates — `make eval-full` _(no real invoices yet)_
 
 ## Quickstart

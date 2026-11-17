@@ -26,6 +26,16 @@ class ReviewState(StrEnum):
     # Set only by the decision engine (app/checks/service.py) when it routes a
     # document `auto`: nothing skips review without a decision on record.
     NOT_REQUIRED = "not_required"
+    # A person decided it is not to be booked; final. Never delivered,
+    # checked again or matched to payments.
+    REJECTED = "rejected"
+
+
+class RejectReason(StrEnum):
+    DUPLICATE = "duplicate"
+    NOT_ADDRESSED_TO_US = "not_addressed_to_us"
+    REPLACED_OR_CANCELLED = "replaced_or_cancelled"
+    OTHER = "other"  # needs a note
 
 
 class ReviewError(ValueError):
@@ -68,6 +78,8 @@ def _child(node: Any, part: str, path: str) -> Any:
 def _require_pending(document: DocumentRow) -> None:
     if document.review_state == ReviewState.APPROVED.value:
         raise NotReviewable("document is already approved")
+    if document.review_state == ReviewState.REJECTED.value:
+        raise NotReviewable("document was rejected")
     if document.status == DocumentStatus.RECEIVED.value:
         raise NotReviewable("document has not been processed yet")
 
@@ -148,3 +160,23 @@ def approve(session: Session, document: DocumentRow, actor: str) -> Invoice:
     )
     session.flush()
     return invoice
+
+
+def reject(
+    session: Session, document: DocumentRow, actor: str, reason: str, note: str | None = None
+) -> None:
+    """A person decides the document is not to be booked, and says why."""
+    _require_pending(document)
+    try:
+        why = RejectReason(reason)
+    except ValueError:
+        allowed = ", ".join(r.value for r in RejectReason)
+        raise ReviewError(f"unknown reason {reason!r}; one of: {allowed}") from None
+    note = (note or "").strip() or None
+    if why is RejectReason.OTHER and note is None:
+        raise ReviewError("a rejection for another reason needs a note saying which")
+    document.review_state = ReviewState.REJECTED.value
+    document.audit_events.append(
+        AuditEventRow(event="rejected", actor=actor, detail={"reason": why.value, "note": note})
+    )
+    session.flush()

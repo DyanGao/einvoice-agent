@@ -106,6 +106,8 @@ def main() -> None:
     args.sample.with_suffix(".xml").write_bytes(render_ubl(entry.invoice, XRECHNUNG))
     # Other bytes than the sample, so it is a new document and not a duplicate.
     (args.sample.parent / f"{HOLD_PREFIX}{args.sample.name}").write_bytes(PDF + b"%held\n")
+    # The same invoice sent again in another file: a duplicate, to be rejected.
+    (args.sample.parent / f"again-{args.sample.name}").write_bytes(PDF + b"%again\n")
 
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool

@@ -273,3 +273,63 @@ def test_review_ui_origin_may_call_the_api(client, settings):
 def test_other_origins_get_no_cors_permission(client):
     response = client.get("/health", headers={"Origin": "https://evil.example"})
     assert "access-control-allow-origin" not in response.headers
+
+
+# --- rejecting ----------------------------------------------------------------
+
+
+def test_reviewer_rejects_a_document_with_a_reason(client):
+    document_id = uploaded(client)
+    response = client.post(
+        f"/documents/{document_id}/reject",
+        headers=REVIEWER,
+        json={"reason": "duplicate", "note": "sent twice"},
+    )
+    assert (response.status_code, response.json()["review_state"]) == (200, "rejected")
+    event = response.json()["audit"][-1]
+    assert (event["event"], event["detail"]) == (
+        "rejected",
+        {"reason": "duplicate", "note": "sent twice"},
+    )
+
+
+def test_rejecting_needs_a_reviewer_name(client):
+    response = client.post(f"/documents/{uploaded(client)}/reject", json={"reason": "duplicate"})
+    assert response.status_code == 400
+
+
+def test_rejecting_for_an_unknown_reason_is_refused(client):
+    response = client.post(
+        f"/documents/{uploaded(client)}/reject", headers=REVIEWER, json={"reason": "meh"}
+    )
+    assert response.status_code == 422
+
+
+def test_rejected_document_cannot_be_approved_or_rejected_again(client):
+    document_id = uploaded(client)
+    client.post(f"/documents/{document_id}/reject", headers=REVIEWER, json={"reason": "duplicate"})
+    approve = client.post(f"/documents/{document_id}/approve", headers=REVIEWER)
+    again = client.post(
+        f"/documents/{document_id}/reject", headers=REVIEWER, json={"reason": "duplicate"}
+    )
+    assert (approve.status_code, again.status_code) == (409, 409)
+
+
+def test_list_can_be_filtered_to_rejected_documents(client):
+    rejected = uploaded(client)
+    uploaded(client, XML, "r.xml")
+    client.post(f"/documents/{rejected}/reject", headers=REVIEWER, json={"reason": "duplicate"})
+    documents = client.get("/documents", params={"review_state": "rejected"}).json()["documents"]
+    assert [d["id"] for d in documents] == [rejected]
+
+
+def test_rejected_document_is_not_checked_again(session_factory, settings):
+    from app.checks.service import Checker
+    from tests.support import FakeErp
+
+    client = TestClient(
+        create_app(session_factory, inline_queue(session_factory), settings, Checker(FakeErp()))
+    )
+    document_id = uploaded(client)
+    client.post(f"/documents/{document_id}/reject", headers=REVIEWER, json={"reason": "duplicate"})
+    assert client.post(f"/documents/{document_id}/recheck").status_code == 409

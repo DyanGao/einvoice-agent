@@ -35,6 +35,11 @@ _INLINE_MEDIA_TYPES = {
 _IMAGE_SIGNATURES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"))
 
 
+class Rejection(BaseModel):
+    reason: str  # one of db.RejectReason
+    note: str | None = None
+
+
 class FieldChanges(BaseModel):
     changes: dict[str, Any]
 
@@ -279,6 +284,8 @@ def create_app(
             raise HTTPException(409, "no checks are configured for this installation")
         if row.review_state == db.ReviewState.APPROVED.value:
             raise HTTPException(409, "document is already approved")
+        if row.review_state == db.ReviewState.REJECTED.value:
+            raise HTTPException(409, "document was rejected")
         if row.draft is None:
             raise HTTPException(409, "nothing was read from this document, so nothing to check")
         checker.check(active, row)
@@ -293,6 +300,18 @@ def create_app(
         except db.ReviewError as exc:
             raise HTTPException(422, str(exc)) from exc
         _write_feedback_case(settings, row)
+        return _detail(row)
+
+    @app.post("/documents/{document_id}/reject")
+    def reject(row: Doc, body: Rejection, active: Db, who: Reviewer) -> dict:
+        """Not to be booked, with the reason: a duplicate, an invoice meant for
+        someone else, one replaced by a correction. Final, and never delivered."""
+        try:
+            db.reject(active, row, who, body.reason, body.note)
+        except db.NotReviewable as exc:
+            raise HTTPException(409, str(exc)) from exc
+        except db.ReviewError as exc:
+            raise HTTPException(422, str(exc)) from exc
         return _detail(row)
 
     return app

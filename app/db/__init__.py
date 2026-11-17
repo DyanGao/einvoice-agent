@@ -1,10 +1,12 @@
 from app.db.review import (
     NotReviewable,
+    RejectReason,
     ReviewError,
     ReviewState,
     approve,
     correct_fields,
     missing_for_approval,
+    reject,
 )
 from app.db.store import (
     apply_outcome,
@@ -39,6 +41,7 @@ __all__ = [
     "InvoiceRow",
     "MatchRow",
     "NotReviewable",
+    "RejectReason",
     "ReviewError",
     "ReviewState",
     "SeenBankTransactionRow",
@@ -49,6 +52,7 @@ __all__ = [
     "create_received",
     "find_document",
     "missing_for_approval",
+    "reject",
     "record_duplicate",
     "record_queued_again",
     "store_outcome",

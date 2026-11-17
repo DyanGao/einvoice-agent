@@ -79,6 +79,8 @@ def open_invoices(
         select(DocumentRow)
         .join(MatchRow, MatchRow.document_id == DocumentRow.id)
         .where(MatchRow.supplier_id == supplier_id)
+        # A rejected invoice is not owed, so no transfer pays it.
+        .where(DocumentRow.review_state != ReviewState.REJECTED.value)
         .order_by(DocumentRow.created_at, DocumentRow.id)
     )
     if exclude is not None:
@@ -89,6 +91,8 @@ def open_invoices(
 def rematch(session: Session, checker: Checker, document: DocumentRow, trigger: str) -> None:
     """Match one document again. Raises ErpUnavailable, leaving it unchanged,
     if the ERP does not answer."""
+    if document.review_state == ReviewState.REJECTED.value:
+        return
     if document.review_state == ReviewState.APPROVED.value:
         checker.match_payments(session, document, trigger=trigger)
     else:
