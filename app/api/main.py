@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app import db
 from app.checks import Severity
 from app.checks.service import Checker, build_checker
+from app.db.duplicates import redundant_copies, reject_copies
 from app.extract.draft import InvoiceDraft
 from app.ingest import ingest
 from app.models import DocumentFormat
@@ -33,6 +34,10 @@ _INLINE_MEDIA_TYPES = {
     DocumentFormat.ZUGFERD_PDF.value: "application/pdf",
 }
 _IMAGE_SIGNATURES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"))
+
+
+class CopiesToReject(BaseModel):
+    ids: list[str]
 
 
 class Rejection(BaseModel):
@@ -301,6 +306,37 @@ def create_app(
             raise HTTPException(422, str(exc)) from exc
         _write_feedback_case(settings, row)
         return _detail(row)
+
+    @app.get("/review/duplicates")
+    def duplicate_copies(active: Db) -> dict:
+        """Plain copies of an earlier invoice, waiting for review only for being
+        copies (app/db/duplicates.py): what "reject all duplicates" would reject."""
+
+        def summary(row: db.DocumentRow) -> dict:
+            data = row.draft.data if row.draft else {}
+            return {
+                "id": row.id,
+                "number": data.get("number"),
+                "seller_name": (data.get("seller") or {}).get("name"),
+                "gross_total": data.get("gross_total"),
+                "currency": data.get("currency"),
+                "created_at": row.created_at.isoformat(),
+                "review_state": row.review_state,
+            }
+
+        return {
+            "copies": [
+                {**summary(copy.document), "original": summary(copy.original)}
+                for copy in redundant_copies(active)
+            ]
+        }
+
+    @app.post("/review/duplicates/reject")
+    def reject_duplicate_copies(body: CopiesToReject, active: Db, who: Reviewer) -> dict:
+        """Reject the listed documents that are still plain copies; the rest are
+        skipped, so a list shown earlier cannot reject what has changed since."""
+        result = reject_copies(active, body.ids, who)
+        return {"rejected": result.rejected, "skipped": result.skipped}
 
     @app.post("/documents/{document_id}/reject")
     def reject(row: Doc, body: Rejection, active: Db, who: Reviewer) -> dict:

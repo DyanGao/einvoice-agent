@@ -180,3 +180,30 @@ export function rejectDocument(
     body: JSON.stringify({ reason, note: note.trim() || null }),
   });
 }
+
+/** A plain copy of an earlier invoice (app/db/duplicates.py). */
+export type CopySummary = {
+  id: string;
+  number: string | null;
+  seller_name: string | null;
+  gross_total: string | null;
+  currency: string | null;
+  created_at: string;
+  review_state: ReviewState;
+};
+export type DuplicateCopy = CopySummary & { original: CopySummary };
+
+export function listDuplicateCopies(): Promise<{ copies: DuplicateCopy[] }> {
+  return request("/review/duplicates");
+}
+
+export function rejectDuplicateCopies(
+  ids: string[],
+  reviewer: string,
+): Promise<{ rejected: string[]; skipped: string[] }> {
+  return request("/review/duplicates/reject", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Reviewer": reviewer },
+    body: JSON.stringify({ ids }),
+  });
+}

@@ -7,6 +7,7 @@ const PDF = path.join(__dirname, ".tmp", "rechnung.pdf");
 const XML = path.join(__dirname, ".tmp", "rechnung.xml");
 const WAITING = path.join(__dirname, ".tmp", "waiting-rechnung.pdf");
 const AGAIN = path.join(__dirname, ".tmp", "again-rechnung.pdf");
+const XML_COPY = path.join(__dirname, ".tmp", "rechnung-copy.xml");
 const NUMBER = "RE-2026-17234";
 
 test.describe.configure({ mode: "serial" });
@@ -151,4 +152,18 @@ test("a document that is still being read updates by itself", async ({ page }) =
   await page.getByRole("button", { name: /All documents/ }).click();
   await expect(page.getByText("Waiting to be read")).toBeVisible();
   await expect(page.getByText("Waiting to be read")).toHaveCount(0, { timeout: 15_000 });
+});
+
+test("plain duplicates are rejected together after a confirmation", async ({ page }) => {
+  await upload(page, XML_COPY);
+  await page.getByRole("button", { name: /To review/ }).click();
+  await page.getByRole("button", { name: "Reject 1 plain duplicate…" }).click();
+  const panel = page.getByRole("region", { name: "Duplicates" });
+  await expect(panel.getByRole("row")).toHaveCount(2); // header and the one copy
+  await expect(panel.getByText("The earlier one stays.")).toBeVisible();
+
+  await page.getByPlaceholder("Your name").fill("anna");
+  await panel.getByRole("button", { name: "Reject this copy" }).click();
+  await expect(page.getByText("1 copy rejected.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Duplicates" })).toHaveCount(0);
 });

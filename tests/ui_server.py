@@ -27,7 +27,7 @@ from app.queue import JobQueue
 from app.settings import Settings
 from eval.generators.canonical import XRECHNUNG
 from eval.generators.world import PAID_ONCE, PO_EXACT, build_world
-from eval.generators.xrechnung import render_ubl
+from eval.generators.xrechnung import render_cii, render_ubl
 from eval.match import erp_for
 from tests.support import PDF, inline_queue
 
@@ -104,6 +104,10 @@ def main() -> None:
     args.sample.parent.mkdir(parents=True, exist_ok=True)
     args.sample.write_bytes(PDF)
     args.sample.with_suffix(".xml").write_bytes(render_ubl(entry.invoice, XRECHNUNG))
+    # The same e-invoice sent again as CII: a plain copy for "reject all duplicates".
+    (args.sample.parent / f"{args.sample.stem}-copy.xml").write_bytes(
+        render_cii(entry.invoice, XRECHNUNG)
+    )
     # Other bytes than the sample, so it is a new document and not a duplicate.
     (args.sample.parent / f"{HOLD_PREFIX}{args.sample.name}").write_bytes(PDF + b"%held\n")
     # The same invoice sent again in another file: a duplicate, to be rejected.

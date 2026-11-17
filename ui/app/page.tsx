@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { listDocuments, uploadDocument, type Summary } from "@/lib/api";
+import { useReviewer } from "@/components/Reviewer";
+import {
+  listDocuments,
+  listDuplicateCopies,
+  rejectDuplicateCopies,
+  uploadDocument,
+  type DuplicateCopy,
+  type Summary,
+} from "@/lib/api";
 import { formatLabel, money, reviewLabel, statusLabel, when } from "@/lib/labels";
 
 type View = "pending" | "all";
@@ -19,13 +27,19 @@ export default function QueuePage() {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
+  const reviewer = useReviewer();
+  const [copies, setCopies] = useState<DuplicateCopy[]>([]);
+  const [confirming, setConfirming] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectNote, setRejectNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       // A document that is still being read is not in the review queue yet,
       // so "all" is always fetched and filtered here.
-      const result = await listDocuments();
+      const [result, duplicates] = await Promise.all([listDocuments(), listDuplicateCopies()]);
       setDocuments(result.documents);
+      setCopies(duplicates.copies);
       setError(null);
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : String(problem));
@@ -64,6 +78,28 @@ export default function QueuePage() {
     setNotes(results);
     setUploading(false);
     await load();
+  }
+
+  async function rejectCopies() {
+    setRejecting(true);
+    try {
+      const result = await rejectDuplicateCopies(
+        copies.map((copy) => copy.id),
+        reviewer.name.trim(),
+      );
+      const skipped = result.skipped.length;
+      setRejectNote(
+        `${result.rejected.length} ${result.rejected.length === 1 ? "copy" : "copies"} rejected` +
+          (skipped ? `; ${skipped} changed in the meantime and stay for review` : "") +
+          ".",
+      );
+      setConfirming(false);
+    } catch (problem) {
+      setRejectNote(problem instanceof Error ? problem.message : String(problem));
+    } finally {
+      setRejecting(false);
+      await load();
+    }
   }
 
   const pending = documents?.filter((document) => document.review_state === "pending") ?? [];
@@ -134,6 +170,79 @@ export default function QueuePage() {
           All documents <span className="count">{documents?.length ?? 0}</span>
         </button>
       </nav>
+
+      {rejectNote && (
+        <p className="note" aria-live="polite">
+          {rejectNote}
+        </p>
+      )}
+
+      {view === "pending" && copies.length > 0 && (
+        <section className="copies" aria-label="Duplicates">
+          {!confirming ? (
+            <button type="button" className="button" onClick={() => setConfirming(true)}>
+              Reject {copies.length} plain {copies.length === 1 ? "duplicate" : "duplicates"}…
+            </button>
+          ) : (
+            <>
+              <p>
+                {copies.length === 1 ? "This document is" : "These documents are"} only waiting
+                because the same invoice from the same supplier, with the same total, came in
+                earlier. The earlier one stays. Rejected copies are never booked.
+              </p>
+              <table className="copies-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Copy</th>
+                    <th scope="col">Seller</th>
+                    <th scope="col" className="num">
+                      Gross total
+                    </th>
+                    <th scope="col">Received</th>
+                    <th scope="col">Copy of</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {copies.map((copy) => (
+                    <tr key={copy.id}>
+                      <td>
+                        <Link href={`/documents/${copy.id}`}>{copy.number ?? copy.id}</Link>
+                      </td>
+                      <td>{copy.seller_name ?? "–"}</td>
+                      <td className="num">{money(copy.gross_total, copy.currency)}</td>
+                      <td>{when(copy.created_at)}</td>
+                      <td>
+                        <Link href={`/documents/${copy.original.id}`}>
+                          {copy.original.number ?? copy.original.id}
+                        </Link>
+                        , {when(copy.original.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="action-row">
+                <button
+                  type="button"
+                  className="button button-danger"
+                  disabled={rejecting || reviewer.problem !== null}
+                  onClick={() => void rejectCopies()}
+                >
+                  {rejecting
+                    ? "Rejecting…"
+                    : copies.length === 1
+                      ? "Reject this copy"
+                      : `Reject these ${copies.length}`}
+                </button>
+                <button type="button" className="button" onClick={() => setConfirming(false)}>
+                  Cancel
+                </button>
+              </div>
+              {reviewer.problem && <p className="blocked">{reviewer.problem}</p>}
+            </>
+          )}
+        </section>
+      )}
 
       {error && (
         <p className="problem" role="alert">

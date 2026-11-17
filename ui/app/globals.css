@@ -319,6 +319,34 @@ th {
   color: var(--muted);
 }
 
+.copies {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--rule);
+  background: var(--sheet);
+}
+
+.copies p {
+  margin: 0 0 0.75rem;
+}
+
+.copies-table {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  border-collapse: collapse;
+  font-size: var(--step--1);
+}
+
+.copies-table th,
+.copies-table td {
+  padding: 0.3rem 0.5rem 0.3rem 0;
+  text-align: left;
+}
+
+.copies-table .num {
+  text-align: right;
+}
+
 .state-rejected {
   color: var(--muted);
   text-decoration: line-through;
