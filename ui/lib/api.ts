@@ -207,3 +207,11 @@ export function rejectDuplicateCopies(
     body: JSON.stringify({ ids }),
   });
 }
+
+export function reopenDocument(id: string, reviewer: string, note: string): Promise<Detail> {
+  return request(`/documents/${encodeURIComponent(id)}/reopen`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Reviewer": reviewer },
+    body: JSON.stringify({ note }),
+  });
+}

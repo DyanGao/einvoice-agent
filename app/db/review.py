@@ -26,8 +26,8 @@ class ReviewState(StrEnum):
     # Set only by the decision engine (app/checks/service.py) when it routes a
     # document `auto`: nothing skips review without a decision on record.
     NOT_REQUIRED = "not_required"
-    # A person decided it is not to be booked; final. Never delivered,
-    # checked again or matched to payments.
+    # A person decided it is not to be booked. Never delivered, checked again
+    # or matched to payments, unless a person reopens it.
     REJECTED = "rejected"
 
 
@@ -178,5 +178,20 @@ def reject(
     document.review_state = ReviewState.REJECTED.value
     document.audit_events.append(
         AuditEventRow(event="rejected", actor=actor, detail={"reason": why.value, "note": note})
+    )
+    session.flush()
+
+
+def reopen(session: Session, document: DocumentRow, actor: str, note: str) -> None:
+    """A rejection was a mistake: the document waits for review again. It is
+    not checked again here; that, and approving it, are a person's next steps."""
+    if document.review_state != ReviewState.REJECTED.value:
+        raise NotReviewable("document is not rejected")
+    note = (note or "").strip()
+    if not note:
+        raise ReviewError("reopening needs a note saying why")
+    document.review_state = ReviewState.PENDING.value
+    document.audit_events.append(
+        AuditEventRow(event="reopened", actor=actor, detail={"note": note})
     )
     session.flush()
