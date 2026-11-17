@@ -15,10 +15,10 @@ from functools import cache
 import httpx
 from redis import Redis
 from rq import Queue, SimpleWorker
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.checks.service import build_checker
+from app.db.engine import database_engine
 from app.extract.factory import build_extractor
 from app.ingest import requeue_stuck
 from app.jobs import run_document_job
@@ -62,7 +62,7 @@ def _context() -> tuple:
         base_url=settings.validator_url, timeout=settings.validator_timeout_seconds
     )
     return (
-        sessionmaker(create_engine(settings.database_url)),
+        sessionmaker(database_engine(settings.database_url)),
         KositValidator(client),
         build_extractor(settings),
         build_checker(settings.erp_url, settings.erp_timeout_seconds),
@@ -84,7 +84,7 @@ def main() -> None:
     settings = Settings.from_env()
     threading.Thread(
         target=_sweep_forever,
-        args=(sessionmaker(create_engine(settings.database_url)), RqQueue(settings.redis_url)),
+        args=(sessionmaker(database_engine(settings.database_url)), RqQueue(settings.redis_url)),
         name="stuck-document-sweep",
         daemon=True,
     ).start()

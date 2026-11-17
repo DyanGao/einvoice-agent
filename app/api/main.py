@@ -300,13 +300,12 @@ def create_app(
 
 def create_app_from_env() -> FastAPI:
     """For `uvicorn --factory app.api.main:create_app_from_env`."""
-    from sqlalchemy import create_engine
-
+    from app.db.engine import database_engine
     from app.queue import RqQueue
 
     settings = Settings.from_env()
     return create_app(
-        sessionmaker(create_engine(settings.database_url)),
+        sessionmaker(database_engine(settings.database_url)),
         RqQueue(settings.redis_url),
         settings,
         build_checker(settings.erp_url, settings.erp_timeout_seconds),

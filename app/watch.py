@@ -11,10 +11,10 @@ import logging
 import time
 
 import httpx
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.checks.service import Checker
+from app.db.engine import database_engine
 from app.db.instance_lock import AlreadyRunning, InstanceLock, LockLost
 from app.erp import ErpUnavailable, HttpErpClient
 from app.rematch import BankData, watch_bank
@@ -38,7 +38,7 @@ def main() -> None:
     erp = HttpErpClient(
         httpx.Client(base_url=settings.erp_url, timeout=settings.erp_timeout_seconds)
     )
-    engine = create_engine(settings.database_url)
+    engine = database_engine(settings.database_url)
     try:
         lock = InstanceLock(engine, "bank watch").acquire()
     except AlreadyRunning as exc:

@@ -16,7 +16,6 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.connectors import (
@@ -26,6 +25,7 @@ from app.connectors import (
     ErpFormConnector,
     WebhookConnector,
 )
+from app.db.engine import database_engine
 from app.db.instance_lock import AlreadyRunning, InstanceLock, LockLost
 from app.delivery import deliver_due
 from app.settings import Settings
@@ -82,7 +82,7 @@ def main() -> None:
     connectors = build_connectors(settings)
     if not connectors:
         raise SystemExit("nothing to deliver to: set ERP_URL, EXPORT_DIR or WEBHOOK_URL")
-    engine = create_engine(settings.database_url)
+    engine = database_engine(settings.database_url)
     try:
         # Two loops would race for the same due deliveries.
         lock = InstanceLock(engine, "delivery loop").acquire()
