@@ -431,3 +431,31 @@ def test_checking_again_leaves_a_rejected_document_rejected(session_factory, erp
     with session_factory.begin() as session:
         assert checker.check(session, session.get(db.DocumentRow, document_id)) == []
     assert read(session_factory, document_id, lambda d: d.review_state) == "rejected"
+
+
+# --- the queue's "reject all duplicates" -------------------------------------
+
+
+def test_queue_lists_copies_and_rejects_them_together(session_factory, erp, entry, tmp_path):
+    checker = Checker(erp)
+    queue = inline_queue(session_factory, checker=checker)
+    client = TestClient(create_app(session_factory, queue, settings_for(tmp_path), checker))
+    original = client.post(
+        "/documents", files={"file": ("a.xml", render_ubl(entry.invoice, XRECHNUNG))}
+    ).json()["id"]
+    copy = client.post(
+        "/documents", files={"file": ("b.xml", render_cii(entry.invoice, XRECHNUNG))}
+    ).json()["id"]
+
+    (listed,) = client.get("/review/duplicates").json()["copies"]
+    assert (listed["id"], listed["original"]["id"]) == (copy, original)
+
+    refused = client.post("/review/duplicates/reject", json={"ids": [copy]})
+    assert refused.status_code == 400  # no reviewer name
+    done = client.post(
+        "/review/duplicates/reject",
+        headers={"X-Reviewer": "anna"},
+        json={"ids": [copy, original]},
+    ).json()
+    assert (done["rejected"], done["skipped"]) == ([copy], [original])
+    assert client.get("/review/duplicates").json()["copies"] == []
