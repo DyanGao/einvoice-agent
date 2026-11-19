@@ -49,6 +49,7 @@ playwright-report/
 
 # Review UI
 ui/e2e/.tmp/
+ui/e2e/.tmp-signin/
 ui/next-env.d.ts
 ui/tsconfig.tsbuildinfo
 

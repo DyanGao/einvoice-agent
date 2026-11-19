@@ -137,9 +137,16 @@ Built and tested:
   `--password`): the first sign-in matches the provider-verified email and links the provider account,
   later ones find the user by that account. The built-in password account stays for first setup.
 
+- **Sign-in in the review UI.** With `AUTH=on` the UI shows nothing but a sign-in page until someone is
+  signed in: the provider's button (`GET /auth/options` says whether there is one) and the password form
+  for the built-in admin. A refusal comes back as `?signin=<reason>` and is explained there. Signed in,
+  the masthead shows the user, their role and Sign out; the "Reviewing as" field is gone, and a viewer is
+  told why nothing can be changed. Any 401 later (expired session) brings the sign-in page back. The UI
+  and the API must be on the same site, as the session cookie is SameSite=Strict.
+
 Not built:
-- **No sign-in in the review UI yet**: local setups run `AUTH=off`, where the reviewer's name in the
-  audit trail is typed into the UI and recorded as unverified.
+- **Local setups run `AUTH=off`**, where the reviewer's name in the audit trail is typed into the UI and
+  recorded as unverified.
 - **No encryption at rest and no retention settings.** Planned here originally; deferred because it
   needs a key-management decision first.
 - **PDFs and scans leave the machine** for the Anthropic API unless `EXTRACTOR=baseline` or `none`.

@@ -1,4 +1,12 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+// "localhost", like the UI: with sign-in on, the session cookie (SameSite=Strict)
+// only travels between the UI and an API on the same site.
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+/** Sent with every request; the API refuses changes made with the session cookie without it. */
+const UI_HEADER = { "X-Requested-By": "einvoice-ui" };
+
+/** Fired when the API says the session is gone, so the page can ask to sign in again. */
+export const SIGNED_OUT_EVENT = "einvoice:signed-out";
 
 export type ReviewState = "pending" | "approved" | "not_required" | "rejected";
 export type RejectReason = "duplicate" | "not_addressed_to_us" | "replaced_or_cancelled" | "other";
@@ -108,17 +116,37 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function send(path: string, init?: RequestInit): Promise<Response> {
   let response: Response;
   try {
-    response = await fetch(API_URL + path, init);
+    response = await fetch(API_URL + path, {
+      ...init,
+      credentials: "include",
+      headers: { ...UI_HEADER, ...init?.headers },
+    });
   } catch {
     throw new ApiError(0, `The API at ${API_URL} is not reachable. Start it with "make api".`);
   }
   if (!response.ok) {
     throw new ApiError(response.status, await errorText(response));
   }
-  return (await response.json()) as T;
+  return response;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  try {
+    return (await (await send(path, init)).json()) as T;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
+    }
+    throw error;
+  }
+}
+
+/** The name for the history, sent only with sign-in off; signed in, the API knows who it is. */
+function reviewerHeader(reviewer: string): Record<string, string> {
+  return reviewer ? { "X-Reviewer": reviewer } : {};
 }
 
 async function errorText(response: Response): Promise<string> {
@@ -160,7 +188,7 @@ export function correctFields(
 ): Promise<Detail & { changed: string[] }> {
   return request(`/documents/${encodeURIComponent(id)}/fields`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", "X-Reviewer": reviewer },
+    headers: { "Content-Type": "application/json", ...reviewerHeader(reviewer) },
     body: JSON.stringify({ changes }),
   });
 }
@@ -172,7 +200,7 @@ export function recheckDocument(id: string): Promise<Detail> {
 export function approveDocument(id: string, reviewer: string): Promise<Detail> {
   return request(`/documents/${encodeURIComponent(id)}/approve`, {
     method: "POST",
-    headers: { "X-Reviewer": reviewer },
+    headers: reviewerHeader(reviewer),
   });
 }
 
@@ -184,7 +212,7 @@ export function rejectDocument(
 ): Promise<Detail> {
   return request(`/documents/${encodeURIComponent(id)}/reject`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Reviewer": reviewer },
+    headers: { "Content-Type": "application/json", ...reviewerHeader(reviewer) },
     body: JSON.stringify({ reason, note: note.trim() || null }),
   });
 }
@@ -202,7 +230,7 @@ export function rejectDuplicateCopies(
 ): Promise<{ rejected: string[]; skipped: string[] }> {
   return request("/review/duplicates/reject", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Reviewer": reviewer },
+    headers: { "Content-Type": "application/json", ...reviewerHeader(reviewer) },
     body: JSON.stringify({ ids }),
   });
 }
@@ -210,7 +238,46 @@ export function rejectDuplicateCopies(
 export function reopenDocument(id: string, reviewer: string, note: string): Promise<Detail> {
   return request(`/documents/${encodeURIComponent(id)}/reopen`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Reviewer": reviewer },
+    headers: { "Content-Type": "application/json", ...reviewerHeader(reviewer) },
     body: JSON.stringify({ note }),
   });
 }
+
+export type Role = "viewer" | "reviewer" | "admin";
+
+/** What the sign-in page offers. */
+export type SignInOptions =
+  | { auth: "off" }
+  | { auth: "on"; provider: boolean; provider_name: string | null };
+
+export type Me = { auth: "on"; name: string; email: string | null; role: Role };
+
+export function getSignInOptions(): Promise<SignInOptions> {
+  return send("/auth/options").then((response) => response.json());
+}
+
+/** Who is signed in; null when nobody is. Not `request`: a 401 here is an answer. */
+export async function getMe(): Promise<Me | { auth: "off" } | null> {
+  try {
+    return await (await send("/auth/me")).json();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  }
+}
+
+export async function signIn(email: string, password: string): Promise<Me> {
+  const response = await send("/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return response.json();
+}
+
+export async function signOut(): Promise<void> {
+  await send("/auth/logout", { method: "POST" });
+}
+
+/** A browser navigation, not a fetch: the identity provider's page takes over. */
+export const PROVIDER_SIGN_IN_URL = `${API_URL}/auth/oidc/start`;

@@ -138,3 +138,34 @@ def test_with_sign_in_off_there_is_nothing_to_start(session_factory, tmp_path):
         session_factory, inline_queue(session_factory), replace(settings_for(tmp_path), oidc=CONFIG)
     )
     assert TestClient(app).get("/auth/oidc/start").status_code == 409
+
+
+def test_the_sign_in_page_is_told_to_offer_the_provider(session_factory, tmp_path, provider):
+    config = replace(CONFIG, name="Contoso")
+    settings = replace(settings_for(tmp_path), auth="on", oidc=config)
+    app = create_app(
+        session_factory,
+        inline_queue(session_factory),
+        settings,
+        oidc=OidcClient(config, provider.http()),
+    )
+    assert TestClient(app).get("/auth/options").json() == {
+        "auth": "on",
+        "provider": True,
+        "provider_name": "Contoso",
+    }
+
+
+def test_without_a_provider_the_sign_in_page_offers_only_the_password(session_factory, tmp_path):
+    settings = replace(settings_for(tmp_path), auth="on")
+    app = create_app(session_factory, inline_queue(session_factory), settings)
+    assert TestClient(app).get("/auth/options").json() == {
+        "auth": "on",
+        "provider": False,
+        "provider_name": None,
+    }
+
+
+def test_with_sign_in_off_the_ui_is_told_so(session_factory, tmp_path):
+    app = create_app(session_factory, inline_queue(session_factory), settings_for(tmp_path))
+    assert TestClient(app).get("/auth/options").json() == {"auth": "off"}

@@ -7,6 +7,8 @@ const UI_PORT = 3010;
 
 export default defineConfig({
   testDir: "e2e",
+  // Sign-in off; the sign-in tests have their own servers (playwright.signin.config.ts).
+  testMatch: "review.spec.ts",
   // One shared in-memory API: the tests build on each other's uploads.
   workers: 1,
   fullyParallel: false,
