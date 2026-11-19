@@ -1,12 +1,15 @@
 """HTTP API for upload and review.
 
-There is no authentication yet. The server is meant to listen on localhost
-only, and the X-Reviewer header is a name for the audit trail, not a proof of
-identity.
+With AUTH=on (the default) every route but /health and the sign-in routes
+needs a signed-in user (a session cookie, from the identity provider or the
+built-in password account) or an API token. With AUTH=off the API answers only
+requests addressed to localhost, and the X-Reviewer header is a name for the
+audit trail, not a proof of identity.
 """
 
 import json
 import logging
+import secrets
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Annotated, Any
@@ -19,7 +22,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import auth, db
-from app.auth import Actor, Role
+from app.auth import Actor, Role, SignInRefused
+from app.auth.oidc import LoginAttempt, OidcClient, OidcError
 from app.checks import Severity
 from app.checks.service import Checker, build_checker
 from app.db.duplicates import redundant_copies, reject_copies
@@ -48,6 +52,12 @@ class Credentials(BaseModel):
 
 
 SESSION_COOKIE = "eia_session"
+# State, nonce and PKCE verifier between the start of a provider sign-in and
+# its callback. SameSite=Lax: the callback is a navigation from the provider's
+# site, on which a Strict cookie would not be sent.
+LOGIN_COOKIE = "eia_oidc"
+LOGIN_COOKIE_PATH = "/auth/oidc"
+LOGIN_SECONDS = 600
 # Sent by the review UI with every change. Another site can make a browser send
 # the session cookie, but not a custom header (CORS allows it only to the UI).
 UI_HEADER = "X-Requested-By"
@@ -214,10 +224,14 @@ def create_app(
     queue: JobQueue,
     settings: Settings,
     checker: Checker | None = None,
+    oidc: OidcClient | None = None,
 ) -> FastAPI:
     """`checker` re-runs the business-rule checks after a correction, so the
-    findings always describe the draft as it stands. None: no checks."""
+    findings always describe the draft as it stands. None: no checks.
+    `oidc` talks to the identity provider; None: the one in `settings`, if any."""
     app = FastAPI(title="einvoice-agent")
+    if oidc is None and settings.oidc is not None:
+        oidc = OidcClient(settings.oidc)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.ui_origin],
@@ -304,14 +318,7 @@ def create_app(
     def health() -> dict:
         return {"status": "ok"}
 
-    @app.post("/auth/login")
-    def login(body: Credentials, response: Response, request: Request, active: Db) -> dict:
-        """Password sign-in, for the built-in account(s) set up with the CLI."""
-        if settings.auth == "off":
-            raise HTTPException(409, "sign-in is off (AUTH=off)")
-        actor = auth.sign_in(active, body.email, body.password)
-        if actor is None:
-            raise HTTPException(401, "wrong email or password")
+    def start_session(active: Session, actor: Actor, request: Request, response: Response):
         session_id = auth.start_session(active, actor.user_id, datetime.now(UTC))
         response.set_cookie(
             SESSION_COOKIE,
@@ -321,7 +328,92 @@ def create_app(
             samesite="strict",
             secure=request.url.scheme == "https",
         )
+
+    def back_to_ui(outcome: str | None = None) -> RedirectResponse:
+        target = settings.ui_origin.rstrip("/") + "/"
+        if outcome is not None:
+            target += f"?signin={outcome}"
+        response = RedirectResponse(target, status_code=303)
+        response.delete_cookie(LOGIN_COOKIE, path=LOGIN_COOKIE_PATH)
+        return response
+
+    def provider() -> OidcClient:
+        if settings.auth == "off":
+            raise HTTPException(409, "sign-in is off (AUTH=off)")
+        if oidc is None:
+            raise HTTPException(404, "no identity provider is configured (OIDC_ISSUER)")
+        return oidc
+
+    @app.post("/auth/login")
+    def login(body: Credentials, response: Response, request: Request, active: Db) -> dict:
+        """Password sign-in, for the built-in account(s) set up with the CLI."""
+        if settings.auth == "off":
+            raise HTTPException(409, "sign-in is off (AUTH=off)")
+        actor = auth.sign_in(active, body.email, body.password)
+        if actor is None:
+            raise HTTPException(401, "wrong email or password")
+        start_session(active, actor, request, response)
         return _me(actor)
+
+    @app.get("/auth/oidc/start")
+    def oidc_start(request: Request) -> RedirectResponse:
+        """Send the browser to the identity provider."""
+        client = provider()
+        attempt = LoginAttempt.new()
+        try:
+            target = client.authorization_url(attempt)
+        except OidcError as exc:
+            logger.warning("identity provider unavailable: %s", exc)
+            raise HTTPException(502, "the identity provider cannot be reached") from exc
+        response = RedirectResponse(target, status_code=303)
+        response.set_cookie(
+            LOGIN_COOKIE,
+            attempt.cookie(),
+            max_age=LOGIN_SECONDS,
+            path=LOGIN_COOKIE_PATH,
+            httponly=True,
+            samesite="lax",
+            secure=request.url.scheme == "https",
+        )
+        return response
+
+    @app.get("/auth/oidc/callback")
+    def oidc_callback(
+        request: Request,
+        active: Db,
+        code: str | None = None,
+        state: str | None = None,
+        error: str | None = None,
+    ) -> RedirectResponse:
+        """The provider sends the browser back here; on to the UI, signed in
+        or with `?signin=` saying why not."""
+        client = provider()
+        if error is not None:
+            return back_to_ui("cancelled")
+        attempt = LoginAttempt.from_cookie(request.cookies.get(LOGIN_COOKIE))
+        if attempt is None or not secrets.compare_digest(state or "", attempt.state) or not code:
+            # Expired, opened in another browser, or not started here at all.
+            return back_to_ui("failed")
+        try:
+            identity = client.identify(code, attempt, datetime.now(UTC))
+        except OidcError as exc:
+            logger.warning("sign-in through the identity provider failed: %s", exc)
+            return back_to_ui("failed")
+        try:
+            actor = auth.sign_in_with_provider(
+                active,
+                identity.issuer,
+                identity.subject,
+                identity.email,
+                identity.email_verified,
+                client.config.require_verified_email,
+            )
+        except SignInRefused as refused:
+            logger.info("sign-in refused: %s", refused)
+            return back_to_ui(refused.reason)
+        response = back_to_ui()
+        start_session(active, actor, request, response)
+        return response
 
     @app.post("/auth/logout", status_code=204)
     def logout(request: Request, active: Db) -> Response:

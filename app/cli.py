@@ -4,7 +4,8 @@ einvoice process FILE...     detect, validate, parse and store structured invoic
 einvoice watch DIR           queue every new file that appears in a folder
 einvoice requeue             queue documents that were stored but never processed
 einvoice user-add EMAIL --name NAME --role ROLE [--password]
-                             add a user; --password asks for one (the built-in admin)
+                             add a user; --password asks for one (the built-in admin),
+                             without it they sign in through the identity provider
 einvoice token-create EMAIL --name NAME
                              make an API token for scripts; printed once
 einvoice token-revoke TOKEN  stop a token from working

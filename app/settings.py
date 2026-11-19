@@ -21,6 +21,46 @@ def _auth_mode(value: str) -> str:
 
 
 @dataclass(frozen=True)
+class OidcConfig:
+    """The identity provider people sign in with (app/auth/oidc.py)."""
+
+    issuer: str
+    client_id: str
+    client_secret: str
+    # Where the provider sends the browser back; registered with the provider.
+    redirect_uri: str
+    # Providers that do not send `email_verified` (Entra ID) are refused unless
+    # this is off — only for a directory whose emails its admin controls.
+    require_verified_email: bool = True
+
+
+def _flag(value: str, name: str) -> bool:
+    if value.lower() not in ("true", "false"):
+        raise ValueError(f"{name} must be true or false, not {value!r}")
+    return value.lower() == "true"
+
+
+def _oidc(env: dict[str, str]) -> OidcConfig | None:
+    """None without OIDC_ISSUER; with it, the rest must be there too."""
+    issuer = env.get("OIDC_ISSUER") or None
+    if issuer is None:
+        return None
+    needed = ("OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "OIDC_REDIRECT_URI")
+    missing = [name for name in needed if not env.get(name)]
+    if missing:
+        raise ValueError(f"OIDC_ISSUER is set, so {', '.join(missing)} must be too")
+    return OidcConfig(
+        issuer=issuer,
+        client_id=env["OIDC_CLIENT_ID"],
+        client_secret=env["OIDC_CLIENT_SECRET"],
+        redirect_uri=env["OIDC_REDIRECT_URI"],
+        require_verified_email=_flag(
+            env.get("OIDC_REQUIRE_VERIFIED_EMAIL", "true"), "OIDC_REQUIRE_VERIFIED_EMAIL"
+        ),
+    )
+
+
+@dataclass(frozen=True)
 class Settings:
     validator_url: str
     database_url: str
@@ -61,6 +101,9 @@ class Settings:
     # these hosts are answered, so it cannot be used from another machine.
     auth: str = "on"
     open_hosts: tuple[str, ...] = ("localhost", "127.0.0.1", "::1")
+    # The identity provider people sign in with; None = only the built-in
+    # password account(s) and API tokens.
+    oidc: OidcConfig | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -96,4 +139,5 @@ class Settings:
             webhook_url=os.environ.get("WEBHOOK_URL") or None,
             webhook_secret=os.environ.get("WEBHOOK_SECRET") or None,
             auth=_auth_mode(os.environ.get("AUTH", "on")),
+            oidc=_oidc(dict(os.environ)),
         )

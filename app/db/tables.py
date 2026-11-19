@@ -236,6 +236,12 @@ class UserRow(Base):
     password_hash: Mapped[str | None] = mapped_column(String(200))
     disabled: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    # The identity provider's account, linked at the first sign-in through it;
+    # from then on the user is found by it, not by the email.
+    oidc_issuer: Mapped[str | None] = mapped_column(String(255))
+    oidc_subject: Mapped[str | None] = mapped_column(String(255))
+
+    __table_args__ = (UniqueConstraint("oidc_issuer", "oidc_subject"),)
 
 
 class ApiTokenRow(Base):
