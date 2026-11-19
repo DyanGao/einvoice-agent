@@ -18,6 +18,7 @@ from app.db.store import (
     store_outcome,
 )
 from app.db.tables import (
+    ApiTokenRow,
     AuditEventRow,
     Base,
     DecisionRow,
@@ -28,10 +29,13 @@ from app.db.tables import (
     InvoiceRow,
     MatchRow,
     SeenBankTransactionRow,
+    SessionRow,
+    UserRow,
     ValidationRow,
 )
 
 __all__ = [
+    "ApiTokenRow",
     "AuditEventRow",
     "Base",
     "DecisionRow",
@@ -46,6 +50,8 @@ __all__ = [
     "ReviewError",
     "ReviewState",
     "SeenBankTransactionRow",
+    "SessionRow",
+    "UserRow",
     "ValidationRow",
     "apply_outcome",
     "approve",

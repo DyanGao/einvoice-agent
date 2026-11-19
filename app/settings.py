@@ -14,6 +14,12 @@ DEFAULT_REDIS_URL = "redis://127.0.0.1:6380/0"
 DEFAULT_DATABASE_URL = "postgresql+psycopg://einvoice:einvoice@127.0.0.1:5433/einvoice"
 
 
+def _auth_mode(value: str) -> str:
+    if value not in ("on", "off"):
+        raise ValueError(f"AUTH must be on or off, not {value!r}")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     validator_url: str
@@ -50,6 +56,11 @@ class Settings:
     # Receiver of signed bookings, and the shared secret; None = no webhook.
     webhook_url: str | None = None
     webhook_secret: str | None = None
+    # "on": every request needs a signed-in user or an API token (v1.0).
+    # "off": no sign-in, as before v1.0 — then only requests addressed to
+    # these hosts are answered, so it cannot be used from another machine.
+    auth: str = "on"
+    open_hosts: tuple[str, ...] = ("localhost", "127.0.0.1", "::1")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -84,4 +95,5 @@ class Settings:
             browser_log_dir=os.environ.get("BROWSER_LOG_DIR") or "data/browser",
             webhook_url=os.environ.get("WEBHOOK_URL") or None,
             webhook_secret=os.environ.get("WEBHOOK_SECRET") or None,
+            auth=_auth_mode(os.environ.get("AUTH", "on")),
         )

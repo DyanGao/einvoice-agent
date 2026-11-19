@@ -44,7 +44,7 @@ On a third-party synthetic set, 40 photographed and scanned invoices from [Beleg
 - [x] Human-in-the-loop review UI for low-confidence fields and exceptions _(upload, queue, "why a person needs to look", unsure fields marked, correct, approve or reject with a reason (and reopen a mistaken rejection), reject plain duplicates together, history, where each document was booked)_
 - [x] Decision engine: books an invoice without a person only when it was read with confidence, nothing was assumed and no check raised a finding _(75 % of held-out documents on synthetic data; ≤ 1 % error not yet shown, see Results)_
 - [x] Output connectors: CSV/DATEV-style export, REST webhook, mock ERP via API, Playwright fallback for UI-only systems _(each invoice delivered once per connector, retried with backoff; the browser connector reads every booking back)_
-- [x] Audit trail per document (source, extracted values, who approved or rejected and why) _(the reviewer's name comes from the UI and is not authenticated: the API has no login and is meant for localhost)_
+- [x] Audit trail per document (source, extracted values, who approved or rejected and why) _(with `AUTH=on` every API request is a signed-in user or an API token and the trail records the verified user; the review UI has no sign-in page yet, so local setups run `AUTH=off`, which answers only requests to localhost and records the typed name as unverified)_
 - [x] Eval harness: labeled synthetic sets, rule-based baseline, held-out split, 3 recorded model runs, CI gates — `make eval-full` _(no real invoices yet; a third-party synthetic set, [Belege](docs/eval-report.md#third-party-set-belege-sample-immineal-2026), is measured locally)_
 - [x] Running it: one bank watch and one delivery loop per database, stuck documents re-queued, a page limit before any model call, configurable database password with a warning on the development default
 
@@ -89,7 +89,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 - [x] v0.3 matching + checks + decision engine _(rule-based matching instead of a model agent)_
 - [x] v0.4 connectors (export, webhook, mock ERP, Playwright fallback) and the whole stack in Docker
 - [x] v0.5 eval report published _([docs/eval-report.md](docs/eval-report.md): 3-run variance, OCR-text and hosted vs. local ablations, third-party set, hardening; synthetic data only, and it says so)_
-- [ ] v1.0 multi-tenant, IMAP ingest, German/English UI
+- [ ] v1.0 sign-in, multi-tenant, IMAP ingest, German/English UI _(in progress: API sign-in, roles and tokens built)_
 
 ## Tech stack
 Python 3.12 (FastAPI, Pydantic, SQLAlchemy + Alembic, lxml) · KoSIT validator (Java, in a container) · factur-x / pypdf · Tesseract OCR + Claude (vision, structured output), or a local vision model through Ollama (`qwen2.5vl:7b`, measured, every reading reviewed) · PostgreSQL · Redis + RQ · Playwright (browser connector and UI tests) · Next.js / React / TypeScript review UI · Docker Compose · pytest, ruff, uv

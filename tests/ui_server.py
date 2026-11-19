@@ -123,6 +123,8 @@ def main() -> None:
         Settings.from_env(),
         feedback_dir=Path(tempfile.mkdtemp(prefix="einvoice-ui-test-")),
         ui_origin=args.ui_origin,
+        # The review UI has no sign-in page yet (v1.0 Stage 1, increment 3).
+        auth="off",
     )
     queue = HoldingQueue(
         inline_queue(session_factory, extractor=UncertainExtractor(), checker=checker),

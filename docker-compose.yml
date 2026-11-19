@@ -18,6 +18,9 @@ x-app: &app
     VALIDATOR_URL: http://validator:8080
     ERP_URL: http://mock-erp:8100
     UI_ORIGIN: http://localhost:3000
+    # Sign-in (v1.0): "off" until the review UI has its sign-in page; then only
+    # requests to localhost are answered. Set AUTH=on in .env to require it.
+    AUTH: ${AUTH:-off}
   restart: unless-stopped
 
 x-after-migrate: &after-migrate

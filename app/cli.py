@@ -3,19 +3,25 @@
 einvoice process FILE...     detect, validate, parse and store structured invoices now
 einvoice watch DIR           queue every new file that appears in a folder
 einvoice requeue             queue documents that were stored but never processed
+einvoice user-add EMAIL --name NAME --role ROLE [--password]
+                             add a user; --password asks for one (the built-in admin)
+einvoice token-create EMAIL --name NAME
+                             make an API token for scripts; printed once
+einvoice token-revoke TOKEN  stop a token from working
 """
 
 import argparse
+import getpass
 import json
 import sys
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import db
+from app import auth, db
 from app.db.engine import database_engine
 from app.ingest import requeue_received, scan_folder
 from app.pipeline import DocumentStatus, Outcome, Validator, process_structured
@@ -30,6 +36,7 @@ def main(
     validator: Validator | None = None,
     session_factory: sessionmaker[Session] | None = None,
     queue: JobQueue | None = None,
+    password_prompt: Callable[[], str] | None = None,
 ) -> int:
     parser = argparse.ArgumentParser(prog="einvoice")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -41,9 +48,25 @@ def main(
     watch.add_argument("--interval", type=float, default=5.0, help="seconds between scans")
     watch.add_argument("--once", action="store_true", help="scan once and exit")
     commands.add_parser("requeue", help="queue stored documents that were never processed")
+    user_add = commands.add_parser("user-add", help="add a user")
+    user_add.add_argument("email")
+    user_add.add_argument("--name", required=True)
+    user_add.add_argument("--role", required=True, choices=[role.value for role in auth.Role])
+    user_add.add_argument(
+        "--password", action="store_true", help="ask for a password (the built-in admin account)"
+    )
+    token_create = commands.add_parser("token-create", help="make an API token for a user")
+    token_create.add_argument("email")
+    token_create.add_argument("--name", required=True, help="what the token is for")
+    token_revoke = commands.add_parser("token-revoke", help="stop a token from working")
+    token_revoke.add_argument("token")
     args = parser.parse_args(argv)
 
     settings = Settings.from_env()
+    if args.command in ("user-add", "token-create", "token-revoke"):
+        session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
+        prompt = password_prompt or (lambda: getpass.getpass("Password (12+ characters): "))
+        return _accounts(args, session_factory, prompt)
     if args.command in ("watch", "requeue"):
         session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
         queue = queue or RqQueue(settings.redis_url)
@@ -67,6 +90,32 @@ def main(
         all_valid = all_valid and report["status"] == DocumentStatus.VALID.value
         print(json.dumps(report, ensure_ascii=False))
     return 0 if all_valid else 1
+
+
+def _accounts(args, session_factory: sessionmaker[Session], prompt: Callable[[], str]) -> int:
+    try:
+        with session_factory.begin() as session:
+            if args.command == "user-add":
+                password = prompt() if args.password else None
+                user = auth.create_user(
+                    session, args.email, args.name, auth.Role(args.role), password
+                )
+                print(f"added {user.email} as {user.role}")
+            elif args.command == "token-create":
+                user = auth.find_user(session, args.email)
+                if user is None:
+                    raise ValueError(f"no user with the email {args.email}")
+                token = auth.create_token(session, user.id, args.name)
+                print(f"API token for {user.email} ({args.name}), shown only now:")
+                print(token)
+            elif not auth.revoke_token(session, args.token):
+                raise ValueError("no such token")
+            else:
+                print("token revoked")
+    except ValueError as exc:
+        print(f"einvoice: {exc}", file=sys.stderr)
+        return 1
+    return 0
 
 
 def _watch(

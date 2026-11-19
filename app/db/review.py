@@ -85,7 +85,11 @@ def _require_pending(document: DocumentRow) -> None:
 
 
 def correct_fields(
-    session: Session, document: DocumentRow, changes: dict[str, Any], actor: str
+    session: Session,
+    document: DocumentRow,
+    changes: dict[str, Any],
+    actor: str,
+    actor_user_id: str | None = None,
 ) -> list[str]:
     """Apply field corrections given as {"dotted.path": value}. Returns the
     paths whose value actually changed. All or nothing: an invalid value or
@@ -120,6 +124,7 @@ def correct_fields(
                 AuditEventRow(
                     event="field_corrected",
                     actor=actor,
+                    actor_user_id=actor_user_id,
                     detail={"field": path, "old": before[path], "new": container[key]},
                 )
             )
@@ -137,7 +142,9 @@ def missing_for_approval(draft: InvoiceDraft) -> list[str]:
     return []
 
 
-def approve(session: Session, document: DocumentRow, actor: str) -> Invoice:
+def approve(
+    session: Session, document: DocumentRow, actor: str, actor_user_id: str | None = None
+) -> Invoice:
     """Turn the reviewed draft into the document's invoice of record."""
     _require_pending(document)
     if document.draft is None:
@@ -156,14 +163,24 @@ def approve(session: Session, document: DocumentRow, actor: str) -> Invoice:
             setattr(document.invoice, name, value)
     document.review_state = ReviewState.APPROVED.value
     document.audit_events.append(
-        AuditEventRow(event="approved", actor=actor, detail={"number": invoice.number})
+        AuditEventRow(
+            event="approved",
+            actor=actor,
+            actor_user_id=actor_user_id,
+            detail={"number": invoice.number},
+        )
     )
     session.flush()
     return invoice
 
 
 def reject(
-    session: Session, document: DocumentRow, actor: str, reason: str, note: str | None = None
+    session: Session,
+    document: DocumentRow,
+    actor: str,
+    reason: str,
+    note: str | None = None,
+    actor_user_id: str | None = None,
 ) -> None:
     """A person decides the document is not to be booked, and says why."""
     _require_pending(document)
@@ -177,12 +194,23 @@ def reject(
         raise ReviewError("a rejection for another reason needs a note saying which")
     document.review_state = ReviewState.REJECTED.value
     document.audit_events.append(
-        AuditEventRow(event="rejected", actor=actor, detail={"reason": why.value, "note": note})
+        AuditEventRow(
+            event="rejected",
+            actor=actor,
+            actor_user_id=actor_user_id,
+            detail={"reason": why.value, "note": note},
+        )
     )
     session.flush()
 
 
-def reopen(session: Session, document: DocumentRow, actor: str, note: str) -> None:
+def reopen(
+    session: Session,
+    document: DocumentRow,
+    actor: str,
+    note: str,
+    actor_user_id: str | None = None,
+) -> None:
     """A rejection was a mistake: the document waits for review again. It is
     not checked again here; that, and approving it, are a person's next steps."""
     if document.review_state != ReviewState.REJECTED.value:
@@ -192,6 +220,8 @@ def reopen(session: Session, document: DocumentRow, actor: str, note: str) -> No
         raise ReviewError("reopening needs a note saying why")
     document.review_state = ReviewState.PENDING.value
     document.audit_events.append(
-        AuditEventRow(event="reopened", actor=actor, detail={"note": note})
+        AuditEventRow(
+            event="reopened", actor=actor, actor_user_id=actor_user_id, detail={"note": note}
+        )
     )
     session.flush()
