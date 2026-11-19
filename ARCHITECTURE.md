@@ -123,15 +123,23 @@ Built and tested:
   is ignored.
 
 - **Sign-in and roles (API, v1.0 Stage 1).** With `AUTH=on` (the default) every route except `/health`
-  needs a session (password sign-in of the built-in admin; OIDC follows) or an API token, and a role:
+  needs a session or an API token, and a role:
   viewer reads, reviewer uploads, corrects, approves, rejects and reopens, admin does everything. Passwords
   are salted scrypt hashes; tokens and session ids are kept only as SHA-256. Changes made with the session
   cookie need the UI's `X-Requested-By` header (CSRF). Audit events record the verified user id.
   `AUTH=off` keeps the open mode for local use and answers only requests addressed to localhost.
+- **Sign-in through an identity provider (OIDC).** Authorization code flow with PKCE against Entra ID,
+  Google, Keycloak or any provider with discovery (`OIDC_ISSUER`, client id and secret, redirect URI).
+  State, nonce and verifier travel in a 10-minute HttpOnly cookie; the ID token's issuer, audience,
+  expiry and nonce are checked. Its signature is not: the token comes straight from the provider's token
+  endpoint over HTTPS, which OpenID Connect Core (3.1.3.7) accepts for this flow, so plain HTTP is refused
+  except on loopback. Nobody gets in whom an admin has not added (`einvoice user-add` without
+  `--password`): the first sign-in matches the provider-verified email and links the provider account,
+  later ones find the user by that account. The built-in password account stays for first setup.
 
 Not built:
-- **No sign-in in the review UI yet**, and no OIDC: local setups run `AUTH=off`, where the reviewer's
-  name in the audit trail is typed into the UI and recorded as unverified.
+- **No sign-in in the review UI yet**: local setups run `AUTH=off`, where the reviewer's name in the
+  audit trail is typed into the UI and recorded as unverified.
 - **No encryption at rest and no retention settings.** Planned here originally; deferred because it
   needs a key-management decision first.
 - **PDFs and scans leave the machine** for the Anthropic API unless `EXTRACTOR=baseline` or `none`.

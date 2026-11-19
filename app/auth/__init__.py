@@ -1,6 +1,6 @@
 """Who a request comes from (v1.0 Stage 1).
 
-People sign in through the identity provider (increment 2) or, for the
+People sign in through the identity provider (`app/auth/oidc.py`) or, for the
 built-in admin account used for first setup, with a password. Scripts and
 integrations use API tokens. Either way the request acts as a user with one
 role: viewer (reads), reviewer (corrects, approves, rejects, reopens, uploads)
@@ -109,6 +109,47 @@ def sign_in(session: Session, email: str, password: str) -> Actor | None:
         return None
     if not verify_password(password, user.password_hash) or user.disabled:
         return None
+    return _actor(user)
+
+
+class SignInRefused(Exception):
+    """The provider knows the person, but this installation does not let them
+    in. `reason` is a code for the UI: unverified_email, unknown_user,
+    disabled or other_account."""
+
+    def __init__(self, reason: str, detail: str) -> None:
+        super().__init__(detail)
+        self.reason = reason
+
+
+def sign_in_with_provider(
+    session: Session,
+    issuer: str,
+    subject: str,
+    email: str | None,
+    email_verified: bool,
+    require_verified_email: bool = True,
+) -> Actor:
+    """The user behind an identity provider's account. Nobody gets in who an
+    admin has not added: the first sign-in finds the user by email (verified by
+    the provider) and links the account; later ones find it by the account."""
+    user = session.scalar(
+        select(UserRow).where(UserRow.oidc_issuer == issuer, UserRow.oidc_subject == subject)
+    )
+    if user is None:
+        if email is None or (require_verified_email and not email_verified):
+            raise SignInRefused("unverified_email", f"no verified email for {subject} at {issuer}")
+        user = find_user(session, email)
+        if user is None:
+            raise SignInRefused("unknown_user", f"{email} is not a user here")
+        if user.oidc_subject is not None:
+            raise SignInRefused(
+                "other_account", f"{email} is linked to another account at the provider"
+            )
+        user.oidc_issuer, user.oidc_subject = issuer, subject
+        session.flush()
+    if user.disabled:
+        raise SignInRefused("disabled", f"{user.email} is disabled")
     return _actor(user)
 
 
