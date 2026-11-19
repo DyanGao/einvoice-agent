@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app import auth, db
 from app.auth import Actor, Role, SignInRefused
+from app.auth.limits import SignInLimiter
 from app.auth.oidc import LoginAttempt, OidcClient, OidcError
 from app.checks import Severity
 from app.checks.service import Checker, build_checker
@@ -63,6 +64,8 @@ LOGIN_SECONDS = 600
 UI_HEADER = "X-Requested-By"
 UI_HEADER_VALUE = "einvoice-ui"
 _READS = frozenset({"GET", "HEAD", "OPTIONS"})
+# Swagger UI and ReDoc, which a strict Content-Security-Policy would break.
+_PAGES_WITH_SCRIPTS = ("/docs", "/redoc")
 
 
 class Reopening(BaseModel):
@@ -225,13 +228,43 @@ def create_app(
     settings: Settings,
     checker: Checker | None = None,
     oidc: OidcClient | None = None,
+    limiter: SignInLimiter | None = None,
 ) -> FastAPI:
     """`checker` re-runs the business-rule checks after a correction, so the
     findings always describe the draft as it stands. None: no checks.
-    `oidc` talks to the identity provider; None: the one in `settings`, if any."""
+    `oidc` talks to the identity provider; None: the one in `settings`, if any.
+    `limiter` counts failed password sign-ins; None: a new one."""
     app = FastAPI(title="einvoice-agent")
     if oidc is None and settings.oidc is not None:
         oidc = OidcClient(settings.oidc)
+    limiter = limiter or SignInLimiter()
+
+    def secure(request: Request) -> bool:
+        return settings.cookie_secure == "true" or request.url.scheme == "https"
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        headers = response.headers
+        headers.setdefault("X-Content-Type-Options", "nosniff")
+        # Sign-in addresses carry codes; nothing here should travel on as a referrer.
+        headers.setdefault("Referrer-Policy", "no-referrer")
+        # Invoices and sessions: nothing for a shared cache or the back button.
+        headers.setdefault("Cache-Control", "no-store")
+        if request.url.path.startswith(_PAGES_WITH_SCRIPTS):
+            pass  # the interactive API docs load their own scripts and styles
+        elif request.url.path.endswith("/content") and request.url.path.startswith("/documents/"):
+            # The original document is shown inside the review UI, and only there.
+            headers.setdefault("Content-Security-Policy", f"frame-ancestors {settings.ui_origin}")
+        else:
+            headers.setdefault(
+                "Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"
+            )
+            headers.setdefault("X-Frame-Options", "DENY")
+        if secure(request):
+            headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+        return response
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.ui_origin],
@@ -326,7 +359,7 @@ def create_app(
             max_age=int(auth.SESSION_LIFETIME.total_seconds()),
             httponly=True,
             samesite="strict",
-            secure=request.url.scheme == "https",
+            secure=secure(request),
         )
 
     def back_to_ui(outcome: str | None = None) -> RedirectResponse:
@@ -362,9 +395,19 @@ def create_app(
         """Password sign-in, for the built-in account(s) set up with the CLI."""
         if settings.auth == "off":
             raise HTTPException(409, "sign-in is off (AUTH=off)")
+        address = request.client.host if request.client else "unknown"
+        wait = limiter.retry_after(body.email, address)
+        if wait is not None:
+            raise HTTPException(
+                429,
+                f"too many failed sign-ins; try again in {(wait + 59) // 60} minute(s)",
+                headers={"Retry-After": str(wait)},
+            )
         actor = auth.sign_in(active, body.email, body.password)
         if actor is None:
+            limiter.failed(body.email, address)
             raise HTTPException(401, "wrong email or password")
+        limiter.succeeded(body.email)
         start_session(active, actor, request, response)
         return _me(actor)
 
@@ -386,7 +429,7 @@ def create_app(
             path=LOGIN_COOKIE_PATH,
             httponly=True,
             samesite="lax",
-            secure=request.url.scheme == "https",
+            secure=secure(request),
         )
         return response
 

@@ -144,6 +144,15 @@ Built and tested:
   told why nothing can be changed. Any 401 later (expired session) brings the sign-in page back. The UI
   and the API must be on the same site, as the session cookie is SameSite=Strict.
 
+- **Sign-in hardening.** Failed password sign-ins are limited: 5 per email and 20 per client address in
+  15 minutes, then 429 with Retry-After; the password is not even checked until the oldest failure leaves
+  the window. The count is kept in memory per API process (Compose runs one; several processes need a
+  limit at the proxy too). Cookies are Secure over HTTPS, and always with `COOKIE_SECURE=true` (HTTPS
+  ended at a proxy). Every answer carries `nosniff`, `Referrer-Policy: no-referrer` (sign-in addresses
+  carry codes) and `Cache-Control: no-store`; JSON answers `default-src 'none'` and no framing; the
+  original document may be framed by `UI_ORIGIN` only; HSTS over HTTPS. The API docs pages keep their
+  scripts. The UI sends its own (no framing, `nosniff`, no referrer).
+
 Not built:
 - **Local setups run `AUTH=off`**, where the reviewer's name in the audit trail is typed into the UI and
   recorded as unverified.

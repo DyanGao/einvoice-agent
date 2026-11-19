@@ -36,6 +36,12 @@ class OidcConfig:
     name: str | None = None
 
 
+def _cookie_secure(value: str) -> str:
+    if value not in ("auto", "true"):
+        raise ValueError(f"COOKIE_SECURE must be auto or true, not {value!r}")
+    return value
+
+
 def _flag(value: str, name: str) -> bool:
     if value.lower() not in ("true", "false"):
         raise ValueError(f"{name} must be true or false, not {value!r}")
@@ -107,6 +113,11 @@ class Settings:
     # The identity provider people sign in with; None = only the built-in
     # password account(s) and API tokens.
     oidc: OidcConfig | None = None
+    # "auto": cookies are Secure, and HSTS is sent, when the request came over
+    # HTTPS. "true": always — for HTTPS ended at a proxy that talks plain HTTP
+    # to the API and does not pass X-Forwarded-Proto (uvicorn trusts that
+    # header only from FORWARDED_ALLOW_IPS, by default 127.0.0.1).
+    cookie_secure: str = "auto"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -143,4 +154,5 @@ class Settings:
             webhook_secret=os.environ.get("WEBHOOK_SECRET") or None,
             auth=_auth_mode(os.environ.get("AUTH", "on")),
             oidc=_oidc(dict(os.environ)),
+            cookie_secure=_cookie_secure(os.environ.get("COOKIE_SECURE", "auto")),
         )
