@@ -118,6 +118,9 @@ class AuditEventRow(Base):
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), index=True)
     event: Mapped[str] = mapped_column(String(40))
     actor: Mapped[str] = mapped_column(String(100))
+    # The signed-in user behind `actor`; None for the system, and for events from
+    # before sign-in existed, whose actor is a name typed into the UI (unverified).
+    actor_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
     detail: Mapped[dict[str, Any]] = mapped_column(Json)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
@@ -217,6 +220,49 @@ class SeenBankTransactionRow(Base):
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
     booking_date: Mapped[date] = mapped_column(index=True)
     seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class UserRow(Base):
+    """A person who signs in, or the owner of an API token. `email` is stored
+    lower-case. `password_hash` only for the built-in admin account(s); everyone
+    else signs in through the identity provider."""
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    email: Mapped[str] = mapped_column(String(254), unique=True)
+    display_name: Mapped[str] = mapped_column(String(100))
+    role: Mapped[str] = mapped_column(String(20))  # viewer | reviewer | admin
+    password_hash: Mapped[str | None] = mapped_column(String(200))
+    disabled: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class ApiTokenRow(Base):
+    """A token for scripts and integrations, acting as its user. Only a SHA-256
+    of the token is kept; the token itself is shown once, when created."""
+
+    __tablename__ = "api_tokens"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SessionRow(Base):
+    """A signed-in browser. The cookie holds a random id; only its SHA-256 is
+    kept, so a database copy cannot be used to take over a session."""
+
+    __tablename__ = "sessions"
+
+    id_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
 
 
 def invoice_columns(invoice: Invoice) -> dict:

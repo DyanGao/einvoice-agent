@@ -19,7 +19,12 @@ PDF = PDF_DOCUMENT.content
 
 
 def settings_for(tmp_path: Path, **overrides) -> Settings:
-    return replace(Settings.from_env(), feedback_dir=tmp_path / "feedback", **overrides)
+    """Open mode by default, as the tests before sign-in were written; TestClient
+    addresses its requests to "testserver"."""
+    defaults = {"auth": "off", "open_hosts": ("localhost", "127.0.0.1", "::1", "testserver")}
+    return replace(
+        Settings.from_env(), feedback_dir=tmp_path / "feedback", **(defaults | overrides)
+    )
 
 
 def inline_queue(session_factory, validator=None, extractor=None, checker=None) -> InlineQueue:

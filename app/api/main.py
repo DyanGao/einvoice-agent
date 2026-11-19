@@ -8,16 +8,18 @@ identity.
 import json
 import logging
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response, UploadFile
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import db
+from app import auth, db
+from app.auth import Actor, Role
 from app.checks import Severity
 from app.checks.service import Checker, build_checker
 from app.db.duplicates import redundant_copies, reject_copies
@@ -38,6 +40,19 @@ _IMAGE_SIGNATURES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "ima
 
 class CopiesToReject(BaseModel):
     ids: list[str]
+
+
+class Credentials(BaseModel):
+    email: str
+    password: str
+
+
+SESSION_COOKIE = "eia_session"
+# Sent by the review UI with every change. Another site can make a browser send
+# the session cookie, but not a custom header (CORS allows it only to the UI).
+UI_HEADER = "X-Requested-By"
+UI_HEADER_VALUE = "einvoice-ui"
+_READS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 class Reopening(BaseModel):
@@ -90,6 +105,10 @@ def _summary(document: db.DocumentRow) -> dict:
             for delivery in sorted(document.deliveries, key=lambda d: d.connector)
         ],
     }
+
+
+def _me(actor: Actor) -> dict:
+    return {"auth": "on", "name": actor.name, "email": actor.email, "role": actor.role.value}
 
 
 def _detail(document: db.DocumentRow) -> dict:
@@ -203,20 +222,68 @@ def create_app(
         CORSMiddleware,
         allow_origins=[settings.ui_origin],
         allow_methods=["GET", "POST", "PATCH"],
-        allow_headers=["Content-Type", "X-Reviewer"],
+        allow_headers=["Content-Type", "X-Reviewer", "Authorization", UI_HEADER],
+        allow_credentials=True,
     )
 
     def session() -> Iterator[Session]:
         with session_factory.begin() as active:
             yield active
 
-    def reviewer(x_reviewer: Annotated[str | None, Header()] = None) -> str:
+    def typed_name(x_reviewer: str | None) -> str:
         name = (x_reviewer or "").strip()
         if not name or len(name) > 100:
             raise HTTPException(400, "X-Reviewer header with the reviewer's name is required")
         return name
 
-    def document(document_id: str, active: Annotated[Session, Depends(session)]) -> db.DocumentRow:
+    def identify(request: Request, active: Session) -> Actor | None:
+        """The signed-in user or token owner; None when neither is there."""
+        now = datetime.now(UTC)
+        header = request.headers.get("Authorization", "")
+        if header.startswith("Bearer "):
+            return auth.authenticate_token(active, header.removeprefix("Bearer ").strip(), now)
+        cookie = request.cookies.get(SESSION_COOKIE)
+        if cookie is None:
+            return None
+        if request.method not in _READS and request.headers.get(UI_HEADER) != UI_HEADER_VALUE:
+            raise HTTPException(403, f"a change made with the session cookie needs {UI_HEADER}")
+        return auth.authenticate_session(active, cookie, now)
+
+    def require(role: Role, *, named: bool = False):
+        """A dependency: the request's actor, who must have at least `role`.
+        With sign-in off, anyone on this machine acts; `named` actions record the
+        name typed into the UI, unverified, as before sign-in existed."""
+
+        def dependency(
+            request: Request,
+            active: Annotated[Session, Depends(session)],
+            x_reviewer: Annotated[str | None, Header()] = None,
+        ) -> Actor:
+            if settings.auth == "off":
+                if (request.url.hostname or "") not in settings.open_hosts:
+                    raise HTTPException(
+                        403,
+                        "sign-in is off (AUTH=off): only requests to localhost are answered",
+                    )
+                name = typed_name(x_reviewer) if named else "anonymous"
+                return Actor(name=name, role=Role.ADMIN, verified=False)
+            actor = identify(request, active)
+            if actor is None:
+                raise HTTPException(
+                    401, "sign in, or send an API token", headers={"WWW-Authenticate": "Bearer"}
+                )
+            if not actor.role.allows(role):
+                raise HTTPException(403, f"needs the {role} role")
+            return actor
+
+        return dependency
+
+    def document(
+        document_id: str,
+        active: Annotated[Session, Depends(session)],
+        _: Annotated[Actor, Depends(require(Role.VIEWER))],
+    ) -> db.DocumentRow:
+        """Signed in first: a stranger must not learn which documents exist."""
         row = active.get(db.DocumentRow, document_id)
         if row is None:
             raise HTTPException(404, "document not found")
@@ -224,7 +291,9 @@ def create_app(
 
     Db = Annotated[Session, Depends(session)]
     Doc = Annotated[db.DocumentRow, Depends(document)]
-    Reviewer = Annotated[str, Depends(reviewer)]
+    Viewer = Annotated[Actor, Depends(require(Role.VIEWER))]
+    Uploader = Annotated[Actor, Depends(require(Role.REVIEWER))]
+    Reviewer = Annotated[Actor, Depends(require(Role.REVIEWER, named=True))]
 
     @app.get("/", include_in_schema=False)
     def root() -> RedirectResponse:
@@ -235,8 +304,45 @@ def create_app(
     def health() -> dict:
         return {"status": "ok"}
 
+    @app.post("/auth/login")
+    def login(body: Credentials, response: Response, request: Request, active: Db) -> dict:
+        """Password sign-in, for the built-in account(s) set up with the CLI."""
+        if settings.auth == "off":
+            raise HTTPException(409, "sign-in is off (AUTH=off)")
+        actor = auth.sign_in(active, body.email, body.password)
+        if actor is None:
+            raise HTTPException(401, "wrong email or password")
+        session_id = auth.start_session(active, actor.user_id, datetime.now(UTC))
+        response.set_cookie(
+            SESSION_COOKIE,
+            session_id,
+            max_age=int(auth.SESSION_LIFETIME.total_seconds()),
+            httponly=True,
+            samesite="strict",
+            secure=request.url.scheme == "https",
+        )
+        return _me(actor)
+
+    @app.post("/auth/logout", status_code=204)
+    def logout(request: Request, active: Db) -> Response:
+        cookie = request.cookies.get(SESSION_COOKIE)
+        if cookie is not None:
+            auth.end_session(active, cookie)
+        response = Response(status_code=204)
+        response.delete_cookie(SESSION_COOKIE)
+        return response
+
+    @app.get("/auth/me")
+    def me(request: Request, active: Db) -> dict:
+        if settings.auth == "off":
+            return {"auth": "off"}
+        actor = identify(request, active)
+        if actor is None:
+            raise HTTPException(401, "not signed in")
+        return _me(actor)
+
     @app.post("/documents", status_code=202)
-    async def upload(file: UploadFile, response: Response) -> dict:
+    async def upload(file: UploadFile, response: Response, _: Uploader) -> dict:
         data = await file.read(settings.max_upload_bytes + 1)
         if not data:
             raise HTTPException(400, "empty file")
@@ -255,6 +361,7 @@ def create_app(
     @app.get("/documents")
     def list_documents(
         active: Db,
+        _: Viewer,
         review_state: db.ReviewState | None = None,
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
         offset: Annotated[int, Query(ge=0)] = 0,
@@ -266,11 +373,11 @@ def create_app(
         return {"documents": [_summary(row) for row in rows]}
 
     @app.get("/documents/{document_id}")
-    def get_document(row: Doc) -> dict:
+    def get_document(row: Doc, _: Viewer) -> dict:
         return _detail(row)
 
     @app.get("/documents/{document_id}/content")
-    def get_content(row: Doc) -> Response:
+    def get_content(row: Doc, _: Viewer) -> Response:
         media_type = _media_type(row)
         headers = {"X-Content-Type-Options": "nosniff"}
         if media_type is None:
@@ -284,7 +391,7 @@ def create_app(
     @app.patch("/documents/{document_id}/fields")
     def patch_fields(row: Doc, body: FieldChanges, active: Db, who: Reviewer) -> dict:
         try:
-            changed = db.correct_fields(active, row, body.changes, who)
+            changed = db.correct_fields(active, row, body.changes, who.name, who.user_id)
         except db.NotReviewable as exc:
             raise HTTPException(409, str(exc)) from exc
         except db.ReviewError as exc:
@@ -294,7 +401,7 @@ def create_app(
         return {"changed": changed, **_detail(row)}
 
     @app.post("/documents/{document_id}/recheck")
-    def recheck(row: Doc, active: Db) -> dict:
+    def recheck(row: Doc, active: Db, _: Uploader) -> dict:
         """Match and check again. What is in the ERP and on file changes after
         an invoice was processed: its payment arrives, the other invoices of a
         combined transfer come in, a supplier's master data is corrected."""
@@ -312,7 +419,7 @@ def create_app(
     @app.post("/documents/{document_id}/approve")
     def approve(row: Doc, active: Db, who: Reviewer) -> dict:
         try:
-            db.approve(active, row, who)
+            db.approve(active, row, who.name, who.user_id)
         except db.NotReviewable as exc:
             raise HTTPException(409, str(exc)) from exc
         except db.ReviewError as exc:
@@ -321,7 +428,7 @@ def create_app(
         return _detail(row)
 
     @app.get("/review/duplicates")
-    def duplicate_copies(active: Db) -> dict:
+    def duplicate_copies(active: Db, _: Viewer) -> dict:
         """Plain copies of an earlier invoice, waiting for review only for being
         copies (app/db/duplicates.py): what "reject all duplicates" would reject."""
 
@@ -336,7 +443,7 @@ def create_app(
     def reject_duplicate_copies(body: CopiesToReject, active: Db, who: Reviewer) -> dict:
         """Reject the listed documents that are still plain copies; the rest are
         skipped, so a list shown earlier cannot reject what has changed since."""
-        result = reject_copies(active, body.ids, who)
+        result = reject_copies(active, body.ids, who.name, who.user_id)
         return {"rejected": result.rejected, "skipped": result.skipped}
 
     @app.post("/documents/{document_id}/reject")
@@ -344,7 +451,7 @@ def create_app(
         """Not to be booked, with the reason: a duplicate, an invoice meant for
         someone else, one replaced by a correction. Final, and never delivered."""
         try:
-            db.reject(active, row, who, body.reason, body.note)
+            db.reject(active, row, who.name, body.reason, body.note, who.user_id)
         except db.NotReviewable as exc:
             raise HTTPException(409, str(exc)) from exc
         except db.ReviewError as exc:
@@ -355,7 +462,7 @@ def create_app(
     def reopen(row: Doc, body: Reopening, active: Db, who: Reviewer) -> dict:
         """A rejection was a mistake: back to review, with a note saying why."""
         try:
-            db.reopen(active, row, who, body.note)
+            db.reopen(active, row, who.name, body.note, who.user_id)
         except db.NotReviewable as exc:
             raise HTTPException(409, str(exc)) from exc
         except db.ReviewError as exc:

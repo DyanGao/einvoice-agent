@@ -122,9 +122,16 @@ Built and tested:
 - **Data in git**: synthetic only; real invoice data (`data/private/`, browser logs in `data/browser/`)
   is ignored.
 
+- **Sign-in and roles (API, v1.0 Stage 1).** With `AUTH=on` (the default) every route except `/health`
+  needs a session (password sign-in of the built-in admin; OIDC follows) or an API token, and a role:
+  viewer reads, reviewer uploads, corrects, approves, rejects and reopens, admin does everything. Passwords
+  are salted scrypt hashes; tokens and session ids are kept only as SHA-256. Changes made with the session
+  cookie need the UI's `X-Requested-By` header (CSRF). Audit events record the verified user id.
+  `AUTH=off` keeps the open mode for local use and answers only requests addressed to localhost.
+
 Not built:
-- **No authentication.** The API and UI are meant for localhost; the reviewer's name in the audit trail
-  comes from the UI and is not verified.
+- **No sign-in in the review UI yet**, and no OIDC: local setups run `AUTH=off`, where the reviewer's
+  name in the audit trail is typed into the UI and recorded as unverified.
 - **No encryption at rest and no retention settings.** Planned here originally; deferred because it
   needs a key-management decision first.
 - **PDFs and scans leave the machine** for the Anthropic API unless `EXTRACTOR=baseline` or `none`.

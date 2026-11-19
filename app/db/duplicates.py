@@ -98,7 +98,9 @@ def redundant_copies(session: Session) -> list[RedundantCopy]:
     return copies
 
 
-def reject_copies(session: Session, document_ids: list[str], actor: str) -> BulkRejection:
+def reject_copies(
+    session: Session, document_ids: list[str], actor: str, actor_user_id: str | None = None
+) -> BulkRejection:
     """Reject the given documents that are still redundant copies; the rest
     are skipped. Each is checked again here, so a list shown earlier cannot
     reject a document that has changed since."""
@@ -116,6 +118,7 @@ def reject_copies(session: Session, document_ids: list[str], actor: str) -> Bulk
             actor,
             RejectReason.DUPLICATE.value,
             f"copy of invoice {number or '(no number)'}, document {original.id}",
+            actor_user_id=actor_user_id,
         )
         result.rejected.append(document_id)
     return result
