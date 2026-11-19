@@ -30,3 +30,11 @@ def test_the_email_switch_takes_only_true_or_false():
     assert _oidc(FULL | {"OIDC_REQUIRE_VERIFIED_EMAIL": "false"}).require_verified_email is False
     with pytest.raises(ValueError, match="true or false"):
         _oidc(FULL | {"OIDC_REQUIRE_VERIFIED_EMAIL": "no"})
+
+
+def test_cookie_secure_takes_only_auto_or_true():
+    from app.settings import _cookie_secure
+
+    assert _cookie_secure("true") == "true"
+    with pytest.raises(ValueError, match="auto or true"):
+        _cookie_secure("yes")
