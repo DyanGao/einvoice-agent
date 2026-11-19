@@ -32,6 +32,8 @@ class OidcConfig:
     # Providers that do not send `email_verified` (Entra ID) are refused unless
     # this is off — only for a directory whose emails its admin controls.
     require_verified_email: bool = True
+    # What the sign-in button says, e.g. "Microsoft" or "Contoso"; None = a generic label.
+    name: str | None = None
 
 
 def _flag(value: str, name: str) -> bool:
@@ -57,6 +59,7 @@ def _oidc(env: dict[str, str]) -> OidcConfig | None:
         require_verified_email=_flag(
             env.get("OIDC_REQUIRE_VERIFIED_EMAIL", "true"), "OIDC_REQUIRE_VERIFIED_EMAIL"
         ),
+        name=env.get("OIDC_NAME") or None,
     )
 
 

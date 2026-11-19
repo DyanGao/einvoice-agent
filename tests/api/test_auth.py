@@ -37,6 +37,7 @@ OPEN = {
     "/",
     "/auth/login",
     "/auth/logout",
+    "/auth/options",
     "/auth/oidc/start",
     "/auth/oidc/callback",
     "/openapi.json",

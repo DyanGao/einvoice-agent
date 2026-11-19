@@ -72,10 +72,12 @@ class FakeProvider:
         return code
 
     def _handle(self, request: httpx.Request) -> httpx.Response:
-        if request.url.path == "/.well-known/openid-configuration":
+        # Relative to the issuer, which may have a path (Entra ID's ends in /v2.0).
+        path = request.url.path.removeprefix(urlsplit(self.config.issuer).path.rstrip("/"))
+        if path == "/.well-known/openid-configuration":
             self.discovery_requests += 1
             return httpx.Response(200, json=self.metadata)
-        if request.url.path == "/token" and request.method == "POST":
+        if path == "/token" and request.method == "POST":
             form = {key: values[0] for key, values in parse_qs(request.content.decode()).items()}
             grant = self._codes.pop(form.get("code", ""), None)
             if grant is None or form.get("client_secret") != self.config.client_secret:

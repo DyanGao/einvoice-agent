@@ -172,3 +172,13 @@ def test_a_disabled_user_is_refused(session):
     with pytest.raises(SignInRefused) as refused:
         provider_sign_in(session)
     assert refused.value.reason == "disabled"
+
+
+def test_an_issuer_with_a_path_is_discovered_under_it():
+    """Entra ID's issuer ends in /v2.0; discovery lives below it."""
+    config = replace(CONFIG, issuer="https://login.example.test/tenant-1/v2.0")
+    provider = FakeProvider(config)
+    client = OidcClient(config, provider.http())
+    attempt = LoginAttempt.new()
+    code = provider.authorize(client.authorization_url(attempt))
+    assert client.identify(code, attempt, datetime.now(UTC)).subject == "subject-1"

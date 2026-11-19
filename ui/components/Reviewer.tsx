@@ -1,12 +1,43 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+
+import { getMe, SIGNED_OUT_EVENT, signOut, type Me } from "@/lib/api";
+
+import { SignIn } from "./SignIn";
 
 const STORAGE_KEY = "einvoice.reviewer";
 
-type Reviewer = { name: string; setName: (name: string) => void; problem: string | null };
+/**
+ * Who is reviewing. With sign-in on (AUTH=on) that is the signed-in user, and
+ * the API records them itself. With sign-in off it is a name typed into the
+ * masthead, sent along for the history and marked there as unverified.
+ */
+type Session =
+  | { kind: "checking" }
+  | { kind: "open" } // sign-in off, or the API cannot be reached: the pages say so
+  | { kind: "signed-out" }
+  | { kind: "signed-in"; me: Me };
 
-const ReviewerContext = createContext<Reviewer>({ name: "", setName: () => {}, problem: null });
+type Reviewer = {
+  session: Session;
+  /** The name to send with a change: empty when signed in. */
+  name: string;
+  setName: (name: string) => void;
+  /** Why this person cannot change anything now, or null if they can. */
+  problem: string | null;
+  signedIn: (me: Me) => void;
+  signOut: () => void;
+};
+
+const ReviewerContext = createContext<Reviewer>({
+  session: { kind: "checking" },
+  name: "",
+  setName: () => {},
+  problem: null,
+  signedIn: () => {},
+  signOut: () => {},
+});
 
 /** Why this name cannot be recorded, or null if it can. */
 function problemWith(name: string): string | null {
@@ -19,8 +50,18 @@ function problemWith(name: string): string | null {
   return null;
 }
 
+function problemFor(session: Session, name: string): string | null {
+  if (session.kind === "signed-in") {
+    return session.me.role === "viewer"
+      ? "You can read here, but your role (viewer) cannot change anything."
+      : null;
+  }
+  return problemWith(name);
+}
+
 export function ReviewerProvider({ children }: { children: ReactNode }) {
   const [name, setNameState] = useState("");
+  const [session, setSession] = useState<Session>({ kind: "checking" });
 
   useEffect(() => {
     try {
@@ -28,6 +69,25 @@ export function ReviewerProvider({ children }: { children: ReactNode }) {
     } catch {
       // Storage blocked: the name simply is not remembered between visits.
     }
+  }, []);
+
+  useEffect(() => {
+    getMe()
+      .then((me) => {
+        if (me === null) setSession({ kind: "signed-out" });
+        else if (me.auth === "off") setSession({ kind: "open" });
+        else setSession({ kind: "signed-in", me });
+      })
+      // Not reachable: show the pages, which explain how to start the API.
+      .catch(() => setSession({ kind: "open" }));
+  }, []);
+
+  // The session expired or was ended elsewhere: ask to sign in again.
+  useEffect(() => {
+    const expired = () =>
+      setSession((current) => (current.kind === "signed-in" ? { kind: "signed-out" } : current));
+    window.addEventListener(SIGNED_OUT_EVENT, expired);
+    return () => window.removeEventListener(SIGNED_OUT_EVENT, expired);
   }, []);
 
   const setName = (next: string) => {
@@ -39,8 +99,26 @@ export function ReviewerProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signedIn = useCallback((me: Me) => setSession({ kind: "signed-in", me }), []);
+  const leave = useCallback(() => {
+    signOut()
+      .catch(() => {
+        // Already gone on the server; signed out here either way.
+      })
+      .finally(() => setSession({ kind: "signed-out" }));
+  }, []);
+
   return (
-    <ReviewerContext.Provider value={{ name, setName, problem: problemWith(name) }}>
+    <ReviewerContext.Provider
+      value={{
+        session,
+        name: session.kind === "signed-in" ? "" : name,
+        setName,
+        problem: problemFor(session, name),
+        signedIn,
+        signOut: leave,
+      }}
+    >
       {children}
     </ReviewerContext.Provider>
   );
@@ -48,8 +126,25 @@ export function ReviewerProvider({ children }: { children: ReactNode }) {
 
 export const useReviewer = () => useContext(ReviewerContext);
 
+const ROLE_LABELS = { viewer: "Viewer", reviewer: "Reviewer", admin: "Admin" } as const;
+
+/** The masthead's right side: the name field, or who is signed in. */
 export function ReviewerField() {
-  const { name, setName } = useReviewer();
+  const { session, name, setName, signOut } = useReviewer();
+  if (session.kind === "signed-in") {
+    return (
+      <div className="account">
+        <span>
+          Signed in as <strong>{session.me.name}</strong>
+          <span className="account-role">{ROLE_LABELS[session.me.role]}</span>
+        </span>
+        <button type="button" className="button-quiet" onClick={signOut}>
+          Sign out
+        </button>
+      </div>
+    );
+  }
+  if (session.kind !== "open") return null;
   return (
     <label className="reviewer">
       <span>Reviewing as</span>
@@ -62,4 +157,12 @@ export function ReviewerField() {
       />
     </label>
   );
+}
+
+/** The pages, once it is known who may see them; the sign-in page otherwise. */
+export function SignedIn({ children }: { children: ReactNode }) {
+  const { session, signedIn } = useReviewer();
+  if (session.kind === "checking") return null;
+  if (session.kind === "signed-out") return <SignIn onSignedIn={signedIn} />;
+  return <>{children}</>;
 }

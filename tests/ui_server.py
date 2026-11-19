@@ -5,6 +5,10 @@ once, the rule-based extractor, a validator stub and the mock ERP. No Docker ser
 no model calls. It also writes the sample invoice the browser test uploads.
 
     uv run python -m tests.ui_server --port 8010 --sample ui/e2e/.tmp/rechnung.pdf
+
+With `--auth on` sign-in is required (ui/e2e/sign-in.spec.ts): test accounts
+with made-up passwords, and a stand-in identity provider under /fake-idp that
+signs the browser in as ANNA without asking.
 """
 
 import argparse
@@ -14,22 +18,28 @@ import threading
 import time
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import urlencode
 
 import uvicorn
+from fastapi import Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app import db
 from app.api.main import create_app
+from app.auth import Role, create_user
+from app.auth.oidc import OidcClient
 from app.checks.service import Checker
 from app.extract import BaselineExtractor
 from app.queue import JobQueue
-from app.settings import Settings
+from app.settings import OidcConfig, Settings
 from eval.generators.canonical import XRECHNUNG
 from eval.generators.world import PAID_ONCE, PO_EXACT, build_world
 from eval.generators.xrechnung import render_cii, render_ubl
 from eval.match import erp_for
+from tests.auth.oidc_provider import FakeProvider
 from tests.support import PDF, inline_queue
 
 # The rule-based extractor reports no confidence. The browser test needs one
@@ -44,6 +54,45 @@ DERIVED_FIELD = "currency"
 # UI update by itself. It is processed by the first request after the hold.
 HOLD_PREFIX = "waiting-"
 HOLD_SECONDS = 5.0
+
+
+# Test accounts for --auth on. Made up for the browser tests; ui/e2e/sign-in.spec.ts
+# uses the same values.
+ADMIN = ("admin@example.test", "Ada Admin", Role.ADMIN, "ui-test-admin-password")
+VIEWER = ("viewer@example.test", "Vera Viewer", Role.VIEWER, "ui-test-viewer-password")
+# Signs in through the stand-in identity provider only; FakeProvider's default email.
+ANNA = ("anna@example.com", "Anna Example", Role.REVIEWER, None)
+
+
+def add_test_accounts(session_factory: sessionmaker) -> None:
+    with session_factory.begin() as session:
+        for email, name, role, password in (ADMIN, VIEWER, ANNA):
+            create_user(session, email, name, role, password)
+
+
+def fake_identity_provider(port: int) -> FakeProvider:
+    """Discovery and the token endpoint answer in process (FakeProvider); the
+    authorization step is a real page the browser is sent to (`add_authorize`)."""
+    base = f"http://localhost:{port}"
+    config = OidcConfig(
+        issuer=f"{base}/fake-idp",
+        client_id="einvoice-ui-test",
+        client_secret="ui-test-client-secret",
+        redirect_uri=f"{base}/auth/oidc/callback",
+        name="Test Login",
+    )
+    return FakeProvider(config)
+
+
+def add_authorize(app, provider: FakeProvider) -> None:
+    """The provider's sign-in page: signs the browser in as ANNA at once and
+    sends it back with a code."""
+
+    @app.get("/fake-idp/authorize", include_in_schema=False)
+    def authorize(request: Request) -> RedirectResponse:
+        code = provider.authorize(str(request.url))
+        query = urlencode({"code": code, "state": request.query_params["state"]})
+        return RedirectResponse(f"{provider.config.redirect_uri}?{query}", 303)
 
 
 class HoldingQueue:
@@ -90,6 +139,7 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8010)
     parser.add_argument("--sample", type=Path, required=True)
     parser.add_argument("--ui-origin", default="http://localhost:3010")
+    parser.add_argument("--auth", choices=("on", "off"), default="off")
     args = parser.parse_args()
 
     # The e-invoice comes from the matching world and the ERP below holds that
@@ -123,14 +173,20 @@ def main() -> None:
         Settings.from_env(),
         feedback_dir=Path(tempfile.mkdtemp(prefix="einvoice-ui-test-")),
         ui_origin=args.ui_origin,
-        # The review UI has no sign-in page yet (v1.0 Stage 1, increment 3).
-        auth="off",
+        auth=args.auth,
     )
     queue = HoldingQueue(
         inline_queue(session_factory, extractor=UncertainExtractor(), checker=checker),
         session_factory,
     )
-    app = create_app(session_factory, queue, settings, checker)
+    if args.auth == "on":
+        add_test_accounts(session_factory)
+        provider = fake_identity_provider(args.port)
+        oidc = OidcClient(provider.config, provider.http())
+        app = create_app(session_factory, queue, settings, checker, oidc=oidc)
+        add_authorize(app, provider)
+    else:
+        app = create_app(session_factory, queue, settings, checker)
 
     # One SQLite connection (StaticPool) serves every request, and it cannot be
     # used from two threads at once: the UI loads two lists in parallel, so

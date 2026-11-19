@@ -3,7 +3,7 @@ import { IBM_Plex_Sans } from "next/font/google";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { ReviewerField, ReviewerProvider } from "@/components/Reviewer";
+import { ReviewerField, ReviewerProvider, SignedIn } from "@/components/Reviewer";
 
 import "./globals.css";
 
@@ -25,7 +25,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </Link>
             <ReviewerField />
           </header>
-          <main>{children}</main>
+          <main>
+            <SignedIn>{children}</SignedIn>
+          </main>
         </ReviewerProvider>
       </body>
     </html>

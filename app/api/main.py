@@ -344,6 +344,19 @@ def create_app(
             raise HTTPException(404, "no identity provider is configured (OIDC_ISSUER)")
         return oidc
 
+    @app.get("/auth/options")
+    def sign_in_options() -> dict:
+        """What the sign-in page offers. The password form is always there with
+        sign-in on: it is how the built-in admin gets in."""
+        if settings.auth == "off":
+            return {"auth": "off"}
+        provider_offered = oidc is not None
+        return {
+            "auth": "on",
+            "provider": provider_offered,
+            "provider_name": oidc.config.name if provider_offered else None,
+        }
+
     @app.post("/auth/login")
     def login(body: Credentials, response: Response, request: Request, active: Db) -> dict:
         """Password sign-in, for the built-in account(s) set up with the CLI."""
