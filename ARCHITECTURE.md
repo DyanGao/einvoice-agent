@@ -122,6 +122,14 @@ named `TENANT_…` variables like every secret, and appear in no log or error. W
 SASL-IR the token goes with the AUTHENTICATE command. The mailbox eval (`make eval-mailbox`, 200
 synthetic mails, with crashes; also through GreenMail) gates this in CI.
 
+**Languages** (v1.0 Stage 4). The review UI speaks German and English: every text it has of its
+own is in `ui/lib/messages.ts`, where the German catalogue is typed against the English keys, so a
+missing translation does not build. The language comes from the browser, can be switched in the
+masthead and is remembered in the browser. Amounts are formatted `de-DE` or `en-GB` from their decimal
+string, never through a float (`Intl.NumberFormat` takes the string exactly). Texts the server writes
+(finding messages, decision reasons, match explanations, error messages) are still English; they become
+codes with parameters in the next increment.
+
 **Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
 identity provider; someone from another tenant gets a role here too), change role, remove (their
 sessions and tokens here stop at once); nobody can demote or remove themselves, and a tenant is never

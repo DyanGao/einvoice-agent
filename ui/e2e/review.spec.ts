@@ -198,3 +198,32 @@ test("the mail page shows what arrived and why a file was refused", async ({ pag
     "gesperrt.pdf refused: PDF protected by a password",
   );
 });
+
+test.describe("in German", () => {
+  test.use({ locale: "de-DE" });
+
+  test("a German browser gets the German UI, with German amounts and dates", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Eingangsrechnungen" })).toBeVisible();
+    await expect(page.getByLabel("Sprache")).toHaveValue("de");
+    await page.getByRole("button", { name: /Alle Belege/ }).click();
+    // An amount the German way: thousands with a dot, decimals with a comma, then the euro sign.
+    await expect(page.locator("td.number").first()).toHaveText(/^\d{1,3}(\.\d{3})*,\d{2}\s€$/);
+    await page.getByRole("link", { name: NUMBER }).first().click();
+    await expect(page.getByLabel("Rechnungsnummer")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Verlauf" })).toBeVisible();
+    await expect(page.locator(".audit-what").first()).toHaveText("Eingegangen");
+  });
+});
+
+test("the language chosen in the masthead is kept after a reload", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Incoming invoices" })).toBeVisible();
+  await page.getByLabel("Language").selectOption("de");
+  await expect(page.getByRole("heading", { name: "Eingangsrechnungen" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Eingangsrechnungen" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Seiten" })).toContainText("Post");
+  await page.getByLabel("Sprache").selectOption("en");
+  await expect(page.getByRole("heading", { name: "Incoming invoices" })).toBeVisible();
+});

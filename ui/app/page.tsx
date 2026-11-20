@@ -12,10 +12,14 @@ import {
   type DuplicateCopy,
   type Summary,
 } from "@/lib/api";
-import { bookingLabel, formatLabel, money, reviewLabel, statusLabel, when } from "@/lib/labels";
+import { useI18n } from "@/lib/i18n";
+import { bookingLabel, formatLabel, reviewLabel, statusLabel } from "@/lib/labels";
 
 type View = "pending" | "all";
-type UploadNote = { file: string; text: string; id?: string; failed: boolean };
+type UploadNote = { file: string; id?: string } & (
+  | { failed: false; duplicate: boolean }
+  | { failed: true; reason: string }
+);
 
 const REFRESH_MS = 3000;
 
@@ -28,6 +32,8 @@ export default function QueuePage() {
   const [dragging, setDragging] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const reviewer = useReviewer();
+  const i18n = useI18n();
+  const { t, tn, money, when } = i18n;
   const [copies, setCopies] = useState<DuplicateCopy[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -68,15 +74,10 @@ export default function QueuePage() {
     for (const file of files) {
       try {
         const result = await uploadDocument(file);
-        results.push({
-          file: file.name,
-          id: result.id,
-          failed: false,
-          text: result.duplicate ? "was uploaded before" : "uploaded",
-        });
+        results.push({ file: file.name, id: result.id, failed: false, duplicate: result.duplicate });
       } catch (problem) {
-        const text = problem instanceof Error ? problem.message : String(problem);
-        results.push({ file: file.name, failed: true, text });
+        const reason = problem instanceof Error ? problem.message : String(problem);
+        results.push({ file: file.name, failed: true, reason });
       }
     }
     setNotes(results);
@@ -93,9 +94,9 @@ export default function QueuePage() {
       );
       const skipped = result.skipped.length;
       setRejectNote(
-        `${result.rejected.length} ${result.rejected.length === 1 ? "copy" : "copies"} rejected` +
-          (skipped ? `; ${skipped} changed in the meantime and stay for review` : "") +
-          ".",
+        skipped
+          ? tn("copies.doneSkipped", result.rejected.length, { skipped })
+          : tn("copies.done", result.rejected.length),
       );
       setConfirming(false);
     } catch (problem) {
@@ -125,15 +126,15 @@ export default function QueuePage() {
         }}
       >
         <div>
-          <h1>Incoming invoices</h1>
-          <p>Drop XRechnung, ZUGFeRD, PDF or scanned invoices here, or choose files.</p>
+          <h1>{t("queue.title")}</h1>
+          <p>{t("queue.dropHint")}</p>
         </div>
         <input
           ref={picker}
           type="file"
           multiple
           hidden
-          aria-label="Invoice files"
+          aria-label={t("queue.files")}
           onChange={(event) => {
             void upload([...(event.target.files ?? [])]);
             event.target.value = "";
@@ -145,7 +146,7 @@ export default function QueuePage() {
           disabled={uploading}
           onClick={() => picker.current?.click()}
         >
-          {uploading ? "Uploading…" : "Choose files"}
+          {uploading ? t("queue.uploading") : t("queue.choose")}
         </button>
       </section>
 
@@ -154,11 +155,15 @@ export default function QueuePage() {
           {notes.map((note, index) => (
             <li key={index} className={note.failed ? "note note-failed" : "note"}>
               <strong>{note.file}</strong>{" "}
-              {note.failed ? `was not uploaded: ${note.text}` : note.text}
+              {note.failed
+                ? t("queue.notUploaded", { reason: note.reason })
+                : note.duplicate
+                  ? t("queue.uploadedBefore")
+                  : t("queue.uploaded")}
               {note.id && (
                 <>
                   {" "}
-                  <Link href={`/documents/${note.id}`}>Open</Link>
+                  <Link href={`/documents/${note.id}`}>{t("queue.open")}</Link>
                 </>
               )}
             </li>
@@ -166,12 +171,12 @@ export default function QueuePage() {
         </ul>
       )}
 
-      <nav className="tabs" aria-label="Which documents to show">
+      <nav className="tabs" aria-label={t("queue.which")}>
         <button type="button" aria-pressed={view === "pending"} onClick={() => setView("pending")}>
-          To review <span className="count">{pending.length}</span>
+          {t("queue.toReview")} <span className="count">{pending.length}</span>
         </button>
         <button type="button" aria-pressed={view === "all"} onClick={() => setView("all")}>
-          All documents <span className="count">{documents?.length ?? 0}</span>
+          {t("queue.all")} <span className="count">{documents?.length ?? 0}</span>
         </button>
       </nav>
 
@@ -182,28 +187,24 @@ export default function QueuePage() {
       )}
 
       {view === "pending" && copies.length > 0 && (
-        <section className="copies" aria-label="Duplicates">
+        <section className="copies" aria-label={t("copies.region")}>
           {!confirming ? (
             <button type="button" className="button" onClick={() => setConfirming(true)}>
-              Reject {copies.length} plain {copies.length === 1 ? "duplicate" : "duplicates"}…
+              {tn("copies.offer", copies.length)}
             </button>
           ) : (
             <>
-              <p>
-                {copies.length === 1 ? "This document is" : "These documents are"} only waiting
-                because the same invoice from the same supplier, with the same total, came in
-                earlier. The earlier one stays. Rejected copies are never booked.
-              </p>
+              <p>{tn("copies.explain", copies.length)}</p>
               <table className="copies-table">
                 <thead>
                   <tr>
-                    <th scope="col">Copy</th>
-                    <th scope="col">Seller</th>
+                    <th scope="col">{t("copies.col.copy")}</th>
+                    <th scope="col">{t("queue.col.seller")}</th>
                     <th scope="col" className="num">
-                      Gross total
+                      {t("queue.col.gross")}
                     </th>
-                    <th scope="col">Received</th>
-                    <th scope="col">Copy of</th>
+                    <th scope="col">{t("queue.col.received")}</th>
+                    <th scope="col">{t("copies.col.copyOf")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -220,8 +221,11 @@ export default function QueuePage() {
                           {copy.original.number ?? copy.original.id}
                         </Link>
                         , {when(copy.original.created_at)}
-                        {bookingLabel(copy.original.bookings) && (
-                          <span className="booked"> · {bookingLabel(copy.original.bookings)}</span>
+                        {bookingLabel(i18n, copy.original.bookings) && (
+                          <span className="booked">
+                            {" "}
+                            · {bookingLabel(i18n, copy.original.bookings)}
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -235,14 +239,10 @@ export default function QueuePage() {
                   disabled={rejecting || reviewer.problem !== null}
                   onClick={() => void rejectCopies()}
                 >
-                  {rejecting
-                    ? "Rejecting…"
-                    : copies.length === 1
-                      ? "Reject this copy"
-                      : `Reject these ${copies.length}`}
+                  {rejecting ? t("copies.rejecting") : tn("copies.confirm", copies.length)}
                 </button>
                 <button type="button" className="button" onClick={() => setConfirming(false)}>
-                  Cancel
+                  {t("copies.cancel")}
                 </button>
               </div>
               {reviewer.problem && <p className="blocked">{reviewer.problem}</p>}
@@ -259,9 +259,7 @@ export default function QueuePage() {
 
       {documents !== null && shown.length === 0 && !error && (
         <p className="empty">
-          {view === "pending"
-            ? "Nothing is waiting for review. Upload an invoice to start."
-            : "No documents yet. Upload an invoice to start."}
+          {view === "pending" ? t("queue.emptyPending") : t("queue.emptyAll")}
         </p>
       )}
 
@@ -270,14 +268,14 @@ export default function QueuePage() {
           <table className="documents">
             <thead>
               <tr>
-                <th>Invoice</th>
-                <th>Seller</th>
-                <th className="number">Gross total</th>
-                <th>Kind</th>
-                <th>Result</th>
-                <th>Review</th>
-                <th>Booked</th>
-                <th>Received</th>
+                <th>{t("queue.col.invoice")}</th>
+                <th>{t("queue.col.seller")}</th>
+                <th className="number">{t("queue.col.gross")}</th>
+                <th>{t("queue.col.kind")}</th>
+                <th>{t("queue.col.result")}</th>
+                <th>{t("queue.col.review")}</th>
+                <th>{t("queue.col.booked")}</th>
+                <th>{t("queue.col.received")}</th>
               </tr>
             </thead>
             <tbody>
@@ -285,25 +283,24 @@ export default function QueuePage() {
                 <tr key={document.id}>
                   <td>
                     <Link href={`/documents/${document.id}`}>
-                      {document.number ?? document.filename ?? "Unnamed document"}
+                      {document.number ?? document.filename ?? t("queue.unnamed")}
                     </Link>
                   </td>
                   <td>{document.seller_name ?? ""}</td>
                   <td className="number">{money(document.gross_total, document.currency)}</td>
-                  <td>{formatLabel(document.format)}</td>
-                  <td>{statusLabel(document.status)}</td>
+                  <td>{formatLabel(i18n, document.format)}</td>
+                  <td>{statusLabel(i18n, document.status)}</td>
                   <td>
                     <span className={`state state-${document.review_state}`}>
-                      {reviewLabel(document.review_state)}
+                      {reviewLabel(i18n, document.review_state)}
                     </span>
                     {document.findings_to_review > 0 && (
                       <span className="finding-count">
-                        {document.findings_to_review}{" "}
-                        {document.findings_to_review === 1 ? "finding" : "findings"}
+                        {tn("queue.findings", document.findings_to_review)}
                       </span>
                     )}
                   </td>
-                  <td className="booked">{bookingLabel(document.bookings) || "–"}</td>
+                  <td className="booked">{bookingLabel(i18n, document.bookings) || "–"}</td>
                   <td>{when(document.created_at)}</td>
                 </tr>
               ))}

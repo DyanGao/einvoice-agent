@@ -956,3 +956,14 @@ th {
 .mail-refused .mail-reason {
   color: var(--red-pen);
 }
+
+/* Language switch in the masthead */
+.language select {
+  padding: 0.15rem 0.3rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--sheet);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--step--1);
+}
