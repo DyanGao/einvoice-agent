@@ -160,3 +160,29 @@ def test_a_zip_of_invoices_and_a_mail_with_nothing_are_both_recorded(session_fac
     with session_factory() as session:
         subjects = sorted(row.subject for row in session.query(db.MailRow).all())
     assert subjects == ["nur Text", "zip"]
+
+
+def test_signing_in_with_an_oauth_token(session_factory, user, monkeypatch):
+    """XOAUTH2 through the whole path: settings, a token from the (fake)
+    provider, AUTHENTICATE on a real IMAP server, a mail read."""
+    from app.mailbox import connect
+    from app.mailbox_oauth import TokenSource
+    from tests.test_mailbox_oauth import Provider
+
+    monkeypatch.setenv("TENANT_TEST_OAUTH_SECRET", "s")
+    monkeypatch.setenv("TENANT_TEST_OAUTH_REFRESH", "r")
+    deliver(user, mail("oauth", [pdf()]))
+    host, port = host_port()
+    cfg = TenantConfig(
+        imap_host=host,
+        imap_port=port,
+        imap_tls=False,
+        imap_user=user,
+        imap_auth="google",
+        imap_oauth_client_id="einvoice-app",
+        imap_oauth_secret_env="TENANT_TEST_OAUTH_SECRET",
+        imap_oauth_refresh_env="TENANT_TEST_OAUTH_REFRESH",
+    )
+    provider = Provider()
+    done = run(session_factory, cfg, connect(cfg, TokenSource(cfg, provider.http())))
+    assert (done.mails, len(provider.requests)) == (1, 1)

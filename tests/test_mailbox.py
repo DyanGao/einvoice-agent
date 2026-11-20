@@ -227,7 +227,7 @@ def test_the_password_comes_from_the_environment_only(monkeypatch):
 @pytest.mark.parametrize(
     ("settings", "message"),
     [
-        ({"imap_host": "imap.example.test"}, "imap_user and imap_password_env"),
+        ({"imap_host": "imap.example.test"}, "needs imap_user, imap_password_env"),
         (
             {
                 "imap_host": "imap.example.test",

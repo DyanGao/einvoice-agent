@@ -49,7 +49,12 @@ logger = logging.getLogger(__name__)
 _ENV_NAME = re.compile(r"[A-Z][A-Z0-9_]*")
 _LOOPBACK = {"localhost", "127.0.0.1", "::1"}
 # Settings that name the environment variable holding a secret.
-SECRET_NAMES = ("webhook_secret_env", "imap_password_env")
+SECRET_NAMES = (
+    "webhook_secret_env",
+    "imap_password_env",
+    "imap_oauth_secret_env",
+    "imap_oauth_refresh_env",
+)
 # What a tenant's own admin may change in the admin UI. Everything else
 # reaches the server's network or files (an ERP URL, a folder, a webhook) and
 # is the installation operator's, through `einvoice tenant-set` (owner's
@@ -90,15 +95,31 @@ class TenantConfig(BaseModel):
     imap_folder: str = "INBOX"
     # Where a handled mail goes; None: it stays and is flagged. Never deleted.
     imap_processed_folder: str | None = None
+    # How the poller signs in: a password, or OAuth2 (XOAUTH2) with a token
+    # from Microsoft (the app signs in as itself: client credentials) or
+    # Google (a refresh token from a one-time consent). Owner's decision,
+    # 2026-11-20 (app/mailbox_oauth.py).
+    imap_auth: Literal["password", "microsoft", "google"] = "password"
+    # Microsoft Entra tenant (directory id or domain) of the mailbox.
+    imap_oauth_tenant: str | None = None
+    imap_oauth_client_id: str | None = None
+    # The NAMES of the environment variables with the client secret and, for
+    # Google, the refresh token.
+    imap_oauth_secret_env: str | None = None
+    imap_oauth_refresh_env: str | None = None
+    # Where tokens come from, if not the provider's own endpoint (a test one).
+    imap_oauth_token_url: str | None = None
 
-    @field_validator("erp_url", "erp_ui_url", "webhook_url")
+    @field_validator("erp_url", "erp_ui_url", "webhook_url", "imap_oauth_token_url")
     @classmethod
     def _http_url(cls, value: str | None) -> str | None:
         if value is not None and urlsplit(value).scheme not in ("http", "https"):
             raise ValueError(f"not an http(s) URL: {value!r}")
         return value
 
-    @field_validator("webhook_secret_env", "imap_password_env")
+    @field_validator(
+        "webhook_secret_env", "imap_password_env", "imap_oauth_secret_env", "imap_oauth_refresh_env"
+    )
     @classmethod
     def _env_name(cls, value: str | None) -> str | None:
         if value is not None and not _ENV_NAME.fullmatch(value):
@@ -109,8 +130,26 @@ class TenantConfig(BaseModel):
     def _mailbox(self) -> "TenantConfig":
         if self.imap_host is None:
             return self
-        if self.imap_user is None or self.imap_password_env is None:
-            raise ValueError("a mailbox needs imap_user and imap_password_env")
+        needed = {
+            "password": ("imap_user", "imap_password_env"),
+            "microsoft": (
+                "imap_user",
+                "imap_oauth_tenant",
+                "imap_oauth_client_id",
+                "imap_oauth_secret_env",
+            ),
+            "google": (
+                "imap_user",
+                "imap_oauth_client_id",
+                "imap_oauth_secret_env",
+                "imap_oauth_refresh_env",
+            ),
+        }[self.imap_auth]
+        missing = [name for name in needed if getattr(self, name) is None]
+        if missing:
+            raise ValueError(
+                f"a mailbox with imap_auth={self.imap_auth} needs {', '.join(missing)}"
+            )
         if not self.imap_tls and self.imap_host not in _LOOPBACK:
             raise ValueError("a mailbox on another machine is only read over TLS (imap_tls)")
         return self

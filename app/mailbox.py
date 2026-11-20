@@ -19,6 +19,7 @@ new mail to `ingest`, like an upload: stored for the tenant, then queued.
 One poller per database (instance lock), like the bank watch.
 """
 
+import base64
 import contextlib
 import email
 import imaplib
@@ -44,6 +45,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.db.rls import tenant_transaction
 from app.db.tables import MailboxStateRow, MailRow
 from app.ingest import ingest
+from app.mailbox_oauth import TokenError, TokenSource, xoauth2
 from app.queue import JobQueue
 from app.tenants import TenantConfig
 
@@ -100,10 +102,15 @@ class ImapConnection:
         port: int,
         tls: bool,
         user: str,
-        password: str,
+        password: str | None = None,
         processed_folder: str | None = None,
         timeout: float = 30.0,
+        token: str | None = None,
     ) -> None:
+        """Signs in with the password, or with an OAuth2 access token
+        (XOAUTH2) when one is given."""
+        if (password is None) == (token is None):
+            raise ValueError("sign in with a password or a token, not both or neither")
         if tls:
             self._imap: imaplib.IMAP4 = imaplib.IMAP4_SSL(
                 host, port, ssl_context=ssl.create_default_context(), timeout=timeout
@@ -111,11 +118,32 @@ class ImapConnection:
         else:
             self._imap = imaplib.IMAP4(host, port, timeout=timeout)
         try:
-            self._imap.login(user, password)
+            if token is not None:
+                self._xoauth2(user, token)
+            else:
+                self._imap.login(user, password)
         except imaplib.IMAP4.error as exc:
             raise MailboxError(f"sign-in to {host} refused") from exc
         self._processed_folder = processed_folder
         self._can_move = "MOVE" in self._imap.capabilities
+
+    def _xoauth2(self, user: str, token: str) -> None:
+        """AUTHENTICATE XOAUTH2. Where the server offers SASL-IR (RFC 4959;
+        Gmail and Outlook do, and some servers take nothing else), the token
+        goes with the command. imaplib only knows the other way, the server
+        asking for it first, so this does what imaplib's own `authenticate`
+        does (`literal`, `_simple_command`, `state`), with the token as the
+        command's argument. A refusal comes as a challenge; it is answered
+        with an empty line, as XOAUTH2 asks, and then the server says NO."""
+        if "SASL-IR" not in self._imap.capabilities:
+            self._imap.authenticate("XOAUTH2", lambda _: xoauth2(user, token))
+            return
+        initial = base64.b64encode(xoauth2(user, token)).decode("ascii")
+        self._imap.literal = imaplib._Authenticator(lambda _: b"").process  # noqa: SLF001
+        status, data = self._imap._simple_command("AUTHENTICATE", "XOAUTH2", initial)  # noqa: SLF001
+        if status != "OK":
+            raise imaplib.IMAP4.error(data[-1].decode("utf-8", "replace") if data else status)
+        self._imap.state = "AUTH"
 
     def _ok(self, answer: tuple, what: str) -> list:
         status, data = answer
@@ -438,18 +466,28 @@ def poll(
     return done
 
 
-def connect(config: TenantConfig) -> ImapConnection:
-    password = os.environ.get(config.imap_password_env or "")
-    if not password:
-        raise MailboxError(f"the mailbox password ({config.imap_password_env}) is not set")
-    return ImapConnection(
-        config.imap_host,
-        config.imap_port,
-        config.imap_tls,
-        config.imap_user,
-        password,
-        config.imap_processed_folder,
-    )
+def connect(config: TenantConfig, tokens: TokenSource | None = None) -> ImapConnection:
+    """Open the tenant's mailbox: with its password, or with a token from
+    `tokens` for imap_auth microsoft or google."""
+    common = {
+        "host": config.imap_host,
+        "port": config.imap_port,
+        "tls": config.imap_tls,
+        "user": config.imap_user,
+        "processed_folder": config.imap_processed_folder,
+    }
+    if config.imap_auth == "password":
+        password = os.environ.get(config.imap_password_env or "")
+        if not password:
+            raise MailboxError(f"the mailbox password ({config.imap_password_env}) is not set")
+        return ImapConnection(**common, password=password)
+    if tokens is None:
+        raise MailboxError(f"imap_auth={config.imap_auth} needs a token source")
+    try:
+        token = tokens.token()
+    except TokenError as exc:
+        raise MailboxError(str(exc)) from exc
+    return ImapConnection(**common, token=token)
 
 
 def main() -> None:
@@ -469,6 +507,8 @@ def main() -> None:
     session_factory = sessionmaker(engine)
     tenants = TenantServices(session_factory, settings)
     queue = RqQueue(settings.redis_url)
+    # Kept from round to round, so a token is reused until it runs out.
+    token_sources: dict[str, TokenSource] = {}
     logger.info("reading every tenant's mailbox every %ss", settings.mailbox_seconds)
     while True:
         try:
@@ -480,7 +520,11 @@ def main() -> None:
             if config.imap_host is None:
                 continue
             try:
-                connection = connect(config)
+                tokens = None
+                if config.imap_auth != "password":
+                    key = config.model_dump_json()
+                    tokens = token_sources.setdefault(key, TokenSource(config))
+                connection = connect(config, tokens)
                 try:
                     done = poll(
                         session_factory,
