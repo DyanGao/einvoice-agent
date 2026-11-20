@@ -24,6 +24,7 @@ from app.matching.model import (
     Payment,
     PeerInvoice,
 )
+from app.texts import Text
 
 # A reference with at most this many character edits is "the same, with a slip".
 # A swapped pair of digits counts as two.
@@ -107,7 +108,7 @@ def _latest_before(
 
 def _match_order(
     invoice: InvoiceDraft, orders: list[Order]
-) -> tuple[str | None, str | None, Basis, list[str]]:
+) -> tuple[str | None, str | None, Basis, list[Text]]:
     """(order number, delivery id, basis, explanation)."""
     reference = key(invoice.po_ref)
     billed = _billed(invoice)
@@ -136,11 +137,11 @@ def _match_order(
     if len(exact) == 1:
         order = exact[0]
         delivery_id = delivery_of(order)
-        notes = [f"order {order.number} is named on the invoice"]
+        notes = [Text("match.order_named", order=order.number)]
         notes.append(
-            f"delivery {delivery_id} contains exactly the billed items"
+            Text("match.delivery_exact", delivery=delivery_id)
             if delivery_id
-            else "no single delivery of that order contains exactly the billed items"
+            else Text("match.no_single_delivery")
         )
         return order.number, delivery_id, Basis.EXACT_REFERENCE, notes
 
@@ -151,33 +152,28 @@ def _match_order(
             order.number,
             delivery_of(order),
             Basis.SIMILAR_REFERENCE,
-            [
-                f"the invoice names {invoice.po_ref}; order {order.number} differs by a slip "
-                "and one of its deliveries contains exactly the billed items"
-            ],
+            [Text("match.order_slip", po_ref=invoice.po_ref, order=order.number)],
         )
 
     if len(by_content) == 1:
         order, delivery = by_content[0]
-        said = (
-            f"the invoice names {invoice.po_ref}, which is no order of this supplier; "
-            if (reference)
-            else "the invoice names no order; "
+        note = (
+            Text(
+                "match.content_unknown_reference",
+                po_ref=invoice.po_ref,
+                delivery=delivery.id,
+                order=order.number,
+            )
+            if reference
+            else Text("match.content_no_reference", delivery=delivery.id, order=order.number)
         )
-        return (
-            order.number,
-            delivery.id,
-            Basis.CONTENT,
-            [
-                f"{said}delivery {delivery.id} of order {order.number} "
-                "contains exactly the billed items"
-            ],
-        )
+        return order.number, delivery.id, Basis.CONTENT, [note]
     if len(by_content) > 1:
         candidates = ", ".join(
             sorted(f"{order.number}/{delivery.id}" for order, delivery in by_content)
         )
-        return None, None, Basis.AMBIGUOUS, [f"several deliveries fit equally well: {candidates}"]
+        ambiguous = Text("match.deliveries_ambiguous", candidates=candidates)
+        return None, None, Basis.AMBIGUOUS, [ambiguous]
     if len(similar) == 1:
         # A slip in the number and nothing to confirm it: named, not decided.
         return (
@@ -185,11 +181,14 @@ def _match_order(
             None,
             Basis.AMBIGUOUS,
             [
-                f"the invoice names {invoice.po_ref}; order {similar[0].number} is similar, "
-                "but no delivery confirms it"
+                Text(
+                    "match.order_similar_unconfirmed",
+                    po_ref=invoice.po_ref,
+                    order=similar[0].number,
+                )
             ],
         )
-    return None, None, Basis.NONE, ["no order of this supplier fits the invoice"]
+    return None, None, Basis.NONE, [Text("match.no_order")]
 
 
 # --- payments ---------------------------------------------------------------
@@ -242,10 +241,10 @@ def _match_payments(
     invoice: InvoiceDraft,
     transactions: list[BankTransaction],
     peers: Sequence[PeerInvoice],
-) -> tuple[tuple[Payment, ...], Basis, list[str]]:
+) -> tuple[tuple[Payment, ...], Basis, list[Text]]:
     gross = invoice.gross_total
     if gross is None or gross <= 0:
-        return (), Basis.NONE, ["the invoice has no total to look for"]
+        return (), Basis.NONE, [Text("match.no_total")]
     number = key(invoice.number)
     peer_numbers = {key(peer.number) for peer in peers} - {number, ""}
 
@@ -273,7 +272,7 @@ def _match_payments(
 
     # Every way the candidates could have paid this invoice, with how strongly
     # the references support it and a preference for the simpler story.
-    explanations: list[tuple[int, int, tuple[Payment, ...], Basis, str]] = []
+    explanations: list[tuple[int, int, tuple[Payment, ...], Basis, Text]] = []
     for transaction, basis in candidates:
         if transaction.amount == gross:
             explanations.append(
@@ -282,7 +281,7 @@ def _match_payments(
                     3,
                     (Payment(transaction.id, gross),),
                     basis,
-                    f"transfer {transaction.id} is exactly the invoice total",
+                    Text("match.transfer_exact", transfer=transaction.id),
                 )
             )
     # One transfer for several invoices: it has to quote this invoice, at
@@ -298,8 +297,11 @@ def _match_payments(
                     2,
                     (Payment(transaction.id, gross),),
                     basis,
-                    f"transfer {transaction.id} of {transaction.amount} equals this invoice's "
-                    "total plus other invoices of the supplier",
+                    Text(
+                        "match.transfer_shared",
+                        transfer=transaction.id,
+                        transfer_amount=transaction.amount,
+                    ),
                 )
             )
     smaller = [(tx, basis) for tx, basis in candidates if tx.amount < gross]
@@ -313,12 +315,12 @@ def _match_payments(
                     1,
                     tuple(Payment(tx.id, tx.amount) for tx in ordered),
                     basis,
-                    f"transfers {ordered[0].id} and {ordered[1].id} add up to the invoice total",
+                    Text("match.transfers_two", first=ordered[0].id, second=ordered[1].id),
                 )
             )
 
     if not explanations:
-        return (), Basis.NONE, ["no transfer to this supplier pays this invoice"]
+        return (), Basis.NONE, [Text("match.no_transfer")]
     twins = [peer.number for peer in peers if peer.gross_total == gross]
     if twins and all(entry[3] is Basis.CONTENT for entry in explanations):
         # Only the amount speaks for these transfers, and another invoice of
@@ -326,23 +328,16 @@ def _match_payments(
         return (
             (),
             Basis.AMBIGUOUS,
-            [
-                "a transfer of the invoice total exists without an invoice number, but "
-                f"invoice {twins[0]} of this supplier has the same total"
-            ],
+            [Text("match.transfer_twin", number=twins[0])],
         )
     best = max((strength, simplicity) for strength, simplicity, *_ in explanations)
     top = [entry for entry in explanations if (entry[0], entry[1]) == best]
     if len(top) > 1:
         ids = sorted({payment.bank_transaction_id for entry in top for payment in entry[2]})
-        return (), Basis.AMBIGUOUS, [f"several transfers fit equally well: {', '.join(ids)}"]
+        return (), Basis.AMBIGUOUS, [Text("match.transfers_ambiguous", transfers=ids)]
     _, _, payments, basis, note = top[0]
-    grounds = {
-        Basis.EXACT_REFERENCE: "and quotes the invoice number",
-        Basis.SIMILAR_REFERENCE: "and quotes the invoice number with a slip",
-        Basis.CONTENT: "to the supplier's account, without an invoice number",
-    }[basis]
-    return payments, basis, [f"{note} {grounds}"]
+    grounds = Text(f"grounds.{basis.value}")
+    return payments, basis, [Text("match.payment_grounds", note=note, grounds=grounds)]
 
 
 # --- the matcher ------------------------------------------------------------
@@ -376,7 +371,7 @@ def match_invoice(
     """Look up the supplier, its orders and the transfers to it, and match."""
     supplier = data.find_supplier(invoice.seller.vat_id, invoice.seller.name)
     if supplier is None:
-        return Match(explanation=("the supplier is not on file, so nothing can be matched",))
+        return Match(explanation=(Text("match.no_supplier"),))
     return match_candidates(
         invoice,
         supplier,

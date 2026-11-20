@@ -184,6 +184,9 @@ class FindingRow(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), index=True)
     position: Mapped[int]
+    # The message's code and parameters (app/texts.py), for the UI's language;
+    # None for findings from before v1.0 Stage 4, which show `message`.
+    text: Mapped[dict[str, Any] | None] = mapped_column(Json)
     type: Mapped[str] = mapped_column(String(40), index=True)
     severity: Mapped[str] = mapped_column(String(10))
     message: Mapped[str]
@@ -210,6 +213,9 @@ class MatchRow(Base):
     payments: Mapped[list[dict[str, str]]] = mapped_column(Json)
     payment_basis: Mapped[str] = mapped_column(String(20))
     explanation: Mapped[list[str]] = mapped_column(Json)
+    # Each explanation's code and parameters, in the same order; None where a
+    # line has none (rows from before v1.0 Stage 4).
+    explanation_texts: Mapped[list[dict[str, Any] | None] | None] = mapped_column(Json)
 
     document: Mapped[DocumentRow] = relationship(back_populates="match")
 
@@ -252,6 +258,7 @@ class DeliveryRow(Base):
     # The downstream system's reference for the booking.
     external_ref: Mapped[str | None] = mapped_column(String(100))
     last_error: Mapped[str | None]
+    error_text: Mapped[dict[str, Any] | None] = mapped_column(Json)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

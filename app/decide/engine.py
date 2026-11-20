@@ -29,6 +29,7 @@ from app.extract.confidence import ASSUMED_FIELDS
 from app.extract.draft import InvoiceDraft
 from app.matching import Basis, Match
 from app.pipeline import DocumentStatus
+from app.texts import Text
 
 THRESHOLDS_FILE = Path(__file__).with_name("thresholds.json")
 
@@ -96,10 +97,6 @@ class DecisionSettings:
         return cls(min_field_confidence=data["min_field_confidence"], version=data["version"])
 
 
-def _listed(paths: Iterable[str]) -> str:
-    return ", ".join(paths)
-
-
 def reading_causes(draft: InvoiceDraft, settings: DecisionSettings) -> list[Reason]:
     """Whether what was read can be trusted without a person looking."""
     reasons = []
@@ -108,7 +105,7 @@ def reading_causes(draft: InvoiceDraft, settings: DecisionSettings) -> list[Reas
         reasons.append(
             Reason(
                 Cause.MISSING_FIELDS,
-                f"mandatory fields are missing or invalid: {_listed(missing)}",
+                Text("reason.missing_fields", fields=list(missing)),
                 fields=tuple(missing),
             )
         )
@@ -117,7 +114,7 @@ def reading_causes(draft: InvoiceDraft, settings: DecisionSettings) -> list[Reas
         reasons.append(
             Reason(
                 Cause.ASSUMED_VALUE,
-                f"not on the document, assumed: {_listed(assumed)}",
+                Text("reason.assumed_value", fields=list(assumed)),
                 fields=assumed,
             )
         )
@@ -125,7 +122,7 @@ def reading_causes(draft: InvoiceDraft, settings: DecisionSettings) -> list[Reas
         reasons.append(
             Reason(
                 Cause.PRINTED_NOT_READ,
-                f"on the document but not read: {_listed(draft.unread_fields)}",
+                Text("reason.printed_not_read", fields=list(draft.unread_fields)),
                 fields=tuple(draft.unread_fields),
             )
         )
@@ -138,8 +135,11 @@ def reading_causes(draft: InvoiceDraft, settings: DecisionSettings) -> list[Reas
         reasons.append(
             Reason(
                 Cause.LOW_CONFIDENCE,
-                f"read with less than {settings.min_field_confidence:.0%} confidence: "
-                f"{_listed(unsure)}",
+                Text(
+                    "reason.low_confidence",
+                    threshold_percent=settings.min_field_confidence,
+                    fields=list(unsure),
+                ),
                 fields=unsure,
             )
         )
@@ -157,8 +157,7 @@ def business_causes(
         reasons.append(
             Reason(
                 Cause.FINDINGS,
-                "the checks found something a person has to look at: "
-                + "; ".join(finding.message for finding in serious),
+                Text("reason.findings", details=[finding.message for finding in serious]),
                 fields=tuple(dict.fromkeys(path for f in serious for path in f.fields)),
                 findings=tuple(dict.fromkeys(finding.type.value for finding in serious)),
             )
@@ -169,7 +168,7 @@ def business_causes(
             reasons.append(
                 Reason(
                     Cause.NOT_COMPARED,
-                    "not compared with the ERP: supplier, bank account and order are unconfirmed",
+                    Text("reason.not_compared"),
                 )
             )
         return reasons
@@ -178,8 +177,7 @@ def business_causes(
             reasons.append(
                 Reason(
                     Cause.ORDER_BY_CONTENT,
-                    f"the invoice quotes no usable order number; order {match.po_number} was "
-                    "found by what it bills, confirm it",
+                    Text("reason.order_by_content", order=match.po_number),
                     fields=("po_ref",),
                 )
             )
@@ -187,7 +185,7 @@ def business_causes(
             reasons.append(
                 Reason(
                     Cause.NOT_DELIVERED,
-                    f"no delivery on order {match.po_number} matches what this invoice bills",
+                    Text("reason.not_delivered", order=match.po_number),
                 )
             )
     return reasons
@@ -203,21 +201,18 @@ def decide(
     settings: DecisionSettings,
 ) -> Decision:
     if status not in _DECIDABLE:
-        reasons = [
-            Reason(Cause.NOT_READ, f"the document was not validated or read ({status.value})")
-        ]
+        reasons = [Reason(Cause.NOT_READ, Text("reason.not_read", status=status.value))]
     else:
         reasons = reading_causes(draft, settings) + business_causes(findings, match, settings)
     if status is DocumentStatus.EXTRACTED and settings.uncalibrated_reader is not None:
         reasons.append(
             Reason(
                 Cause.READER_NOT_CALIBRATED,
-                f"read by {settings.uncalibrated_reader}, a model the decision is not "
-                "calibrated for: a person checks everything it reads",
+                Text("reason.reader_not_calibrated", model=settings.uncalibrated_reader),
             )
         )
     if corrected:
-        reasons.append(Reason(Cause.CORRECTED, "a reviewer changed it; it waits for approval"))
+        reasons.append(Reason(Cause.CORRECTED, Text("reason.corrected")))
     return Decision(
         route=Route.REVIEW if reasons else Route.AUTO,
         reasons=tuple(reasons),

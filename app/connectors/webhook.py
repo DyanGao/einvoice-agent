@@ -29,6 +29,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from app.connectors.base import Booking, DeliveryFailed
+from app.texts import Text
 
 SIGNATURE_HEADER = "X-Einvoice-Signature"
 TIMESTAMP_HEADER = "X-Einvoice-Timestamp"
@@ -112,7 +113,8 @@ class WebhookConnector:
             )
         except httpx.HTTPError as exc:
             raise DeliveryFailed(
-                f"webhook receiver not reachable: {type(exc).__name__}: {exc}", retryable=True
+                Text("delivery.webhook_unreachable", detail=f"{type(exc).__name__}: {exc}"),
+                retryable=True,
             ) from exc
         status = response.status_code
         if 200 <= status < 300:
@@ -121,11 +123,14 @@ class WebhookConnector:
             except (ValueError, KeyError, TypeError):
                 return f"HTTP {status}"
         if status >= 500 or status == 429:
-            raise DeliveryFailed(f"webhook receiver failed with {status}", retryable=True)
+            raise DeliveryFailed(Text("delivery.webhook_failed", status=status), retryable=True)
         if 300 <= status < 400:
             raise DeliveryFailed(
-                f"webhook receiver answered {status} (redirect to "
-                f"{response.headers.get('location')!r}); redirects are not followed",
+                Text(
+                    "delivery.webhook_redirect",
+                    status=status,
+                    location=repr(response.headers.get("location")),
+                ),
                 retryable=False,
             )
-        raise DeliveryFailed(f"webhook receiver refused the booking with {status}", retryable=False)
+        raise DeliveryFailed(Text("delivery.webhook_refused", status=status), retryable=False)

@@ -34,6 +34,7 @@ from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page, sync_playwright
 
 from app.connectors.base import Booking, DeliveryFailed
+from app.texts import Text
 
 # (field of the Booking, label on the ERP's screens)
 LABELS = (
@@ -176,21 +177,21 @@ class ErpFormConnector:
                     except _FormChanged as exc:
                         self._screenshot(page, folder, attempt, record)
                         raise DeliveryFailed(
-                            f"the ERP's booking form has changed: {exc}; nothing was booked",
+                            Text("delivery.form_changed", detail=str(exc)),
                             retryable=False,
                         ) from exc
                     except PlaywrightError as exc:
                         self._screenshot(page, folder, attempt, record)
                         if blocked:
                             raise DeliveryFailed(
-                                f"the browser was sent to {blocked[0]}, which is not on the "
-                                "allowlist; blocked, nothing was booked there",
+                                Text("delivery.form_blocked", url=blocked[0]),
                                 retryable=False,
                             ) from exc
                         # Not reachable, too slow: safe to try again, since every
                         # attempt searches for an existing booking first.
                         raise DeliveryFailed(
-                            f"ERP screens not usable: {str(exc).splitlines()[0]}", retryable=True
+                            Text("delivery.form_unusable", detail=str(exc).splitlines()[0]),
+                            retryable=True,
                         ) from exc
                 finally:
                     browser.close()
@@ -211,7 +212,9 @@ class ErpFormConnector:
         record("goto", url=url)
         response = page.goto(url)
         if response is not None and response.status >= 500:
-            raise DeliveryFailed(f"ERP answered {response.status} for {url}", retryable=True)
+            raise DeliveryFailed(
+                Text("delivery.form_status", status=response.status, url=url), retryable=True
+            )
 
     def _book(self, page: Page, booking: Booking, record) -> str:
         existing = self._find(page, booking.reference, record)
@@ -257,7 +260,7 @@ class ErpFormConnector:
                 ids.append(cells[0].removeprefix("Buchung ").strip())
         if len(ids) > 1:
             raise DeliveryFailed(
-                f"the ERP holds {len(ids)} bookings for reference {reference}: {', '.join(ids)}",
+                Text("delivery.form_several", count=len(ids), reference=reference, ids=list(ids)),
                 retryable=False,
             )
         return ids[0] if ids else None
@@ -282,5 +285,11 @@ class ErpFormConnector:
         record("read_back", booking=booking_id, differ=differ)
         if differ:
             raise DeliveryFailed(
-                f"booking {booking_id} in the ERP: {refuse}: {', '.join(differ)}", retryable=False
+                Text(
+                    "delivery.form_differs",
+                    booking=booking_id,
+                    refuse=refuse,
+                    fields_differing=list(differ),
+                ),
+                retryable=False,
             )

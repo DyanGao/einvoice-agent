@@ -7,6 +7,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import type { Said } from "./api";
+import { labelFor } from "./form";
 import { de, en, type MessageKey } from "./messages";
 
 export type Locale = "de" | "en";
@@ -45,17 +47,20 @@ export type Translator = {
   percent: (fraction: number) => string;
   /** A label inside a sentence: lower-case in English; German nouns keep their capital. */
   inSentence: (label: string) => string;
+  /** A text the server wrote, in this language; its English sentence where there is no code. */
+  server: (said: Said | null | undefined, english: string) => string;
 };
 
 export function translator(locale: Locale): Translator {
   const catalogue = CATALOGUES[locale];
   const intl = INTL[locale];
   const dates = new Intl.DateTimeFormat(intl, { dateStyle: "medium", timeStyle: "short" });
-  const percents = new Intl.NumberFormat(intl, { style: "percent", maximumFractionDigits: 0 });
+  const percents = new Intl.NumberFormat(intl, { style: "percent", maximumFractionDigits: 1 });
   const t = (key: MessageKey, params?: Params) => fill(catalogue[key], params);
   const tx = (key: string, fallback: string, params?: Params) =>
-    fill(key in catalogue ? catalogue[key as MessageKey] : fallback, params);
-  return {
+    // An unknown key shows the fallback as it is: it is already a sentence.
+    key in catalogue ? fill(catalogue[key as MessageKey], params) : fallback;
+  const translatorFor: Translator = {
     locale,
     t,
     tx,
@@ -87,7 +92,34 @@ export function translator(locale: Locale): Translator {
     },
     percent: (fraction) => percents.format(fraction),
     inSentence: (label) => (locale === "en" ? label.toLowerCase() : label),
+    // Rendered with this same translator, for the parameters too.
+    server: (said, english) => (said ? serverText(translatorFor, said) : english),
   };
+  return translatorFor;
+}
+
+function isSaid(value: unknown): value is Said {
+  return typeof value === "object" && value !== null && "code" in value && "text" in value;
+}
+
+/** A parameter of a server text, formatted for the reader (see app/texts.py). */
+function serverParam(i18n: Translator, name: string, value: unknown): string {
+  if (isSaid(value)) return serverText(i18n, value);
+  if (Array.isArray(value)) {
+    if (value.every(isSaid)) return value.map((item) => serverText(i18n, item)).join("; ");
+    const items = value.map(String);
+    return (name === "fields" ? items.map((path) => labelFor(i18n, path)) : items).join(", ");
+  }
+  if (name.endsWith("_amount") && value !== null) return i18n.money(String(value), null);
+  if (name.endsWith("_percent") && value !== null) return i18n.percent(Number(value));
+  return value === null || value === undefined ? "" : String(value);
+}
+
+function serverText(i18n: Translator, said: Said): string {
+  const params = Object.fromEntries(
+    Object.entries(said.params).map(([name, value]) => [name, serverParam(i18n, name, value)]),
+  );
+  return i18n.tx(`server.${said.code}`, said.text, params);
 }
 
 function browserLocale(): Locale {

@@ -35,6 +35,7 @@ from app.db.review import ReviewState
 from app.db.tables import DocumentRow, MatchRow, SeenBankTransactionRow
 from app.erp.client import ErpUnavailable
 from app.matching import BankTransaction, Basis
+from app.texts import Text
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ def after_processing(session: Session, checker: Checker, document: DocumentRow) 
             checker,
             document.tenant_id,
             document.match.supplier_id,
-            trigger=f"new invoice {document.draft.data.get('number')} of the supplier",
+            trigger=Text("trigger.new_invoice", number=document.draft.data.get("number")),
             exclude=document.id,
         )
     except ErpUnavailable as exc:
@@ -188,9 +189,12 @@ def watch_bank(session: Session, erp: BankData, checker: Checker, tenant_id: str
     return [tx.id for tx in new]
 
 
-def _trigger(ids: Sequence[str]) -> str:
-    shown = ", ".join(ids[:5]) + (f" and {len(ids) - 5} more" if len(ids) > 5 else "")
-    return f"new bank transaction{'s' if len(ids) > 1 else ''} {shown}"
+def _trigger(ids: Sequence[str]) -> Text:
+    if len(ids) > 5:
+        return Text("trigger.new_transfers_more", transfers=list(ids[:5]), more=len(ids) - 5)
+    if len(ids) > 1:
+        return Text("trigger.new_transfers", transfers=list(ids))
+    return Text("trigger.new_transfer", transfers=list(ids))
 
 
 def _latest_seen(session: Session, tenant_id: str):

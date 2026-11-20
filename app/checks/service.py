@@ -41,6 +41,7 @@ from app.extract.ollama import is_local
 from app.matching import Basis, Match, MatchingData, PeerInvoice, match_candidates
 from app.pipeline import DocumentStatus
 from app.settings import Settings
+from app.texts import Text, said
 
 _DECIDED_BY_A_PERSON = frozenset({ReviewState.APPROVED.value, ReviewState.REJECTED.value})
 
@@ -127,17 +128,15 @@ def _same_seller(draft: InvoiceDraft, known: KnownInvoice) -> bool:
     return bool(draft.seller.name) and draft.seller.name == known.seller_name
 
 
-def _order_note(draft: InvoiceDraft, match: Match) -> str | None:
+def _order_note(draft: InvoiceDraft, match: Match) -> Text | None:
     """How the order was found, when the invoice does not quote it as it is."""
     if match.po_number is None or match.po_basis is Basis.EXACT_REFERENCE:
         return None
-    said = f"names {draft.po_ref}" if draft.po_ref else "names no purchase order"
-    how = (
-        "which differs from it by a slip; a delivery confirms it"
-        if match.po_basis is Basis.SIMILAR_REFERENCE
-        else "found by the delivered items"
-    )
-    return f"the invoice {said}; matched to order {match.po_number}, {how}"
+    if match.po_basis is Basis.SIMILAR_REFERENCE:
+        return Text("order_note.slip", po_ref=draft.po_ref, order=match.po_number)
+    if draft.po_ref:
+        return Text("order_note.content", po_ref=draft.po_ref, order=match.po_number)
+    return Text("order_note.content_unnamed", order=match.po_number)
 
 
 def _store_match(session: Session, document: DocumentRow, match: Match | None) -> None:
@@ -160,6 +159,7 @@ def _store_match(session: Session, document: DocumentRow, match: Match | None) -
         ],
         payment_basis=match.payment_basis.value,
         explanation=list(match.explanation),
+        explanation_texts=[said(line) for line in match.explanation],
     )
 
 
@@ -169,6 +169,7 @@ def _store_decision(document: DocumentRow, decision: Decision) -> None:
         {
             "cause": reason.cause.value,
             "message": reason.message,
+            "text": said(reason.message),
             "fields": list(reason.fields),
             "findings": list(reason.findings),
         }
@@ -219,7 +220,7 @@ class Checker:
         try:
             supplier = self.erp.find_supplier(draft.seller.vat_id, draft.seller.name)
             if supplier is None:
-                match = Match(explanation=("the supplier is not on file, so nothing is matched",))
+                match = Match(explanation=(Text("match.no_supplier"),))
                 orders = []
             else:
                 orders = self.erp.orders_of(supplier.id)
@@ -302,6 +303,7 @@ class Checker:
                 type=finding.type.value,
                 severity=finding.severity.value,
                 message=finding.message,
+                text=said(finding.message),
                 fields=list(finding.fields),
                 detail=finding.detail,
             )
@@ -335,7 +337,7 @@ class Checker:
                     if match is None
                     else [p.bank_transaction_id for p in match.payments],
                 }
-                | ({} if trigger is None else {"trigger": trigger}),
+                | ({} if trigger is None else {"trigger": trigger, "trigger_text": said(trigger)}),
             )
         )
         session.flush()
@@ -364,17 +366,22 @@ class Checker:
         stored.payment_basis = match.payment_basis.value
         if (match.po_number, match.delivery_id) == (stored.po_number, stored.delivery_id):
             stored.explanation = list(match.explanation)
+            stored.explanation_texts = [said(line) for line in match.explanation]
         else:
-            stored.explanation = [
-                *stored.explanation,
-                f"payments matched again; order {stored.po_number} and delivery "
-                f"{stored.delivery_id} stay as approved",
-            ]
+            note = Text("match.payments_again", order=stored.po_number, delivery=stored.delivery_id)
+            texts = stored.explanation_texts or [None] * len(stored.explanation)
+            stored.explanation = [*stored.explanation, note]
+            stored.explanation_texts = [*texts, said(note)]
         document.audit_events.append(
             AuditEventRow(
                 event="payments_matched",
                 actor=CHECKS_ACTOR,
-                detail={"trigger": trigger, "before": before, "after": after},
+                detail={
+                    "trigger": trigger,
+                    "trigger_text": said(trigger),
+                    "before": before,
+                    "after": after,
+                },
             )
         )
         session.flush()

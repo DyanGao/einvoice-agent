@@ -28,6 +28,7 @@ from app.db.review import ReviewState
 from app.db.rls import tenant_transaction
 from app.db.tables import DEFAULT_TENANT_ID, AuditEventRow, DeliveryRow, DocumentRow
 from app.extract.draft import InvoiceDraft
+from app.texts import Text, said
 
 logger = logging.getLogger(__name__)
 
@@ -59,15 +60,12 @@ def booking_for(document: DocumentRow) -> Booking:
     """The invoice as it was approved or decided, with the supplier and the
     order it was matched to."""
     if document.match is None or document.match.supplier_id is None:
-        raise NotBookable("the supplier is not known in the ERP")
+        raise NotBookable(Text("delivery.supplier_unknown"))
     invoice = InvoiceDraft.model_validate(document.draft.data).to_invoice()
     if invoice.type_code != "380":
         # A booking has no sign and no document type: a credit note would be
         # booked as an invoice. Until that exists (deferred), it is booked by hand.
-        raise NotBookable(
-            f"document type {invoice.type_code} is not an ordinary invoice; "
-            "credit notes and other types are booked by hand"
-        )
+        raise NotBookable(Text("delivery.not_an_invoice", type_code=invoice.type_code))
 
     def text(amount) -> str | None:
         return None if amount is None else str(amount)
@@ -127,6 +125,7 @@ def _claim(
             delivery.booking = booking_for(document).as_json()
         except NotBookable as exc:
             delivery.status, delivery.last_error = FAILED, str(exc)
+            delivery.error_text = said(exc.args[0] if exc.args else None)
             document.deliveries.append(delivery)
             _event(
                 document,
@@ -158,6 +157,7 @@ def _record(
     if error is None:
         delivery.status, delivery.external_ref, delivery.delivered_at = DELIVERED, ref, now
         delivery.last_error = None
+        delivery.error_text = None
         _event(
             document,
             "delivered",
@@ -169,6 +169,8 @@ def _record(
         return
     message, retryable = str(error), error.retryable
     delivery.last_error = message
+    # str() of the exception is plain; its first argument keeps the code.
+    delivery.error_text = said(error.args[0] if error.args else None)
     if not retryable or delivery.attempts >= MAX_ATTEMPTS:
         delivery.status = FAILED
     _event(

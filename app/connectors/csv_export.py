@@ -21,6 +21,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from app.connectors.base import Booking, DeliveryFailed
+from app.texts import Text
 
 ENCODING = "cp1252"
 HEADER = (
@@ -85,8 +86,11 @@ class CsvExportConnector:
             encoded = _line(row).encode(ENCODING)
         except UnicodeEncodeError as exc:
             raise DeliveryFailed(
-                f"invoice {booking.number}: {exc.object[exc.start : exc.end]!r} cannot be written "
-                "in Windows-1252, the encoding of the booking list",
+                Text(
+                    "delivery.csv_encoding",
+                    number=booking.number,
+                    characters=repr(exc.object[exc.start : exc.end]),
+                ),
                 retryable=False,
             ) from exc
         name = f"buchungen-{booking.issue_date[:7]}.csv"
@@ -97,7 +101,8 @@ class CsvExportConnector:
                 return self._append(file, name, row, encoded)
         except OSError as exc:
             raise DeliveryFailed(
-                f"booking list {self._folder / name} could not be written: {exc}", retryable=True
+                Text("delivery.csv_not_written", file=str(self._folder / name), detail=str(exc)),
+                retryable=True,
             ) from exc
 
     def _append(self, file, name: str, row: list[str], encoded: bytes) -> str:
@@ -109,7 +114,7 @@ class CsvExportConnector:
             if written[_REFERENCE] == row[_REFERENCE]:
                 if written != row:
                     raise DeliveryFailed(
-                        f"{name} line {number} already holds this invoice with other values",
+                        Text("delivery.csv_conflict", file=name, line=number),
                         retryable=False,
                     )
                 return f"{name}:{number}"

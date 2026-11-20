@@ -126,9 +126,15 @@ synthetic mails, with crashes; also through GreenMail) gates this in CI.
 own is in `ui/lib/messages.ts`, where the German catalogue is typed against the English keys, so a
 missing translation does not build. The language comes from the browser, can be switched in the
 masthead and is remembered in the browser. Amounts are formatted `de-DE` or `en-GB` from their decimal
-string, never through a float (`Intl.NumberFormat` takes the string exactly). Texts the server writes
-(finding messages, decision reasons, match explanations, error messages) are still English; they become
-codes with parameters in the next increment.
+string, never through a float (`Intl.NumberFormat` takes the string exactly). Texts the server writes —
+findings, decision reasons, match explanations, re-match triggers, delivery errors — are `Text`s
+(`app/texts.py`): a `str` that is the English sentence, as before, and also carries a code and
+parameters. They are stored next to the sentence (`findings.text`, `matches.explanation_texts`,
+`deliveries.error_text`, a `text` in each decision reason and `trigger_text` in the history) and the UI
+renders them in its language (`server.<code>` in the catalogues), falling back to the English sentence.
+Parameters named `…_amount`, `…_percent` and `fields` are formatted by the UI (amounts, shares, field
+labels). `tests/test_texts.py` fails if a code lacks a German or English text or if their parameters
+differ. The API's own error messages are next.
 
 **Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
 identity provider; someone from another tenant gets a role here too), change role, remove (their

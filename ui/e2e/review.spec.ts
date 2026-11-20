@@ -43,7 +43,8 @@ test("upload, correct, approve: every step is in the history", async ({ page }) 
   // Every reason it was not booked without a person is listed.
   const why = page.getByRole("region", { name: "Why review" });
   await expect(why.getByText("Read with low confidence")).toBeVisible();
-  await expect(why.getByText(/due_date/)).toBeVisible();
+  // The fields are named by their labels, not their paths.
+  await expect(why.getByText(/Due date/)).toBeVisible();
   await expect(why.getByText("Checks need a person")).toBeVisible();
   // The checks ran: the ERP does not know this supplier, and the page says so.
   await expect(page.getByText("no supplier with this VAT ID or name is on file")).toBeVisible();
@@ -211,6 +212,11 @@ test.describe("in German", () => {
     await expect(page.locator("td.number").first()).toHaveText(/^\d{1,3}(\.\d{3})*,\d{2}\s€$/);
     await page.getByRole("link", { name: NUMBER }).first().click();
     await expect(page.getByLabel("Rechnungsnummer")).toBeVisible();
+    // What the server wrote, in German too (a code with parameters, not its English).
+    await expect(
+      page.getByText("kein Lieferant mit dieser USt-IdNr. oder diesem Namen hinterlegt"),
+    ).toBeVisible();
+    await expect(page.getByText(/mit weniger als 97,5\s%\sSicherheit ausgelesen/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Verlauf" })).toBeVisible();
     await expect(page.locator(".audit-what").first()).toHaveText("Eingegangen");
   });
