@@ -90,7 +90,7 @@ def payments(session_factory, document_id) -> list[str]:
 
 def watch(session_factory, erp, checker) -> list[str]:
     with session_factory.begin() as session:
-        return watch_bank(session, erp, checker)
+        return watch_bank(session, erp, checker, db.DEFAULT_TENANT_ID)
 
 
 def test_transfer_arriving_after_the_invoice_is_matched_when_it_arrives(session_factory, world):
@@ -195,7 +195,7 @@ def test_erp_failing_during_a_rematch_leaves_the_invoice_as_it_was(session_facto
     erp.arrive()
     erp.down = True
     with session_factory.begin() as session, pytest.raises(ErpUnavailable):
-        rematch_supplier(session, checker, entry.supplier_id, trigger="test")
+        rematch_supplier(session, checker, db.DEFAULT_TENANT_ID, entry.supplier_id, trigger="test")
     with session_factory() as session:
         document = session.get(db.DocumentRow, document_id)
         after = (document.match.po_number, document.review_state, len(document.audit_events))
@@ -297,7 +297,9 @@ def test_matching_a_supplier_again_leaves_a_rejected_invoice_alone(session_facto
         db.reject(session, document, "anna", "duplicate")
         events = len(document.audit_events)
     with session_factory.begin() as session:
-        touched = rematch_supplier(session, checker, supplier_id, trigger="test")
+        touched = rematch_supplier(
+            session, checker, db.DEFAULT_TENANT_ID, supplier_id, trigger="test"
+        )
     with session_factory() as session:
         document = session.get(db.DocumentRow, document_id)
         assert (document.review_state, len(document.audit_events)) == ("rejected", events)

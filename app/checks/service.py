@@ -61,14 +61,14 @@ def _received_before(document: DocumentRow):
 def _known_invoices(
     session: Session, document: DocumentRow, *, earlier_only: bool = False
 ) -> tuple[KnownInvoice, ...]:
-    """Every other document's invoice: all of them for payment matching (a
-    combined transfer pays later invoices too), only the earlier ones for
-    duplicate detection. Reads all drafts; fine for thousands of documents,
-    not for millions."""
+    """Every other document's invoice of the same tenant: all of them for
+    payment matching (a combined transfer pays later invoices too), only the
+    earlier ones for duplicate detection. Reads all drafts; fine for thousands
+    of documents, not for millions."""
     query = (
         select(DraftRow.document_id, DraftRow.data)
         .join(DocumentRow, DocumentRow.id == DraftRow.document_id)
-        .where(DraftRow.document_id != document.id)
+        .where(DocumentRow.tenant_id == document.tenant_id, DraftRow.document_id != document.id)
     )
     if earlier_only:
         query = query.where(_received_before(document))
@@ -86,6 +86,7 @@ def _billed_before(
         .join(MatchRow, MatchRow.document_id == DraftRow.document_id)
         .join(DocumentRow, DocumentRow.id == DraftRow.document_id)
         .where(
+            DocumentRow.tenant_id == document.tenant_id,
             MatchRow.delivery_id == match.delivery_id,
             MatchRow.document_id != document.id,
             _received_before(document),

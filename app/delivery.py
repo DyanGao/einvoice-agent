@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.connectors.base import Booking, Connector, DeliveryFailed
 from app.db.review import ReviewState
-from app.db.tables import AuditEventRow, DeliveryRow, DocumentRow
+from app.db.tables import DEFAULT_TENANT_ID, AuditEventRow, DeliveryRow, DocumentRow
 from app.extract.draft import InvoiceDraft
 
 logger = logging.getLogger(__name__)
@@ -181,14 +181,16 @@ def _record(
     )
 
 
-def _candidates(session: Session, connector: Connector) -> list[str]:
-    """Documents that may be delivered and are not finished with this connector."""
+def _candidates(session: Session, connector: Connector, tenant_id: str) -> list[str]:
+    """The tenant's documents that may be delivered and are not finished with
+    this connector."""
     finished = select(DeliveryRow.document_id).where(
         DeliveryRow.connector == connector.name, DeliveryRow.status != PENDING
     )
     rows = session.scalars(
         select(DocumentRow)
         .where(
+            DocumentRow.tenant_id == tenant_id,
             DocumentRow.review_state.in_(
                 (ReviewState.APPROVED.value, ReviewState.NOT_REQUIRED.value)
             ),
@@ -200,15 +202,21 @@ def _candidates(session: Session, connector: Connector) -> list[str]:
 
 
 def deliver_due(
-    session_factory: sessionmaker[Session], connectors: Sequence[Connector], now: datetime
+    session_factory: sessionmaker[Session],
+    connectors: Sequence[Connector],
+    now: datetime,
+    tenant_id: str = DEFAULT_TENANT_ID,
 ) -> list[tuple[str, str, str]]:
-    """Deliver what is due to every connector: (document, connector, outcome)
-    for each attempt made. The sending happens outside any database
-    transaction; each claim and each result is committed on its own."""
+    """Deliver what of the tenant is due to its connectors: (document,
+    connector, outcome) for each attempt made. The connectors in .env are the
+    default tenant's until tenants have their own settings (v1.0 Stage 2,
+    increment 4); another tenant's documents never reach them. The sending
+    happens outside any database transaction; each claim and each result is
+    committed on its own."""
     done = []
     for connector in connectors:
         with session_factory() as session:
-            candidates = _candidates(session, connector)
+            candidates = _candidates(session, connector, tenant_id)
         for document_id in candidates:
             with session_factory.begin() as session:
                 document = session.get(DocumentRow, document_id, with_for_update=True)

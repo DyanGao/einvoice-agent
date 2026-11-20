@@ -18,9 +18,12 @@ from app.pipeline import DocumentStatus, Outcome
 SYSTEM_ACTOR = "system"
 
 
-def find_document(session: Session, data: bytes) -> DocumentRow | None:
+def find_document(session: Session, data: bytes, tenant_id: str) -> DocumentRow | None:
+    """The tenant's document with exactly these bytes, if it has one."""
     digest = hashlib.sha256(data).hexdigest()
-    return session.scalar(select(DocumentRow).where(DocumentRow.sha256 == digest))
+    return session.scalar(
+        select(DocumentRow).where(DocumentRow.tenant_id == tenant_id, DocumentRow.sha256 == digest)
+    )
 
 
 def record_duplicate(session: Session, document: DocumentRow, filename: str | None) -> None:
@@ -35,9 +38,12 @@ def record_queued_again(document: DocumentRow, waited_minutes: int) -> None:
     document.audit_events.append(_event("queued_again", waited_minutes=waited_minutes))
 
 
-def create_received(session: Session, data: bytes, filename: str | None) -> DocumentRow:
-    """Store an incoming document before anything is known about it."""
+def create_received(
+    session: Session, data: bytes, filename: str | None, tenant_id: str
+) -> DocumentRow:
+    """Store an incoming document of a tenant before anything is known about it."""
     document = DocumentRow(
+        tenant_id=tenant_id,
         sha256=hashlib.sha256(data).hexdigest(),
         filename=filename,
         format=DocumentFormat.UNKNOWN.value,
@@ -95,9 +101,9 @@ def apply_outcome(session: Session, document: DocumentRow, outcome: Outcome) -> 
 
 
 def store_outcome(
-    session: Session, data: bytes, filename: str | None, outcome: Outcome
+    session: Session, data: bytes, filename: str | None, outcome: Outcome, tenant_id: str
 ) -> DocumentRow:
-    document = create_received(session, data, filename)
+    document = create_received(session, data, filename, tenant_id)
     apply_outcome(session, document, outcome)
     return document
 

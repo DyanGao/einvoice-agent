@@ -26,7 +26,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.checks.finding import Finding, FindingType, Severity
 from app.checks.service import Checker
-from app.db import Base, DocumentRow, DraftRow
+from app.db import DEFAULT_TENANT_ID, Base, DocumentRow, DraftRow
 from app.db.review import ReviewState
 from app.extract.draft import InvoiceDraft
 from app.models import DocumentFormat
@@ -93,6 +93,7 @@ def _document(key: str, invoice: CanonicalInvoice) -> DocumentRow:
         invoice.to_gold(DocumentFormat.UNKNOWN).model_dump()
     ).model_dump(mode="json")
     return DocumentRow(
+        tenant_id=DEFAULT_TENANT_ID,
         sha256=hashlib.sha256(key.encode()).hexdigest(),
         filename=f"{key}.xml",
         format=DocumentFormat.UNKNOWN.value,

@@ -14,6 +14,7 @@ import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.checks.service import Checker
+from app.db import DEFAULT_TENANT_ID
 from app.db.engine import database_engine
 from app.db.instance_lock import AlreadyRunning, InstanceLock, LockLost
 from app.erp import ErpUnavailable, HttpErpClient
@@ -24,9 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 def run_once(session_factory: sessionmaker[Session], erp: BankData, checker: Checker) -> list[str]:
-    """One watch in one transaction: all of it is stored, or none."""
+    """One watch in one transaction: all of it is stored, or none. The ERP in
+    .env is the default tenant's until tenants have their own settings (v1.0
+    Stage 2, increment 4)."""
     with session_factory.begin() as session:
-        return watch_bank(session, erp, checker)
+        return watch_bank(session, erp, checker, DEFAULT_TENANT_ID)
 
 
 def main() -> None:

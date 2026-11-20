@@ -101,7 +101,7 @@ def _accounts(args, session_factory: sessionmaker[Session], prompt: Callable[[],
                 user = auth.create_user(
                     session, args.email, args.name, auth.Role(args.role), password
                 )
-                print(f"added {user.email} as {user.role}")
+                print(f"added {user.email} as {args.role}")
             elif args.command == "token-create":
                 user = auth.find_user(session, args.email)
                 if user is None:
@@ -144,7 +144,8 @@ def _process_file(
         return _report(path, process_structured(data, validator), document_id=None)
 
     with session_factory.begin() as session:
-        existing = db.find_document(session, data)
+        # The default tenant until the CLI learns --tenant (v1.0 Stage 2, increment 3).
+        existing = db.find_document(session, data, db.DEFAULT_TENANT_ID)
         if existing is not None:
             db.record_duplicate(session, existing, path.name)
             return {
@@ -154,7 +155,7 @@ def _process_file(
                 "duplicate": True,
             }
         outcome = process_structured(data, validator)
-        document = db.store_outcome(session, data, path.name, outcome)
+        document = db.store_outcome(session, data, path.name, outcome, db.DEFAULT_TENANT_ID)
         return _report(path, outcome, document_id=document.id)
 
 

@@ -14,7 +14,7 @@ XML = samples.ubl("01.01a")
 def store(session_factory, validator, data=XML, filename="rechnung.xml") -> str:
     with session_factory.begin() as session:
         outcome = process_structured(data, validator)
-        return db.store_outcome(session, data, filename, outcome).id
+        return db.store_outcome(session, data, filename, outcome, db.DEFAULT_TENANT_ID).id
 
 
 def events(session_factory, document_id) -> list[str]:
@@ -70,13 +70,15 @@ def test_validator_failure_is_stored_without_a_validation_row(session_factory):
 def test_same_bytes_are_found_again(session_factory, accepting):
     document_id = store(session_factory, accepting)
     with session_factory() as session:
-        assert db.find_document(session, XML).id == document_id
+        assert db.find_document(session, XML, db.DEFAULT_TENANT_ID).id == document_id
 
 
 def test_duplicate_arrival_is_audited_without_a_second_document(session_factory, accepting):
     document_id = store(session_factory, accepting)
     with session_factory.begin() as session:
-        db.record_duplicate(session, db.find_document(session, XML), "again.xml")
+        db.record_duplicate(
+            session, db.find_document(session, XML, db.DEFAULT_TENANT_ID), "again.xml"
+        )
     with session_factory() as session:
         count = session.scalar(select(func.count()).select_from(db.DocumentRow))
     assert (count, events(session_factory, document_id)[-1]) == (1, "received_again")

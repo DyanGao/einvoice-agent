@@ -33,9 +33,12 @@ def ingest(
     data: bytes,
     filename: str | None,
     *,
+    tenant_id: str = db.DEFAULT_TENANT_ID,
     note_duplicate: bool = True,
 ) -> Ingested:
-    """Store the document and queue it. The same bytes are never stored twice.
+    """Store the tenant's document and queue it. The same bytes are never
+    stored twice for one tenant. Folder watch and the CLI act for the default
+    tenant until they learn --tenant (v1.0 Stage 2, increment 3).
 
     The job is queued only after the row is committed, so a worker can never
     look for a document that does not exist yet. If queueing fails the
@@ -43,12 +46,12 @@ def ingest(
     """
     name = Path(filename).name[:255] if filename else None
     with session_factory.begin() as session:
-        existing = db.find_document(session, data)
+        existing = db.find_document(session, data, tenant_id)
         if existing is not None:
             if note_duplicate:
                 db.record_duplicate(session, existing, name)
             return Ingested(existing.id, existing.status, duplicate=True)
-        document_id = db.create_received(session, data, name).id
+        document_id = db.create_received(session, data, name, tenant_id).id
     queue.enqueue(document_id)
     return Ingested(document_id, DocumentStatus.RECEIVED.value, duplicate=False)
 

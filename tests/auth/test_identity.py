@@ -94,7 +94,9 @@ def test_user_without_a_password_cannot_sign_in_with_one(session_factory):
 def test_session_lasts_until_it_expires_or_ends(session_factory):
     user_id = add(session_factory)
     with session_factory.begin() as session:
-        sid = start_session(session, user_id, NOW, lifetime=timedelta(hours=8))
+        sid = start_session(
+            session, user_id, db.DEFAULT_TENANT_ID, NOW, lifetime=timedelta(hours=8)
+        )
         (row,) = session.query(db.SessionRow).all()
         assert sid != row.id_hash
     with session_factory.begin() as session:

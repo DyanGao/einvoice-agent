@@ -18,6 +18,7 @@ from app.db.store import (
     store_outcome,
 )
 from app.db.tables import (
+    DEFAULT_TENANT_ID,
     ApiTokenRow,
     AuditEventRow,
     Base,
@@ -28,13 +29,16 @@ from app.db.tables import (
     FindingRow,
     InvoiceRow,
     MatchRow,
+    MembershipRow,
     SeenBankTransactionRow,
     SessionRow,
+    TenantRow,
     UserRow,
     ValidationRow,
 )
 
 __all__ = [
+    "DEFAULT_TENANT_ID",
     "ApiTokenRow",
     "AuditEventRow",
     "Base",
@@ -45,12 +49,14 @@ __all__ = [
     "FindingRow",
     "InvoiceRow",
     "MatchRow",
+    "MembershipRow",
     "NotReviewable",
     "RejectReason",
     "ReviewError",
     "ReviewState",
     "SeenBankTransactionRow",
     "SessionRow",
+    "TenantRow",
     "UserRow",
     "ValidationRow",
     "apply_outcome",

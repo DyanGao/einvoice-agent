@@ -44,7 +44,11 @@ def run_document_job(
             # Another worker finished it while this one was processing.
             return document.status
         db.apply_outcome(session, document, outcome)
-        if checker is not None:
+        # The checker asks the ERP in .env, which is the default tenant's until
+        # tenants have their own settings (v1.0 Stage 2, increment 4). Another
+        # tenant's documents wait for a person, unchecked, rather than being
+        # matched against someone else's ERP.
+        if checker is not None and document.tenant_id == db.DEFAULT_TENANT_ID:
             checker.check(session, document)
             # The supplier's open invoices may be settled together with this one.
             rematch.after_processing(session, checker, document)

@@ -76,6 +76,7 @@ def copy_of(session: Session, document: DocumentRow) -> DocumentRow | None:
         original = session.get(DocumentRow, finding.detail.get("document_id"))
         if (
             original is not None
+            and original.tenant_id == document.tenant_id
             and original.review_state != ReviewState.REJECTED.value
             and _earlier(original, document)
             and _gross(original) == gross
@@ -84,10 +85,14 @@ def copy_of(session: Session, document: DocumentRow) -> DocumentRow | None:
     return None
 
 
-def redundant_copies(session: Session) -> list[RedundantCopy]:
+def redundant_copies(session: Session, tenant_id: str) -> list[RedundantCopy]:
+    """The tenant's plain copies waiting for review."""
     pending = session.scalars(
         select(DocumentRow)
-        .where(DocumentRow.review_state == ReviewState.PENDING.value)
+        .where(
+            DocumentRow.tenant_id == tenant_id,
+            DocumentRow.review_state == ReviewState.PENDING.value,
+        )
         .order_by(DocumentRow.created_at, DocumentRow.id)
     )
     copies = []
@@ -99,14 +104,21 @@ def redundant_copies(session: Session) -> list[RedundantCopy]:
 
 
 def reject_copies(
-    session: Session, document_ids: list[str], actor: str, actor_user_id: str | None = None
+    session: Session,
+    tenant_id: str,
+    document_ids: list[str],
+    actor: str,
+    actor_user_id: str | None = None,
 ) -> BulkRejection:
-    """Reject the given documents that are still redundant copies; the rest
-    are skipped. Each is checked again here, so a list shown earlier cannot
-    reject a document that has changed since."""
+    """Reject the given documents of the tenant that are still redundant
+    copies; the rest — another tenant's included — are skipped. Each is
+    checked again here, so a list shown earlier cannot reject a document that
+    has changed since."""
     result = BulkRejection()
     for document_id in document_ids:
         document = session.get(DocumentRow, document_id)
+        if document is not None and document.tenant_id != tenant_id:
+            document = None
         original = None if document is None else copy_of(session, document)
         if original is None:
             result.skipped.append(document_id)
