@@ -211,7 +211,7 @@ export default function ReviewPage() {
       show(await getDocument(id));
       setLoadError(null);
     } catch (problem) {
-      setLoadError(problem instanceof Error ? problem.message : String(problem));
+      setLoadError(i18n.error(problem));
     }
   }, [id, show]);
 
@@ -263,7 +263,7 @@ export default function ReviewPage() {
     try {
       show(await action());
     } catch (problem) {
-      setActionError(problem instanceof Error ? problem.message : String(problem));
+      setActionError(i18n.error(problem));
     } finally {
       setBusy(false);
     }

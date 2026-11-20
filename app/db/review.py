@@ -15,6 +15,7 @@ from app.db.tables import AuditEventRow, DocumentRow, DraftRow, InvoiceRow, invo
 from app.extract.draft import InvoiceDraft
 from app.models import Invoice
 from app.pipeline import DocumentStatus
+from app.texts import Text
 
 # Not part of the invoice itself; reviewers cannot edit these.
 READ_ONLY_FIELDS = {"source_format", "field_confidence", "derived_fields"}
@@ -49,7 +50,7 @@ class NotReviewable(ReviewError):
 def _container_and_key(data: dict[str, Any], path: str) -> tuple[Any, str | int]:
     parts = path.split(".")
     if not path or parts[0] in READ_ONLY_FIELDS:
-        raise ReviewError(f"field cannot be edited: {path!r}")
+        raise ReviewError(Text("review.not_editable", path=repr(path)))
     node: Any = data
     for part in parts[:-1]:
         node = _child(node, part, path)
@@ -57,13 +58,13 @@ def _container_and_key(data: dict[str, Any], path: str) -> tuple[Any, str | int]
     if isinstance(node, list):
         return node, _index(node, last, path)
     if not isinstance(node, dict) or last not in node:
-        raise ReviewError(f"unknown field: {path!r}")
+        raise ReviewError(Text("review.unknown_field", path=repr(path)))
     return node, last
 
 
 def _index(node: list, part: str, path: str) -> int:
     if not part.isdigit() or int(part) >= len(node):
-        raise ReviewError(f"unknown field: {path!r}")
+        raise ReviewError(Text("review.unknown_field", path=repr(path)))
     return int(part)
 
 
@@ -71,17 +72,17 @@ def _child(node: Any, part: str, path: str) -> Any:
     if isinstance(node, list):
         return node[_index(node, part, path)]
     if not isinstance(node, dict) or part not in node:
-        raise ReviewError(f"unknown field: {path!r}")
+        raise ReviewError(Text("review.unknown_field", path=repr(path)))
     return node[part]
 
 
 def _require_pending(document: DocumentRow) -> None:
     if document.review_state == ReviewState.APPROVED.value:
-        raise NotReviewable("document is already approved")
+        raise NotReviewable(Text("review.already_approved"))
     if document.review_state == ReviewState.REJECTED.value:
-        raise NotReviewable("document was rejected")
+        raise NotReviewable(Text("review.rejected"))
     if document.status == DocumentStatus.RECEIVED.value:
-        raise NotReviewable("document has not been processed yet")
+        raise NotReviewable(Text("review.not_processed"))
 
 
 def correct_fields(
@@ -113,7 +114,7 @@ def correct_fields(
         problems = "; ".join(
             f"{'.'.join(map(str, error['loc']))}: {error['msg']}" for error in exc.errors()
         )
-        raise ReviewError(f"invalid value: {problems}") from exc
+        raise ReviewError(Text("review.invalid_value", problems=problems)) from exc
 
     changed = []
     for path in changes:
@@ -148,11 +149,11 @@ def approve(
     """Turn the reviewed draft into the document's invoice of record."""
     _require_pending(document)
     if document.draft is None:
-        raise NotReviewable("document has no draft to approve")
+        raise NotReviewable(Text("review.no_draft"))
     draft = InvoiceDraft.model_validate(document.draft.data)
     missing = missing_for_approval(draft)
     if missing:
-        raise ReviewError(f"cannot approve, fields missing or invalid: {', '.join(missing)}")
+        raise ReviewError(Text("review.fields_missing", fields=list(missing)))
     invoice = draft.to_invoice()
 
     columns = invoice_columns(invoice)
@@ -188,10 +189,12 @@ def reject(
         why = RejectReason(reason)
     except ValueError:
         allowed = ", ".join(r.value for r in RejectReason)
-        raise ReviewError(f"unknown reason {reason!r}; one of: {allowed}") from None
+        raise ReviewError(
+            Text("review.unknown_reason", reason=repr(reason), allowed=allowed)
+        ) from None
     note = (note or "").strip() or None
     if why is RejectReason.OTHER and note is None:
-        raise ReviewError("a rejection for another reason needs a note saying which")
+        raise ReviewError(Text("review.note_needed"))
     document.review_state = ReviewState.REJECTED.value
     document.audit_events.append(
         AuditEventRow(
@@ -214,10 +217,10 @@ def reopen(
     """A rejection was a mistake: the document waits for review again. It is
     not checked again here; that, and approving it, are a person's next steps."""
     if document.review_state != ReviewState.REJECTED.value:
-        raise NotReviewable("document is not rejected")
+        raise NotReviewable(Text("review.not_rejected"))
     note = (note or "").strip()
     if not note:
-        raise ReviewError("reopening needs a note saying why")
+        raise ReviewError(Text("review.reopen_note"))
     document.review_state = ReviewState.PENDING.value
     document.audit_events.append(
         AuditEventRow(

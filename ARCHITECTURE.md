@@ -134,7 +134,10 @@ parameters. They are stored next to the sentence (`findings.text`, `matches.expl
 renders them in its language (`server.<code>` in the catalogues), falling back to the English sentence.
 Parameters named `…_amount`, `…_percent` and `fields` are formatted by the UI (amounts, shares, field
 labels). `tests/test_texts.py` fails if a code lacks a German or English text or if their parameters
-differ. The API's own error messages are next.
+differ. The API's refusals work the same way: an `HTTPException` whose detail is a `Text` is answered
+with `detail` (the English sentence, as every client got before) and `text` (its code); review actions
+and member changes raise Texts too, and the UI shows any refusal through `i18n.error()` in its
+language, as it does its own "API not reachable".
 
 **Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
 identity provider; someone from another tenant gets a role here too), change role, remove (their

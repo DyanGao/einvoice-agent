@@ -207,6 +207,13 @@ test.describe("in German", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Eingangsrechnungen" })).toBeVisible();
     await expect(page.getByLabel("Sprache")).toHaveValue("de");
+    // A refusal of the API, in German too: an empty file is not taken.
+    await page.getByLabel("Rechnungsdateien").setInputFiles({
+      name: "leer.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.alloc(0),
+    });
+    await expect(page.getByText("wurde nicht hochgeladen: leere Datei")).toBeVisible();
     await page.getByRole("button", { name: /Alle Belege/ }).click();
     // An amount the German way: thousands with a dot, decimals with a comma, then the euro sign.
     await expect(page.locator("td.number").first()).toHaveText(/^\d{1,3}(\.\d{3})*,\d{2}\s€$/);

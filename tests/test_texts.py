@@ -125,3 +125,44 @@ def test_a_checked_document_keeps_the_codes_of_its_findings_and_reasons(session_
     assert "finding.unknown_supplier" in finding_codes
     assert "reason.findings" in reason_codes
     assert explanation == [said(Text("match.no_supplier"))]
+
+
+def test_an_api_refusal_keeps_its_english_detail_and_says_its_code(session_factory, tmp_path):
+    from dataclasses import replace
+
+    from fastapi.testclient import TestClient
+
+    from app.api.main import create_app
+    from app.auth import Role, create_token, create_user
+    from tests.support import inline_queue, settings_for
+
+    settings = replace(settings_for(tmp_path), auth="on")
+    client = TestClient(create_app(session_factory, inline_queue(session_factory), settings))
+    with session_factory.begin() as session:
+        user = create_user(session, "v@example.com", "V", Role.VIEWER)
+        viewer = {"Authorization": f"Bearer {create_token(session, user.id, 't')}"}
+
+    missing = client.get("/documents/" + "0" * 32, headers=viewer).json()
+    assert missing == {
+        "detail": "document not found",
+        "text": {"code": "api.document_not_found", "params": {}, "text": "document not found"},
+    }
+    upload = client.post("/documents", files={"file": ("r.pdf", b"x")}, headers=viewer).json()
+    assert upload["detail"] == "needs the reviewer role"
+    assert upload["text"]["params"]["role"]["code"] == "role.reviewer"
+
+
+def test_a_refused_review_action_says_its_code(session_factory, tmp_path):
+    from fastapi.testclient import TestClient
+
+    from app.api.main import create_app
+    from tests.support import XML, inline_queue, settings_for
+
+    client = TestClient(
+        create_app(session_factory, inline_queue(session_factory), settings_for(tmp_path))
+    )
+    named = {"X-Reviewer": "anna"}
+    document_id = client.post("/documents", files={"file": ("r.xml", XML)}).json()["id"]
+    answer = client.post(f"/documents/{document_id}/reopen", headers=named, json={"note": "x"})
+    assert answer.status_code == 409
+    assert answer.json()["text"]["code"] == "review.not_rejected"

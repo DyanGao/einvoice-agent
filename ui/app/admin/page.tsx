@@ -20,7 +20,7 @@ import { useI18n, type Translator } from "@/lib/i18n";
 const ROLES: Role[] = ["viewer", "reviewer", "admin"];
 
 function message(i18n: Translator, error: unknown): string {
-  return error instanceof Error ? error.message : i18n.t("admin.failed");
+  return error instanceof Error ? i18n.error(error) : i18n.t("admin.failed");
 }
 
 function shown(i18n: Translator, value: unknown): string {

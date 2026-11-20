@@ -7,7 +7,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import type { Said } from "./api";
+import { API_URL, ApiError, type Said } from "./api";
 import { labelFor } from "./form";
 import { de, en, type MessageKey } from "./messages";
 
@@ -49,6 +49,8 @@ export type Translator = {
   inSentence: (label: string) => string;
   /** A text the server wrote, in this language; its English sentence where there is no code. */
   server: (said: Said | null | undefined, english: string) => string;
+  /** What went wrong, for the reader: the API's refusal in this language where it has a code. */
+  error: (problem: unknown) => string;
 };
 
 export function translator(locale: Locale): Translator {
@@ -94,6 +96,13 @@ export function translator(locale: Locale): Translator {
     inSentence: (label) => (locale === "en" ? label.toLowerCase() : label),
     // Rendered with this same translator, for the parameters too.
     server: (said, english) => (said ? serverText(translatorFor, said) : english),
+    error: (problem) => {
+      if (problem instanceof ApiError) {
+        if (problem.status === 0) return t("api.unreachable", { url: API_URL });
+        return problem.said ? serverText(translatorFor, problem.said) : problem.message;
+      }
+      return problem instanceof Error ? problem.message : String(problem);
+    },
   };
   return translatorFor;
 }

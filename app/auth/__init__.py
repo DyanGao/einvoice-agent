@@ -31,6 +31,7 @@ from app.db.tables import (
     TenantRow,
     UserRow,
 )
+from app.texts import Text
 
 TOKEN_PREFIX = "eia_"  # noqa: S105 -- a marker, not a secret
 SESSION_LIFETIME = timedelta(hours=8)
@@ -329,12 +330,12 @@ def change_role(
 ) -> None:
     membership = _membership(session, user_id, tenant_id)
     if membership is None:
-        raise LookupError("not a member of this tenant")
+        raise LookupError(Text("members.not_member"))
     if membership.role == Role.ADMIN.value and Role(role) != Role.ADMIN:
         if user_id == acting_user_id:
-            raise MembershipError("you cannot take away your own admin role")
+            raise MembershipError(Text("members.own_admin"))
         if _admins(session, tenant_id) <= 1:
-            raise MembershipError("the tenant would be left without an admin")
+            raise MembershipError(Text("members.last_admin"))
     membership.role = Role(role).value
     session.flush()
 
@@ -347,11 +348,11 @@ def remove_member(
     be in other tenants and the audit trail names them."""
     membership = _membership(session, user_id, tenant_id)
     if membership is None:
-        raise LookupError("not a member of this tenant")
+        raise LookupError(Text("members.not_member"))
     if user_id == acting_user_id:
-        raise MembershipError("you cannot remove yourself")
+        raise MembershipError(Text("members.self_remove"))
     if membership.role == Role.ADMIN.value and _admins(session, tenant_id) <= 1:
-        raise MembershipError("the tenant would be left without an admin")
+        raise MembershipError(Text("members.last_admin"))
     session.delete(membership)
     session.flush()
 

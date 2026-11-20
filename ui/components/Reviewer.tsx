@@ -167,7 +167,8 @@ export function ReviewerField() {
 
 /** The company this session works in; a choice for someone in several. */
 function TenantChoice({ me }: { me: Me }) {
-  const { t } = useI18n();
+  const i18n = useI18n();
+  const { t } = i18n;
   const [problem, setProblem] = useState<string | null>(null);
   if (me.tenants.length < 2) {
     return <span className="account-tenant">{me.tenant.name}</span>;
@@ -178,7 +179,7 @@ function TenantChoice({ me }: { me: Me }) {
       // Every page loads again, for the other company.
       .then(() => window.location.assign("/"))
       .catch((error: unknown) =>
-        setProblem(error instanceof Error ? error.message : t("account.switchFailed")),
+        setProblem(error instanceof Error ? i18n.error(error) : t("account.switchFailed")),
       );
   };
   return (

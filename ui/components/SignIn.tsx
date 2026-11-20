@@ -40,7 +40,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
     getSignInOptions()
       .then(setOptions)
       .catch((error: unknown) => {
-        if (error instanceof Error) setProblem(error.message);
+        if (error instanceof Error) setProblem(i18n.error(error));
         else setUnreachable(true);
       });
   }, []);
@@ -60,7 +60,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
           error instanceof ApiError && error.status === 401
             ? t("signin.wrongPassword")
             : error instanceof Error
-              ? error.message
+              ? i18n.error(error)
               : t("signin.failedGeneric"),
         );
       })

@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -36,6 +36,7 @@ from app.models import DocumentFormat
 from app.queue import JobQueue, QueueUnavailable
 from app.settings import Settings
 from app.tenants import TENANT_ADMIN_KEYS, config_for, update_config
+from app.texts import Text
 
 if TYPE_CHECKING:
     from app.tenants import TenantServices
@@ -142,6 +143,13 @@ def _summary(document: db.DocumentRow) -> dict:
             for delivery in sorted(document.deliveries, key=lambda d: d.connector)
         ],
     }
+
+
+def reason(exc: Exception) -> str:
+    """An exception's message, keeping its code when it has one (a Text):
+    str(exc) would make it plain."""
+    message = exc.args[0] if exc.args else ""
+    return message if isinstance(message, Text) else str(exc)
 
 
 def _tenant(tenant: db.TenantRow) -> dict:
@@ -281,6 +289,17 @@ def create_app(
     `tenants` gives each tenant its own checker (its ERP); without it,
     `checker` serves the default tenant only."""
     app = FastAPI(title="einvoice-agent")
+
+    @app.exception_handler(HTTPException)
+    async def refusal(request: Request, exc: HTTPException) -> JSONResponse:
+        """`detail` stays the English sentence, for every client as before; a
+        refusal written as a Text also says its code, for the review UI's
+        language (app/texts.py)."""
+        body: dict[str, Any] = {"detail": exc.detail}
+        if isinstance(exc.detail, Text):
+            body = {"detail": str(exc.detail), "text": exc.detail.said()}
+        return JSONResponse(body, status_code=exc.status_code, headers=exc.headers)
+
     if oidc is None and settings.oidc is not None:
         oidc = OidcClient(settings.oidc)
     limiter = limiter or SignInLimiter()
@@ -326,7 +345,7 @@ def create_app(
     def typed_name(x_reviewer: str | None) -> str:
         name = (x_reviewer or "").strip()
         if not name or len(name) > 100:
-            raise HTTPException(400, "X-Reviewer header with the reviewer's name is required")
+            raise HTTPException(400, Text("api.reviewer_name_required"))
         return name
 
     def identify(request: Request, active: Session) -> Actor | None:
@@ -339,7 +358,7 @@ def create_app(
         if cookie is None:
             return None
         if request.method not in _READS and request.headers.get(UI_HEADER) != UI_HEADER_VALUE:
-            raise HTTPException(403, f"a change made with the session cookie needs {UI_HEADER}")
+            raise HTTPException(403, Text("api.csrf_header", header=UI_HEADER))
         return auth.authenticate_session(active, cookie, now)
 
     def require(role: Role, *, named: bool = False):
@@ -356,7 +375,7 @@ def create_app(
                 if (request.url.hostname or "") not in settings.open_hosts:
                     raise HTTPException(
                         403,
-                        "sign-in is off (AUTH=off): only requests to localhost are answered",
+                        Text("api.open_mode_localhost"),
                     )
                 name = typed_name(x_reviewer) if named else "anonymous"
                 actor = Actor(
@@ -372,14 +391,14 @@ def create_app(
                 if actor is None:
                     raise HTTPException(
                         401,
-                        "sign in, or send an API token",
+                        Text("api.sign_in"),
                         headers={"WWW-Authenticate": "Bearer"},
                     )
                 request.state.actor = actor
                 # Postgres hides every other tenant's rows from here on.
                 act_for(active, actor.tenant_id)
             if not actor.role.allows(role):
-                raise HTTPException(403, f"needs the {role} role")
+                raise HTTPException(403, Text("api.needs_role", role=Text(f"role.{role}")))
             return actor
 
         return dependency
@@ -393,7 +412,7 @@ def create_app(
         Another tenant's document does not exist either (404, not 403)."""
         row = active.get(db.DocumentRow, document_id)
         if row is None or row.tenant_id != actor.tenant_id:
-            raise HTTPException(404, "document not found")
+            raise HTTPException(404, Text("api.document_not_found"))
         return row
 
     def checker_for(row: db.DocumentRow) -> Checker | None:
@@ -439,9 +458,9 @@ def create_app(
 
     def provider() -> OidcClient:
         if settings.auth == "off":
-            raise HTTPException(409, "sign-in is off (AUTH=off)")
+            raise HTTPException(409, Text("api.sign_in_off"))
         if oidc is None:
-            raise HTTPException(404, "no identity provider is configured (OIDC_ISSUER)")
+            raise HTTPException(404, Text("api.no_provider"))
         return oidc
 
     @app.get("/auth/options")
@@ -461,19 +480,19 @@ def create_app(
     def login(body: Credentials, response: Response, request: Request, active: Db) -> dict:
         """Password sign-in, for the built-in account(s) set up with the CLI."""
         if settings.auth == "off":
-            raise HTTPException(409, "sign-in is off (AUTH=off)")
+            raise HTTPException(409, Text("api.sign_in_off"))
         address = request.client.host if request.client else "unknown"
         wait = limiter.retry_after(body.email, address)
         if wait is not None:
             raise HTTPException(
                 429,
-                f"too many failed sign-ins; try again in {(wait + 59) // 60} minute(s)",
+                Text("api.too_many_sign_ins", minutes=(wait + 59) // 60),
                 headers={"Retry-After": str(wait)},
             )
         actor = auth.sign_in(active, body.email, body.password)
         if actor is None:
             limiter.failed(body.email, address)
-            raise HTTPException(401, "wrong email or password")
+            raise HTTPException(401, Text("api.wrong_password"))
         limiter.succeeded(body.email)
         start_session(active, actor, request, response)
         return _me(active, actor)
@@ -487,7 +506,7 @@ def create_app(
             target = client.authorization_url(attempt)
         except OidcError as exc:
             logger.warning("identity provider unavailable: %s", exc)
-            raise HTTPException(502, "the identity provider cannot be reached") from exc
+            raise HTTPException(502, Text("api.provider_unreachable")) from exc
         response = RedirectResponse(target, status_code=303)
         response.set_cookie(
             LOGIN_COOKIE,
@@ -553,19 +572,21 @@ def create_app(
             return {"auth": "off"}
         actor = identify(request, active)
         if actor is None:
-            raise HTTPException(401, "not signed in")
+            raise HTTPException(401, Text("api.not_signed_in"))
         return _me(active, actor)
 
     def browser_session(request: Request, active: Db) -> Actor:
         """Signed in with the session cookie: checked before anything else of
         the request is looked at."""
         if settings.auth == "off":
-            raise HTTPException(409, "sign-in is off (AUTH=off)")
+            raise HTTPException(409, Text("api.sign_in_off"))
         if request.headers.get("Authorization", "").startswith("Bearer "):
-            raise HTTPException(409, "an API token acts in the tenant it was made for")
+            raise HTTPException(409, Text("api.token_cannot_switch"))
         actor = identify(request, active)
         if actor is None:
-            raise HTTPException(401, "not signed in", headers={"WWW-Authenticate": "Bearer"})
+            raise HTTPException(
+                401, Text("api.not_signed_in"), headers={"WWW-Authenticate": "Bearer"}
+            )
         return actor
 
     @app.post("/auth/tenant")
@@ -582,7 +603,7 @@ def create_app(
         )
         if actor is None:
             # Like a document of another tenant: not there, rather than forbidden.
-            raise HTTPException(404, "no such tenant among yours")
+            raise HTTPException(404, Text("api.no_such_tenant"))
         return _me(active, actor)
 
     @contextmanager
@@ -592,9 +613,7 @@ def create_app(
         not read the sign-in tables. Everything here is filtered by the
         admin's tenant in the code."""
         if settings.auth == "off":
-            raise HTTPException(
-                409, "sign-in is off (AUTH=off): manage members with the einvoice CLI"
-            )
+            raise HTTPException(409, Text("api.members_cli"))
         with session_factory.begin() as session:
             yield session
 
@@ -626,11 +645,11 @@ def create_app(
                         session, body.email, body.name, body.role, tenant_id=who.tenant_id
                     )
                 elif session.get(db.MembershipRow, (user.id, who.tenant_id)) is not None:
-                    raise HTTPException(409, f"{user.email} is a member already")
+                    raise HTTPException(409, Text("api.member_already", email=user.email))
                 else:
                     auth.add_membership(session, user.id, who.tenant_id, body.role)
             except ValueError as exc:
-                raise HTTPException(422, str(exc)) from exc
+                raise HTTPException(422, Text("api.member_refused", detail=str(exc))) from exc
             return member(user, body.role)
 
     @app.patch("/admin/members/{user_id}")
@@ -639,9 +658,9 @@ def create_app(
             try:
                 auth.change_role(session, who.tenant_id, user_id, body.role, who.user_id)
             except LookupError as exc:
-                raise HTTPException(404, str(exc)) from exc
+                raise HTTPException(404, reason(exc)) from exc
             except auth.MembershipError as exc:
-                raise HTTPException(409, str(exc)) from exc
+                raise HTTPException(409, reason(exc)) from exc
             return member(session.get(db.UserRow, user_id), body.role)
 
     @app.delete("/admin/members/{user_id}", status_code=204)
@@ -650,9 +669,9 @@ def create_app(
             try:
                 auth.remove_member(session, who.tenant_id, user_id, who.user_id)
             except LookupError as exc:
-                raise HTTPException(404, str(exc)) from exc
+                raise HTTPException(404, reason(exc)) from exc
             except auth.MembershipError as exc:
-                raise HTTPException(409, str(exc)) from exc
+                raise HTTPException(409, reason(exc)) from exc
         return Response(status_code=204)
 
     @app.get("/admin/settings")
@@ -673,28 +692,26 @@ def create_app(
         if refused:
             raise HTTPException(
                 403,
-                f"{', '.join(refused)}: set by the installation's operator (einvoice tenant-set)",
+                Text("api.operator_settings", settings=refused),
             )
         with accounts() as session:
             try:
                 update_config(session, who.tenant_id, body.changes, settings)
             except ValueError as exc:
-                raise HTTPException(422, str(exc)) from exc
+                raise HTTPException(422, Text("api.invalid_settings", detail=str(exc))) from exc
         return tenant_settings(who)
 
     @app.post("/documents", status_code=202)
     async def upload(file: UploadFile, response: Response, who: Uploader) -> dict:
         data = await file.read(settings.max_upload_bytes + 1)
         if not data:
-            raise HTTPException(400, "empty file")
+            raise HTTPException(400, Text("api.empty_file"))
         if len(data) > settings.max_upload_bytes:
-            raise HTTPException(413, f"file larger than {settings.max_upload_bytes} bytes")
+            raise HTTPException(413, Text("api.file_too_large", bytes=settings.max_upload_bytes))
         try:
             result = ingest(session_factory, queue, data, file.filename, tenant_id=who.tenant_id)
         except QueueUnavailable as exc:
-            raise HTTPException(
-                503, f"document stored but not queued ({exc}); run `einvoice requeue`"
-            ) from exc
+            raise HTTPException(503, Text("api.not_queued", detail=str(exc))) from exc
         if result.duplicate:
             response.status_code = 200
         return {"id": result.document_id, "status": result.status, "duplicate": result.duplicate}
@@ -738,9 +755,9 @@ def create_app(
         try:
             changed = db.correct_fields(active, row, body.changes, who.name, who.user_id)
         except db.NotReviewable as exc:
-            raise HTTPException(409, str(exc)) from exc
+            raise HTTPException(409, reason(exc)) from exc
         except db.ReviewError as exc:
-            raise HTTPException(422, str(exc)) from exc
+            raise HTTPException(422, reason(exc)) from exc
         checks = checker_for(row)
         if checks is not None and changed:
             checks.check(active, row)
@@ -753,13 +770,13 @@ def create_app(
         combined transfer come in, a supplier's master data is corrected."""
         checks = checker_for(row)
         if checks is None:
-            raise HTTPException(409, "no checks are configured for this installation")
+            raise HTTPException(409, Text("api.no_checks"))
         if row.review_state == db.ReviewState.APPROVED.value:
-            raise HTTPException(409, "document is already approved")
+            raise HTTPException(409, Text("review.already_approved"))
         if row.review_state == db.ReviewState.REJECTED.value:
-            raise HTTPException(409, "document was rejected")
+            raise HTTPException(409, Text("review.rejected"))
         if row.draft is None:
-            raise HTTPException(409, "nothing was read from this document, so nothing to check")
+            raise HTTPException(409, Text("api.nothing_to_check"))
         checks.check(active, row)
         return _detail(row)
 
@@ -768,9 +785,9 @@ def create_app(
         try:
             db.approve(active, row, who.name, who.user_id)
         except db.NotReviewable as exc:
-            raise HTTPException(409, str(exc)) from exc
+            raise HTTPException(409, reason(exc)) from exc
         except db.ReviewError as exc:
-            raise HTTPException(422, str(exc)) from exc
+            raise HTTPException(422, reason(exc)) from exc
         _write_feedback_case(settings, row)
         return _detail(row)
 
@@ -830,9 +847,9 @@ def create_app(
         try:
             db.reject(active, row, who.name, body.reason, body.note, who.user_id)
         except db.NotReviewable as exc:
-            raise HTTPException(409, str(exc)) from exc
+            raise HTTPException(409, reason(exc)) from exc
         except db.ReviewError as exc:
-            raise HTTPException(422, str(exc)) from exc
+            raise HTTPException(422, reason(exc)) from exc
         return _detail(row)
 
     @app.post("/documents/{document_id}/reopen")
@@ -841,9 +858,9 @@ def create_app(
         try:
             db.reopen(active, row, who.name, body.note, who.user_id)
         except db.NotReviewable as exc:
-            raise HTTPException(409, str(exc)) from exc
+            raise HTTPException(409, reason(exc)) from exc
         except db.ReviewError as exc:
-            raise HTTPException(422, str(exc)) from exc
+            raise HTTPException(422, reason(exc)) from exc
         return _detail(row)
 
     return app
