@@ -43,7 +43,7 @@ from pypdf.errors import PdfReadError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.rls import tenant_transaction
-from app.db.tables import MailboxStateRow, MailRow
+from app.db.tables import DocumentRow, MailboxStateRow, MailRow
 from app.ingest import ingest
 from app.mailbox_oauth import TokenError, TokenSource, xoauth2
 from app.queue import JobQueue
@@ -362,6 +362,22 @@ def _start(
         return state.last_uid
 
 
+def _first_from(
+    session_factory: sessionmaker[Session], tenant_id: str, document_id: str, source: dict
+) -> bool:
+    """Whether a document already known came first from this very mail: read
+    again after a crash between storing it and marking the mail. It is then
+    this mail's invoice, not a copy someone sent again (found by the mailbox
+    eval)."""
+    with tenant_transaction(session_factory, tenant_id) as session:
+        document = session.get(DocumentRow, document_id)
+        first = {}
+        if document is not None and document.audit_events:
+            first = document.audit_events[0].detail.get("source") or {}
+    same = ("mailbox", "uidvalidity", "uid")
+    return all(first.get(key) == source[key] for key in same)
+
+
 def _handled(
     session_factory: sessionmaker[Session],
     tenant_id: str,
@@ -391,13 +407,15 @@ def poll(
     crash anywhere in between costs at most reading one mail again, which
     stores nothing new."""
     key = mailbox_key(config)
-    last = _start(session_factory, tenant_id, key, connection.select(config.imap_folder))
+    uidvalidity = connection.select(config.imap_folder)
+    last = _start(session_factory, tenant_id, key, uidvalidity)
     done = Round()
     for uid in connection.uids_after(last):
         message = email.message_from_bytes(connection.fetch(uid), policy=default_policy)
         source = {
             "channel": "email",
             "mailbox": key,
+            "uidvalidity": str(uidvalidity),
             "uid": str(uid),
             "from": _header(message, "From"),
             "subject": _header(message, "Subject"),
@@ -428,7 +446,10 @@ def poll(
                     tenant_id=tenant_id,
                     source=source,
                 )
-                outcome = KNOWN if result.duplicate else INGESTED
+                first_time = not result.duplicate or _first_from(
+                    session_factory, tenant_id, result.document_id, source
+                )
+                outcome = INGESTED if first_time else KNOWN
                 parts.append(
                     Part(
                         invoice.filename,
@@ -438,7 +459,7 @@ def poll(
                         document_id=result.document_id,
                     )
                 )
-                if result.duplicate:
+                if not first_time:
                     done.duplicates += 1
                 else:
                     done.documents.append(result.document_id)

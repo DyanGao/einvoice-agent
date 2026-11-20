@@ -201,3 +201,22 @@ def test_each_tenant_sees_only_its_own_mail(session_factory, tmp_path):
     read(session_factory, Mailbox([mail("fuer acme", [pdf()])]), tenant_id=acme)
     client, headers = viewer_client(session_factory, tmp_path)
     assert client.get("/mail", headers=headers).json()["mails"] == []
+
+
+def test_a_mail_read_again_after_a_crash_still_counts_its_invoice_as_received(session_factory):
+    """Found by the mailbox eval: stored, then the poller died before marking
+    the mail; read again, the invoice is this mail's own, not a copy."""
+    box = Mailbox([mail("a", [pdf()])])
+    box.fail_marking = True
+    with pytest.raises(Exception, match="connection lost"):
+        read(session_factory, box)
+    box.fail_marking = False
+    read(session_factory, box)
+    (record,) = records(session_factory)
+    assert outcomes(record) == [("rechnung.pdf", "ingested", None)]
+
+
+def test_the_same_invoice_in_a_later_mail_is_still_known(session_factory):
+    box = Mailbox([mail("a", [pdf()]), mail("b", [pdf()])])
+    read(session_factory, box)
+    assert [outcomes(r)[0][1] for r in records(session_factory)] == ["ingested", "known"]

@@ -119,7 +119,8 @@ Signing in: a password, or OAuth2 (XOAUTH2, `app/mailbox_oauth.py`) — Microsof
 client-credentials grant (the app signs in as itself), Gmail with a refresh token from a one-time
 consent; a token is reused until two minutes before it expires. Client secrets and refresh tokens are
 named `TENANT_…` variables like every secret, and appear in no log or error. Where the server offers
-SASL-IR the token goes with the AUTHENTICATE command.
+SASL-IR the token goes with the AUTHENTICATE command. The mailbox eval (`make eval-mailbox`, 200
+synthetic mails, with crashes; also through GreenMail) gates this in CI.
 
 **Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
 identity provider; someone from another tenant gets a role here too), change role, remove (their
