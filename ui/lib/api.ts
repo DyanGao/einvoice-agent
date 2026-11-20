@@ -42,11 +42,16 @@ export type Violation = {
   location: string | null;
 };
 
+/** A text the server wrote, as a code with parameters (app/texts.py) and in
+ * English. Null for rows from before the server sent codes. */
+export type Said = { code: string; params: Record<string, unknown>; text: string };
+
 /** Something a business-rule check found on the invoice. */
 export type Finding = {
   type: string;
   severity: "review" | "info";
   message: string;
+  text?: Said | null;
   fields: string[];
   detail: Record<string, unknown>;
 };
@@ -55,6 +60,7 @@ export type Finding = {
 export type Reason = {
   cause: string;
   message: string;
+  text?: Said | null;
   fields: string[];
   findings: string[];
 };
@@ -69,6 +75,7 @@ export type Delivery = {
   attempts: number;
   external_ref: string | null;
   last_error: string | null;
+  error_text?: Said | null;
   delivered_at: string | null;
 };
 
@@ -81,6 +88,8 @@ export type Match = {
   payments: { bank_transaction_id: string; amount: string }[];
   payment_basis: string;
   explanation: string[];
+  /** The same lines as codes; null where a line has none. */
+  explanation_texts?: (Said | null)[] | null;
 };
 
 export type AuditEvent = {

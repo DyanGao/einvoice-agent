@@ -196,6 +196,8 @@ def _detail(document: db.DocumentRow) -> dict:
             "payments": document.match.payments,
             "payment_basis": document.match.payment_basis,
             "explanation": document.match.explanation,
+            # The same lines as codes for the UI's language (None: English only).
+            "explanation_texts": document.match.explanation_texts,
         },
         "deliveries": [
             {
@@ -204,6 +206,7 @@ def _detail(document: db.DocumentRow) -> dict:
                 "attempts": delivery.attempts,
                 "external_ref": delivery.external_ref,
                 "last_error": delivery.last_error,
+                "error_text": delivery.error_text,
                 "delivered_at": None
                 if delivery.delivered_at is None
                 else delivery.delivered_at.isoformat(),
@@ -222,6 +225,7 @@ def _detail(document: db.DocumentRow) -> dict:
                 "type": finding.type,
                 "severity": finding.severity,
                 "message": finding.message,
+                "text": finding.text,
                 "fields": finding.fields,
                 "detail": finding.detail,
             }

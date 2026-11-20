@@ -17,6 +17,7 @@ import {
   type Delivery,
   type Detail,
   type RejectReason,
+  type Said,
   type Violation,
 } from "@/lib/api";
 import {
@@ -110,7 +111,7 @@ function Hints({ marks }: { marks: ReturnType<typeof marksFor> }) {
 
 /** A table cell has no room for hints; they go into its tooltip. */
 function cellTitle(i18n: Translator, marks: ReturnType<typeof marksFor>): string | undefined {
-  const notes = marks.findings.map((finding) => finding.message);
+  const notes = marks.findings.map((finding) => i18n.server(finding.text, finding.message));
   if (marks.was !== null) notes.push(wasText(i18n, marks.was));
   return notes.length > 0 ? notes.join("\n") : undefined;
 }
@@ -139,10 +140,17 @@ function deliveryText(i18n: Translator, delivery: Delivery): string {
       : t("delivery.delivered", booked);
   }
   if (delivery.status === "failed") {
-    return t("delivery.failed", { target, reason: delivery.last_error ?? t("delivery.noReason") });
+    const reason = delivery.last_error
+      ? i18n.server(delivery.error_text, delivery.last_error)
+      : t("delivery.noReason");
+    return t("delivery.failed", { target, reason });
   }
   return delivery.last_error
-    ? t("delivery.retrying", { target, attempts: delivery.attempts, reason: delivery.last_error })
+    ? t("delivery.retrying", {
+        target,
+        attempts: delivery.attempts,
+        reason: i18n.server(delivery.error_text, delivery.last_error),
+      })
     : t("delivery.waiting", { target });
 }
 
@@ -174,9 +182,9 @@ function auditText(i18n: Translator, event: AuditEvent): string {
   const name = event.event.replaceAll("_", " ");
   const text = i18n.tx(`audit.${event.event}`, name.charAt(0).toUpperCase() + name.slice(1));
   // A re-match says what set it off: a later invoice or a new bank transfer.
-  return typeof detail.trigger === "string"
-    ? t("audit.again", { event: text, trigger: detail.trigger })
-    : text;
+  if (typeof detail.trigger !== "string") return text;
+  const trigger = i18n.server(detail.trigger_text as Said | null | undefined, detail.trigger);
+  return t("audit.again", { event: text, trigger });
 }
 
 export default function ReviewPage() {
@@ -405,7 +413,9 @@ export default function ReviewPage() {
               {detail.decision.reasons.map((reason, index) => (
                 <li key={index} className="violation">
                   <strong>{causeLabel(i18n, reason.cause)}</strong>{" "}
-                  {reason.cause === "findings" ? t("doc.whyReview.seeChecks") : reason.message}
+                  {reason.cause === "findings"
+                    ? t("doc.whyReview.seeChecks")
+                    : i18n.server(reason.text, reason.message)}
                 </li>
               ))}
             </ul>
@@ -423,7 +433,8 @@ export default function ReviewPage() {
                     finding.severity === "review" ? "violation violation-error" : "violation"
                   }
                 >
-                  <strong>{findingLabel(i18n, finding.type)}</strong> {finding.message}
+                  <strong>{findingLabel(i18n, finding.type)}</strong>{" "}
+                  {i18n.server(finding.text, finding.message)}
                 </li>
               ))}
             </ul>
@@ -456,7 +467,7 @@ export default function ReviewPage() {
             </dl>
             <ul className="match-why">
               {detail.match.explanation.map((line, index) => (
-                <li key={index}>{line}</li>
+                <li key={index}>{i18n.server(detail.match?.explanation_texts?.[index], line)}</li>
               ))}
             </ul>
             {!approved && !rejected && (

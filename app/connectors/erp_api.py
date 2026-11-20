@@ -8,6 +8,7 @@ safe.
 import httpx
 
 from app.connectors.base import Booking, DeliveryFailed
+from app.texts import Text
 
 
 class ErpApiConnector:
@@ -26,17 +27,20 @@ class ErpApiConnector:
             )
         except httpx.HTTPError as exc:
             raise DeliveryFailed(
-                f"ERP not reachable: {type(exc).__name__}: {exc}", retryable=True
+                Text("delivery.erp_unreachable", detail=f"{type(exc).__name__}: {exc}"),
+                retryable=True,
             ) from exc
         if response.status_code in (200, 201):
             return str(response.json()["id"])
         detail = _detail(response)
         if response.status_code >= 500 or response.status_code == 429:
             raise DeliveryFailed(
-                f"ERP failed with {response.status_code}: {detail}", retryable=True
+                Text("delivery.erp_failed", status=response.status_code, detail=detail),
+                retryable=True,
             )
         raise DeliveryFailed(
-            f"ERP refused the booking ({response.status_code}): {detail}", retryable=False
+            Text("delivery.erp_refused", status=response.status_code, detail=detail),
+            retryable=False,
         )
 
 

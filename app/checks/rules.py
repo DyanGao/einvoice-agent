@@ -11,6 +11,7 @@ from app.checks.context import CheckContext, KnownInvoice, MasterData
 from app.checks.finding import Finding, FindingType, Severity
 from app.extract.complete import ZERO_RATE_CATEGORIES
 from app.extract.draft import InvoiceDraft
+from app.texts import Text
 
 Check = Callable[[InvoiceDraft, CheckContext], list[Finding]]
 
@@ -22,9 +23,11 @@ def totals(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
         Finding(
             type=FindingType.TOTALS_MISMATCH,
             severity=Severity.REVIEW,
-            message=(
-                f"{result.description}: expected {result.expected.quantize(_CENT)}, "
-                f"invoice says {result.actual}"
+            message=Text(
+                "finding.totals_mismatch",
+                check=result.description,
+                expected_amount=result.expected.quantize(_CENT),
+                actual_amount=result.actual,
             ),
             fields=result.fields,
             detail={
@@ -65,7 +68,9 @@ def vat_rates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
                 Finding(
                     type=FindingType.VAT_RATE_IMPLAUSIBLE,
                     severity=Severity.REVIEW,
-                    message=f"VAT category {group.category} cannot carry a rate of {group.rate} %",
+                    message=Text(
+                        "finding.vat_rate_category", category=group.category, rate=group.rate
+                    ),
                     fields=(f"vat_breakdown.{index}.rate", f"vat_breakdown.{index}.category"),
                     detail={"rate": str(group.rate), "category": group.category},
                 )
@@ -84,7 +89,7 @@ def vat_rates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
                 Finding(
                     type=FindingType.VAT_RATE_IMPLAUSIBLE,
                     severity=Severity.REVIEW,
-                    message=f"{rate} % is not a German VAT rate",
+                    message=Text("finding.vat_rate_not_german", rate=rate),
                     fields=(path,),
                     detail={"rate": str(rate), "allowed": sorted(map(str, allowed))},
                 )
@@ -105,15 +110,15 @@ def german_vat_id_checksum_holds(vat_id: str) -> bool:
     return (11 - product) % 10 == int(vat_id[10])
 
 
-def _vat_id_problem(vat_id: str) -> str | None:
+def _vat_id_problem(vat_id: str) -> Text | None:
     if vat_id.startswith("DE"):
         if not _GERMAN_VAT_ID.fullmatch(vat_id):
-            return "a German VAT ID is DE followed by nine digits"
+            return Text("vat_id.german_shape")
         if not german_vat_id_checksum_holds(vat_id):
-            return "the check digit of this German VAT ID is wrong"
+            return Text("vat_id.german_check_digit")
         return None
     if not _VAT_ID_SHAPE.fullmatch(vat_id) or not any(ch.isdigit() for ch in vat_id):
-        return "this is not the shape of an EU VAT ID"
+        return Text("vat_id.eu_shape")
     return None
 
 
@@ -126,7 +131,12 @@ def vat_ids(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
                 Finding(
                     type=FindingType.VAT_ID_INVALID,
                     severity=Severity.REVIEW,
-                    message=f"{role} VAT ID {party.vat_id}: {problem}",
+                    message=Text(
+                        "finding.vat_id_invalid",
+                        party=Text(f"party.{role}"),
+                        vat_id=party.vat_id,
+                        problem=problem,
+                    ),
                     fields=(f"{role}.vat_id",),
                     detail={"vat_id": party.vat_id, "role": role},
                 )
@@ -144,9 +154,9 @@ def document_type(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
             type=FindingType.CREDIT_NOTE if credit_note else FindingType.UNUSUAL_DOCUMENT_TYPE,
             severity=Severity.REVIEW,
             message=(
-                "credit note: reduces an earlier invoice and is not booked automatically"
+                Text("finding.credit_note")
                 if credit_note
-                else f"document type {draft.type_code} is not an ordinary invoice"
+                else Text("finding.unusual_document_type", type_code=draft.type_code)
             ),
             fields=("type_code",),
             detail={"type_code": draft.type_code},
@@ -205,7 +215,7 @@ def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
                 Finding(
                     type=FindingType.DUPLICATE,
                     severity=Severity.REVIEW,
-                    message=f"invoice {known.number} from this supplier is already on file",
+                    message=Text("finding.duplicate", number=known.number),
                     fields=("number",),
                     detail=detail,
                 )
@@ -226,9 +236,11 @@ def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
                 Finding(
                     type=FindingType.NEAR_DUPLICATE,
                     severity=Severity.REVIEW,
-                    message=(
-                        f"looks like invoice {known.number} from this supplier, already on "
-                        f"file: same amount and {'a similar number' if similar_number else 'date'}"
+                    message=Text(
+                        "finding.near_duplicate_number"
+                        if similar_number
+                        else "finding.near_duplicate_date",
+                        number=known.number,
                     ),
                     fields=("number", "gross_total"),
                     detail=detail,
@@ -241,9 +253,10 @@ def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
             Finding(
                 type=FindingType.DELIVERY_ALREADY_BILLED,
                 severity=Severity.REVIEW,
-                message=(
-                    f"delivery {context.delivery_id} was already billed with invoice "
-                    f"{known.number}, on file"
+                message=Text(
+                    "finding.delivery_already_billed",
+                    delivery=context.delivery_id,
+                    number=known.number,
                 ),
                 fields=("number",),
                 detail={
@@ -266,14 +279,16 @@ def master_data(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
     if context.master_data is MasterData.AVAILABLE:
         return []
     down = context.master_data is MasterData.UNAVAILABLE
-    reason = (
-        f"the ERP did not answer ({context.master_data_problem})" if down else "no ERP is connected"
+    message = (
+        Text("finding.master_data_unavailable", problem=context.master_data_problem)
+        if down
+        else Text("finding.master_data_none")
     )
     return [
         Finding(
             type=FindingType.MASTER_DATA_NOT_CHECKED,
             severity=Severity.REVIEW if down else Severity.INFO,
-            message=f"supplier, payment account and purchase order were not checked: {reason}",
+            message=message,
             detail={"reason": context.master_data.value},
         )
     ]
@@ -290,7 +305,7 @@ def supplier_and_iban(draft: InvoiceDraft, context: CheckContext) -> list[Findin
             Finding(
                 type=FindingType.UNKNOWN_SUPPLIER,
                 severity=Severity.REVIEW,
-                message="no supplier with this VAT ID or name is on file",
+                message=Text("finding.unknown_supplier"),
                 fields=("seller.name", "seller.vat_id"),
                 detail={"name": draft.seller.name, "vat_id": draft.seller.vat_id},
             )
@@ -302,10 +317,7 @@ def supplier_and_iban(draft: InvoiceDraft, context: CheckContext) -> list[Findin
         Finding(
             type=FindingType.IBAN_CHANGED,
             severity=Severity.REVIEW,
-            message=(
-                f"payment account {', '.join(unknown)} is not on file for {supplier.name}; "
-                "confirm it with the supplier through a known contact before paying"
-            ),
+            message=Text("finding.iban_changed", ibans=unknown, supplier=supplier.name),
             fields=("payment_ibans",),
             detail={"unknown": unknown, "on_file": list(supplier.ibans), "supplier": supplier.id},
         )
@@ -326,17 +338,24 @@ def purchase_order(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
     order = context.purchase_order
     if order is None:
         if draft.po_ref is not None or context.purchase_order_problem is not None:
-            named = (
-                f"purchase order {draft.po_ref} named on the invoice does not exist"
-                if draft.po_ref is not None
-                else "the invoice names no purchase order"
-            )
             problem = context.purchase_order_problem
+            if draft.po_ref is not None:
+                message = (
+                    Text("finding.po_not_found_because", po_ref=draft.po_ref, problem=problem)
+                    if problem
+                    else Text("finding.po_not_found", po_ref=draft.po_ref)
+                )
+            else:
+                message = (
+                    Text("finding.no_po_because", problem=problem)
+                    if problem
+                    else Text("finding.missing_po")
+                )
             return [
                 Finding(
                     type=FindingType.PO_NOT_FOUND,
                     severity=Severity.REVIEW,
-                    message=f"{named}; {problem}" if problem else named,
+                    message=message,
                     fields=("po_ref",),
                     detail={"po_ref": draft.po_ref},
                 )
@@ -345,7 +364,7 @@ def purchase_order(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
             Finding(
                 type=FindingType.MISSING_PO,
                 severity=Severity.REVIEW if settings.po_required else Severity.INFO,
-                message="the invoice names no purchase order",
+                message=Text("finding.missing_po"),
                 fields=("po_ref",),
             )
         ]
@@ -376,14 +395,17 @@ def purchase_order(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
         ):  # fmt: skip
             above = None if actual is None else _share_above(actual, agreed)
             if above is not None and above > tolerance:
-                what = "price" if cell == "unit_price" else "quantity"
                 findings.append(
                     Finding(
                         type=kind,
                         severity=Severity.REVIEW,
-                        message=(
-                            f"line {index + 1}: {what} {actual} is {above:.1%} above the "
-                            f"{agreed} on order {order.number}"
+                        message=Text(
+                            f"finding.{kind.value}",
+                            line=index + 1,
+                            invoiced_amount=actual,
+                            above_percent=above,
+                            ordered_amount=agreed,
+                            order=order.number,
                         ),
                         fields=(f"lines.{index}.{cell}",),
                         detail={

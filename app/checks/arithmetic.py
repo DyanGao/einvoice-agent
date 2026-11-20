@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
 from app.extract.draft import InvoiceDraft
+from app.texts import Text
 
 # Printed amounts are rounded to cents, so a product or sum may be off by one.
 TOLERANCE = Decimal("0.01")
@@ -41,7 +42,7 @@ def evaluate(draft: InvoiceDraft) -> list[RuleResult]:
             results.append(
                 RuleResult(
                     rule="line_amount",
-                    description=f"line {index + 1}: quantity x unit price = net amount",
+                    description=Text("check.line_net", line=index + 1),
                     fields=tuple(
                         f"lines.{index}.{cell}" for cell in ("quantity", "unit_price", "net")
                     ),
@@ -54,7 +55,7 @@ def evaluate(draft: InvoiceDraft) -> list[RuleResult]:
         results.append(
             RuleResult(
                 rule="line_sum",
-                description="sum of the line amounts = line total",
+                description=Text("check.lines_total"),
                 fields=("line_net_total",),
                 expected=sum(nets, Decimal(0)),
                 actual=draft.line_net_total,
@@ -66,7 +67,7 @@ def evaluate(draft: InvoiceDraft) -> list[RuleResult]:
             results.append(
                 RuleResult(
                     rule="vat_group_tax",
-                    description=f"VAT group {index + 1}: rate x taxable amount = tax",
+                    description=Text("check.vat_group", group=index + 1),
                     fields=tuple(
                         f"vat_breakdown.{index}.{cell}"
                         for cell in ("rate", "taxable_amount", "tax_amount")
@@ -81,7 +82,7 @@ def evaluate(draft: InvoiceDraft) -> list[RuleResult]:
         results.append(
             RuleResult(
                 rule="net_sum",
-                description="sum of the taxable amounts = net total",
+                description=Text("check.net_total"),
                 fields=("net_total",),
                 expected=sum(bases, Decimal(0)),
                 actual=draft.net_total,
@@ -91,7 +92,7 @@ def evaluate(draft: InvoiceDraft) -> list[RuleResult]:
         results.append(
             RuleResult(
                 rule="vat_sum",
-                description="sum of the VAT groups = VAT total",
+                description=Text("check.vat_total"),
                 fields=("vat_total",),
                 expected=sum(taxes, Decimal(0)),
                 actual=draft.vat_total,
@@ -101,7 +102,7 @@ def evaluate(draft: InvoiceDraft) -> list[RuleResult]:
         results.append(
             RuleResult(
                 rule="gross",
-                description="net total + VAT total = gross total",
+                description=Text("check.gross_total"),
                 fields=("gross_total",),
                 expected=draft.net_total + draft.vat_total,
                 actual=draft.gross_total,
