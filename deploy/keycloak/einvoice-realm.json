@@ -1,0 +1,69 @@
+{
+  "realm": "einvoice",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "einvoice",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "kc-test-client-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8013/auth/oidc/callback"
+      ],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "anna",
+      "email": "anna@example.com",
+      "emailVerified": true,
+      "firstName": "Anna",
+      "lastName": "Example",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "kc-test-anna-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "mallory",
+      "email": "mallory@example.com",
+      "emailVerified": true,
+      "firstName": "Mallory",
+      "lastName": "Stranger",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "kc-test-mallory-password",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "otto",
+      "email": "admin@example.test",
+      "emailVerified": false,
+      "firstName": "Otto",
+      "lastName": "Unverified",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "kc-test-otto-password",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
