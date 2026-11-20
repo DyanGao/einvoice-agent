@@ -36,6 +36,7 @@ def ingest(
     *,
     tenant_id: str = db.DEFAULT_TENANT_ID,
     note_duplicate: bool = True,
+    source: dict[str, str] | None = None,
 ) -> Ingested:
     """Store the tenant's document and queue it. The same bytes are never
     stored twice for one tenant.
@@ -49,9 +50,9 @@ def ingest(
         existing = db.find_document(session, data, tenant_id)
         if existing is not None:
             if note_duplicate:
-                db.record_duplicate(session, existing, name)
+                db.record_duplicate(session, existing, name, source)
             return Ingested(existing.id, existing.status, duplicate=True)
-        document_id = db.create_received(session, data, name, tenant_id).id
+        document_id = db.create_received(session, data, name, tenant_id, source).id
     queue.enqueue(document_id)
     return Ingested(document_id, DocumentStatus.RECEIVED.value, duplicate=False)
 

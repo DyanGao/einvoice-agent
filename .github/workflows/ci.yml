@@ -56,6 +56,9 @@ jobs:
       - name: Migrations match tables
         run: make db-check
 
+      - name: Mailbox against a real IMAP server
+        run: make test-mailbox
+
       # Regression gate: structured path must stay at 100%.
       - name: Structured eval
         run: make eval-quick

@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif eval-belege eval-local keycloak keycloak-down
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif eval-belege eval-local keycloak keycloak-down mailbox test-mailbox
 
 # The README demo in Docker: sample_invoices/ through processing, checks,
 # decision and delivery into a fresh mock ERP, in a database of its own. Needs
@@ -197,6 +197,23 @@ watch:
 # (WEBHOOK_URL + WEBHOOK_SECRET), whichever are set.
 deliver:
 	uv run python -m app.deliver
+
+# Reads every tenant's mailbox (its imap_* settings) every MAILBOX_SECONDS and
+# ingests the attached invoices, once each (app/mailbox.py).
+mailbox:
+	uv run python -m app.mailbox
+
+# The mailbox poller against a real IMAP server: GreenMail in Docker on
+# localhost, synthetic mails only; the container is removed afterwards.
+GREENMAIL = einvoice-greenmail
+test-mailbox:
+	docker container rm --force $(GREENMAIL) >/dev/null 2>&1 || true
+	docker run --detach --name $(GREENMAIL) --publish 127.0.0.1:3143:3143 \
+		--env GREENMAIL_OPTS="-Dgreenmail.setup.test.imap -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled" \
+		greenmail/standalone:2.1.5 >/dev/null
+	for i in $$(seq 1 60); do uv run python -c "import imaplib; imaplib.IMAP4('127.0.0.1', 3143).logout()" 2>/dev/null && break; sleep 1; done
+	GREENMAIL_IMAP=127.0.0.1:3143 uv run pytest tests/test_mailbox_imap.py; status=$$?; \
+		docker container rm --force $(GREENMAIL) >/dev/null; exit $$status
 
 # Review UI (Next.js, in ui/). `make ui` expects the API from `make api`.
 ui-install:

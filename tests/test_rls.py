@@ -93,6 +93,9 @@ def seeded(session_factory):
             ]
         )
         session.add_all([db.TenantSettingsRow(tenant_id=t, config={}) for t in (A, B)])
+        session.add_all(
+            [db.MailboxStateRow(tenant_id=t, mailbox="u@h/INBOX", uidvalidity=1) for t in (A, B)]
+        )
     return session_factory
 
 

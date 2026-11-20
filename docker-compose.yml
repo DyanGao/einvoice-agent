@@ -144,6 +144,16 @@ services:
       mock-erp:
         condition: service_healthy
 
+  # Reads every tenant's mailbox and ingests the attached invoices, once each.
+  # Idle until a tenant has a mailbox (einvoice tenant-set ... imap_host=...).
+  mailbox:
+    <<: *app
+    command: ["python", "-m", "app.mailbox"]
+    depends_on:
+      <<: *after-migrate
+      redis:
+        condition: service_healthy
+
   # Books approved and auto-decided invoices in the ERP, exactly once.
   deliver:
     <<: *app

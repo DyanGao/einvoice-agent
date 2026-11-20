@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import (
     DDL,
     JSON,
+    BigInteger,
     DateTime,
     ForeignKey,
     LargeBinary,
@@ -303,6 +304,23 @@ class TenantSettingsRow(Base):
 
     tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), primary_key=True)
     config: Mapped[dict[str, Any]] = mapped_column(Json)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
+
+
+class MailboxStateRow(Base):
+    """How far the poller has read a tenant's mailbox folder (app/mailbox.py):
+    IMAP UIDs only grow within one UIDVALIDITY, so the last UID handled is
+    enough to never fetch a mail twice. `mailbox` is user@host/folder: another
+    mailbox starts afresh."""
+
+    __tablename__ = "mailbox_state"
+
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), primary_key=True)
+    mailbox: Mapped[str] = mapped_column(String(400), primary_key=True)
+    uidvalidity: Mapped[int] = mapped_column(BigInteger)
+    last_uid: Mapped[int] = mapped_column(BigInteger, default=0)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, onupdate=_now
     )

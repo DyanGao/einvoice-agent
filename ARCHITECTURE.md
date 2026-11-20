@@ -99,6 +99,17 @@ installation-wide. `einvoice tenant-add`, `tenant-set`, `tenant-show` manage the
 bank watch and delivery loop build each tenant's checker and connectors from them, and one tenant's
 broken settings (a missing secret) only stop that tenant's deliveries.
 
+**Mailbox** (`app/mailbox.py`, the `mailbox` service; v1.0 Stage 3). A tenant whose settings name an
+IMAP mailbox (operator-level: host, port, TLS, user, the password's variable, folder, where handled
+mail goes) has it read every `MAILBOX_SECONDS`. Each attached invoice (XML, PDF, attached images; also
+inside forwarded mails) goes through `ingest` for the tenant, with sender, subject and Message-ID in its
+history as where it came from — data, never instructions. Per tenant and mailbox folder the
+`UIDVALIDITY` and the last UID handled are kept (`mailbox_state`, with RLS) and advanced mail by mail:
+a restart loses and duplicates nothing, and a mail read twice adds no document (`ingest` knows the
+bytes). A handled mail is flagged (`\Seen $EInvoiceDone`) or moved, never deleted; mails are read
+with `BODY.PEEK`. Plain IMAP without TLS only to this machine. Tested against a fake mailbox and
+against GreenMail in Docker (`make test-mailbox`, also in CI).
+
 **Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
 identity provider; someone from another tenant gets a role here too), change role, remove (their
 sessions and tokens here stop at once); nobody can demote or remove themselves, and a tenant is never
