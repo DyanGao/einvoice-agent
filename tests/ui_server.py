@@ -105,6 +105,46 @@ def add_authorize(app, provider: FakeProvider) -> None:
         return RedirectResponse(f"{provider.config.redirect_uri}?{query}", 303)
 
 
+def add_mail_records(session_factory: sessionmaker) -> None:
+    """Two mails the mailbox poller would have read, for the Mail page: one
+    with nothing attached, one with a PDF it refused (made up)."""
+    common = {"tenant_id": db.DEFAULT_TENANT_ID, "mailbox": "rechnungen@example.test/INBOX"}
+    with session_factory.begin() as session:
+        session.add_all(
+            [
+                db.MailRow(
+                    **common,
+                    uidvalidity=1,
+                    uid=1,
+                    message_id="<frage@example.test>",
+                    sender="kunde@example.test",
+                    subject="Frage zur Rechnung",
+                    sent="Fri, 20 Nov 2026 09:00:00 +0100",
+                    parts=[],
+                ),
+                db.MailRow(
+                    **common,
+                    uidvalidity=1,
+                    uid=2,
+                    message_id="<gesperrt@example.test>",
+                    sender="lieferant@example.test",
+                    subject="Ihre Rechnung",
+                    sent="Fri, 20 Nov 2026 09:05:00 +0100",
+                    parts=[
+                        {
+                            "filename": "gesperrt.pdf",
+                            "content_type": "application/pdf",
+                            "bytes": 2048,
+                            "outcome": "refused",
+                            "reason": "encrypted_pdf",
+                            "document_id": None,
+                        }
+                    ],
+                ),
+            ]
+        )
+
+
 class HoldingQueue:
     def __init__(self, inner: JobQueue, session_factory: sessionmaker) -> None:
         self._inner = inner
@@ -179,6 +219,7 @@ def main() -> None:
     )
     db.Base.metadata.create_all(engine)
     session_factory = sessionmaker(engine)
+    add_mail_records(session_factory)
     settings = replace(
         Settings.from_env(),
         feedback_dir=Path(tempfile.mkdtemp(prefix="einvoice-ui-test-")),

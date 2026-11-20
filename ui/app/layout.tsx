@@ -23,6 +23,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <Link href="/" className="masthead-title">
               Invoice review
             </Link>
+            <nav className="masthead-nav" aria-label="Pages">
+              <Link href="/">Invoices</Link>
+              <Link href="/mail">Mail</Link>
+            </nav>
             <ReviewerField />
           </header>
           <main>

@@ -309,6 +309,30 @@ class TenantSettingsRow(Base):
     )
 
 
+class MailRow(Base):
+    """A mail the poller read (app/mailbox.py), and what became of each of
+    its parts: an invoice stored, one already known, or refused with a
+    reason. A mail with nothing attached is kept too, so nothing sent to the
+    mailbox disappears without trace. Sender and subject are data."""
+
+    __tablename__ = "mails"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
+    mailbox: Mapped[str] = mapped_column(String(400))
+    uidvalidity: Mapped[int] = mapped_column(BigInteger)
+    uid: Mapped[int] = mapped_column(BigInteger)
+    message_id: Mapped[str] = mapped_column(String(300))
+    sender: Mapped[str] = mapped_column(String(300))
+    subject: Mapped[str] = mapped_column(String(300))
+    sent: Mapped[str] = mapped_column(String(300))  # the Date header, as sent
+    # [{"filename", "content_type", "bytes", "outcome", "reason", "document_id"}]
+    parts: Mapped[list[dict[str, Any]]] = mapped_column(Json)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, index=True)
+
+    __table_args__ = (UniqueConstraint("tenant_id", "mailbox", "uidvalidity", "uid"),)
+
+
 class MailboxStateRow(Base):
     """How far the poller has read a tenant's mailbox folder (app/mailbox.py):
     IMAP UIDs only grow within one UIDVALIDITY, so the last UID handled is

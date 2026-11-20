@@ -148,3 +148,15 @@ def test_a_wrong_folder_is_an_error_not_an_empty_mailbox(session_factory, user):
     cfg = config(user).model_copy(update={"imap_folder": "Gibt-es-nicht"})
     with pytest.raises(MailboxError, match="Gibt-es-nicht"):
         run(session_factory, cfg)
+
+
+def test_a_zip_of_invoices_and_a_mail_with_nothing_are_both_recorded(session_factory, user):
+    from tests.test_mail_records import attached_zip, zipped
+
+    archive = zipped(("a.pdf", PDF), ("b.pdf", PDF + b"%b"))
+    deliver(user, mail("zip", [attached_zip(archive)]), mail("nur Text"))
+    done = run(session_factory, config(user))
+    assert (done.mails, len(done.documents), done.without_invoice) == (2, 2, 1)
+    with session_factory() as session:
+        subjects = sorted(row.subject for row in session.query(db.MailRow).all())
+    assert subjects == ["nur Text", "zip"]
