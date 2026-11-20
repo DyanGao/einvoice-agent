@@ -1,6 +1,7 @@
 """Processing of one stored document, as run by the worker."""
 
 import logging
+from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -10,6 +11,9 @@ from app.db.rls import tenant_transaction
 from app.extract.base import Extractor
 from app.pipeline import DocumentStatus, Validator, process_document
 from app.pipeline.document import MAX_PAGES
+
+if TYPE_CHECKING:
+    from app.tenants import TenantServices
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +25,7 @@ def run_document_job(
     extractor: Extractor | None,
     checker: Checker | None = None,
     max_pages: int = MAX_PAGES,
+    tenants: "TenantServices | None" = None,
 ) -> str:
     """Process a received document and store the outcome. Returns its status.
 
@@ -31,11 +36,19 @@ def run_document_job(
 
     Everything but finding out whose document it is runs acting for its
     tenant, so row-level security holds here as in a request.
+
+    With `tenants`, the checker and the page limit are the tenant's own
+    (app/tenants.py). Without, `checker` and `max_pages` are used, the
+    checker for the default tenant only (its ERP is the one in .env).
     """
     with session_factory() as session:
         tenant_id = db.tenant_of(session, document_id)
     if tenant_id is None:
         raise LookupError(f"no document {document_id}")
+    if tenants is not None:
+        checker, max_pages = tenants.checker(tenant_id), tenants.max_pages(tenant_id)
+    elif tenant_id != db.DEFAULT_TENANT_ID:
+        checker = None
 
     with tenant_transaction(session_factory, tenant_id) as session:
         document = session.get(db.DocumentRow, document_id)
@@ -51,11 +64,7 @@ def run_document_job(
             # Another worker finished it while this one was processing.
             return document.status
         db.apply_outcome(session, document, outcome)
-        # The checker asks the ERP in .env, which is the default tenant's until
-        # tenants have their own settings (v1.0 Stage 2, increment 4). Another
-        # tenant's documents wait for a person, unchecked, rather than being
-        # matched against someone else's ERP.
-        if checker is not None and document.tenant_id == db.DEFAULT_TENANT_ID:
+        if checker is not None:
             checker.check(session, document)
             # The supplier's open invoices may be settled together with this one.
             rematch.after_processing(session, checker, document)

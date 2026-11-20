@@ -87,9 +87,17 @@ sessions(id_hash, user_id, tenant_id, expires_at, ...)     # the tenant a person
 **Tenants (v1.0 Stage 2).** Every document belongs to one tenant; the rows hanging off a document
 (drafts, findings, matches, decisions, deliveries, audit events) are reached only through it. Each
 request acts for one tenant (the session's or the token's), and every query, the duplicate check and
-payment matching see only that tenant: another tenant's document is a 404. Until tenants have their
-own settings, the ERP, connectors and decision settings in `.env` are the `default` tenant's; other
-tenants' documents are neither checked against that ERP nor delivered to it.
+payment matching see only that tenant: another tenant's document is a 404.
+
+**Each tenant's settings** (`app/tenants.py`, table `tenant_settings`): its ERP (matching, bank watch,
+booking through the API or the screens), CSV export folder, webhook, page limit, and whether an order
+found by content alone may be booked on. The default tenant without a row keeps using `.env`, so a
+one-company installation runs unchanged. Secrets are never stored there: a tenant names the
+environment variable that holds its webhook secret (`webhook_secret_env`, `TENANT_…`), and the value
+stays in `.env` until Stage 6 brings encryption at rest. The model and its calibrated threshold stay
+installation-wide. `einvoice tenant-add`, `tenant-set`, `tenant-show` manage them; the worker, API,
+bank watch and delivery loop build each tenant's checker and connectors from them, and one tenant's
+broken settings (a missing secret) only stop that tenant's deliveries.
 
 **Row-level security.** Postgres keeps the tenants apart as well (`app/db/rls.py`). A request's
 transaction switches to the role `einvoice_tenant` (no login, no BYPASSRLS) and sets
@@ -99,7 +107,7 @@ document is. The role may change only those tables and cannot read users, member
 sessions. Background work runs the same way, one tenant at a time: the worker first asks, as the login
 role, whose the queued document is, then does everything else acting for that tenant; the folder watch
 and the CLI's `process`, `watch`, `user-add` and `token-create` take `--tenant`; the bank watch and the
-delivery loop work in tenant transactions (for `default` until tenants have their own ERP). Only the
+delivery loop go tenant by tenant, each with its own ERP and connectors. Only the
 look-ups that must see across tenants run as the login role: whose a document is, the sweep for lost
 jobs, the sign-in tables, migrations. New tables that hold tenant data need their grant and policy in
 their migration.

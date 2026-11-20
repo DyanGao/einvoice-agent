@@ -17,13 +17,13 @@ from redis import Redis
 from rq import Queue, SimpleWorker
 from sqlalchemy.orm import sessionmaker
 
-from app.checks.service import build_checker
 from app.db.engine import database_engine
 from app.extract.factory import build_extractor
 from app.ingest import requeue_stuck
 from app.jobs import run_document_job
 from app.queue import QUEUE_NAME, QueueUnavailable, RqQueue
 from app.settings import Settings
+from app.tenants import TenantServices
 from app.validate import KositValidator
 
 logger = logging.getLogger(__name__)
@@ -61,20 +61,19 @@ def _context() -> tuple:
     client = httpx.Client(
         base_url=settings.validator_url, timeout=settings.validator_timeout_seconds
     )
+    session_factory = sessionmaker(database_engine(settings.database_url))
     return (
-        sessionmaker(database_engine(settings.database_url)),
+        session_factory,
         KositValidator(client),
         build_extractor(settings),
-        build_checker(settings.erp_url, settings.erp_timeout_seconds),
-        settings.max_pages,
+        # Each tenant's checker (its ERP) and page limit, from its settings.
+        TenantServices(session_factory, settings),
     )
 
 
 def process_document_job(document_id: str) -> str:
-    session_factory, validator, extractor, checker, max_pages = _context()
-    return run_document_job(
-        session_factory, document_id, validator, extractor, checker, max_pages=max_pages
-    )
+    session_factory, validator, extractor, tenants = _context()
+    return run_document_job(session_factory, document_id, validator, extractor, tenants=tenants)
 
 
 def main() -> None:

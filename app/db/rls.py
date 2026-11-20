@@ -35,7 +35,7 @@ from sqlalchemy.orm import Session, sessionmaker
 TENANT_ROLE = "einvoice_tenant"
 SETTING = "app.tenant_id"
 
-TENANT_TABLES = ("documents", "seen_bank_transactions")
+TENANT_TABLES = ("documents", "seen_bank_transactions", "tenant_settings")
 DOCUMENT_TABLES = (
     "invoices",
     "drafts",

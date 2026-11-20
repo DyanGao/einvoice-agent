@@ -10,6 +10,11 @@ einvoice user-add EMAIL --name NAME --role ROLE [--password]
 einvoice token-create EMAIL --name NAME
                              make an API token for scripts; printed once
 einvoice token-revoke TOKEN  stop a token from working
+einvoice tenant-add SLUG --name NAME
+                             add a company, with no ERP and no connectors yet
+einvoice tenant-set SLUG KEY=VALUE...
+                             change a company's settings (app/tenants.py); KEY= clears
+einvoice tenant-show SLUG    print a company's settings
 
 process, watch, user-add and token-create act for one tenant: --tenant SLUG,
 "default" if not given.
@@ -26,7 +31,7 @@ from pathlib import Path
 import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import auth, db
+from app import auth, db, tenants
 from app.db.engine import database_engine
 from app.db.rls import tenant_transaction
 from app.ingest import requeue_received, scan_folder
@@ -70,9 +75,20 @@ def main(
         _tenant_option(command)
     token_revoke = commands.add_parser("token-revoke", help="stop a token from working")
     token_revoke.add_argument("token")
+    tenant_add = commands.add_parser("tenant-add", help="add a company")
+    tenant_add.add_argument("slug")
+    tenant_add.add_argument("--name", required=True)
+    tenant_set = commands.add_parser("tenant-set", help="change a company's settings")
+    tenant_set.add_argument("slug")
+    tenant_set.add_argument("assignments", nargs="+", metavar="KEY=VALUE")
+    tenant_show = commands.add_parser("tenant-show", help="print a company's settings")
+    tenant_show.add_argument("slug")
     args = parser.parse_args(argv)
 
     settings = Settings.from_env()
+    if args.command in ("tenant-add", "tenant-set", "tenant-show"):
+        session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
+        return _tenants(args, session_factory, settings)
     if args.command in ("user-add", "token-create", "token-revoke"):
         session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
         prompt = password_prompt or (lambda: getpass.getpass("Password (12+ characters): "))
@@ -122,6 +138,26 @@ def _tenant_id(session_factory: sessionmaker[Session], slug: str) -> str | None:
         except LookupError as exc:
             print(f"einvoice: {exc}", file=sys.stderr)
             return None
+
+
+def _tenants(args, session_factory: sessionmaker[Session], settings: Settings) -> int:
+    try:
+        with session_factory.begin() as session:
+            if args.command == "tenant-add":
+                tenant = tenants.create_tenant(session, args.slug, args.name)
+                print(f"added tenant {tenant.slug} ({tenant.name})")
+                return 0
+            tenant = db.tenant_by_slug(session, args.slug)
+            if args.command == "tenant-set":
+                changes = tenants.parse_assignments(args.assignments)
+                config = tenants.update_config(session, tenant.id, changes, settings)
+            else:
+                config = tenants.config_for(session, tenant.id, settings)
+            print(json.dumps(config.model_dump(mode="json"), indent=1))
+    except (ValueError, LookupError) as exc:
+        print(f"einvoice: {exc}", file=sys.stderr)
+        return 1
+    return 0
 
 
 def _accounts(args, session_factory: sessionmaker[Session], prompt: Callable[[], str]) -> int:
