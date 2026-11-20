@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 
 import {
   ApiError,
@@ -10,23 +10,11 @@ import {
   type Me,
   type SignInOptions,
 } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 /** Why the identity provider's sign-in did not let someone in (`?signin=` from the API). */
-const OUTCOMES: Record<string, string> = {
-  unknown_user: "Your account is not set up here yet. Ask an admin to add your email address.",
-  unverified_email:
-    "The sign-in service did not confirm your email address, so it cannot be matched to an account here.",
-  disabled: "Your account here is disabled. Ask an admin.",
-  no_tenant: "Your account is not part of any company here yet. Ask an admin to add you to one.",
-  other_account:
-    "Your email address here is linked to another account at the sign-in service. Sign in with that one, or ask an admin.",
-  failed: "Sign-in did not work. Please try again.",
-  cancelled: "Sign-in was cancelled.",
-};
-
 function outcomeFromAddress(): string | null {
-  const outcome = new URLSearchParams(window.location.search).get("signin");
-  return outcome === null ? null : (OUTCOMES[outcome] ?? OUTCOMES.failed ?? null);
+  return new URLSearchParams(window.location.search).get("signin");
 }
 
 function forgetOutcome() {
@@ -37,23 +25,27 @@ function forgetOutcome() {
 }
 
 export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
+  const i18n = useI18n();
+  const { t } = i18n;
   const [options, setOptions] = useState<SignInOptions | null>(null);
   const [outcome, setOutcome] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [unreachable, setUnreachable] = useState(false);
 
   useEffect(() => {
     setOutcome(outcomeFromAddress());
     getSignInOptions()
       .then(setOptions)
-      .catch((error: unknown) =>
-        setProblem(error instanceof Error ? error.message : "The API cannot be reached."),
-      );
+      .catch((error: unknown) => {
+        if (error instanceof Error) setProblem(error.message);
+        else setUnreachable(true);
+      });
   }, []);
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: SyntheticEvent) => {
     event.preventDefault();
     setBusy(true);
     setProblem(null);
@@ -66,10 +58,10 @@ export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
         setPassword("");
         setProblem(
           error instanceof ApiError && error.status === 401
-            ? "Wrong email or password."
+            ? t("signin.wrongPassword")
             : error instanceof Error
               ? error.message
-              : "Sign-in did not work.",
+              : t("signin.failedGeneric"),
         );
       })
       .finally(() => setBusy(false));
@@ -78,16 +70,19 @@ export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
   const provider = options?.auth === "on" && options.provider;
   const providerLabel =
     options?.auth === "on" && options.provider_name
-      ? `Sign in with ${options.provider_name}`
-      : "Sign in with your company account";
+      ? t("signin.withProvider", { provider: options.provider_name })
+      : t("signin.withCompanyAccount");
+  // An outcome code the UI does not know is a sign-in that failed.
+  const outcomeText =
+    outcome === null ? null : i18n.tx(`signin.outcome.${outcome}`, t("signin.outcome.failed"));
 
   return (
     <section className="sign-in" aria-labelledby="sign-in-title">
-      <h1 id="sign-in-title">Sign in</h1>
-      <p className="sign-in-lead">to check and approve incoming invoices.</p>
-      {outcome && (
+      <h1 id="sign-in-title">{t("signin.title")}</h1>
+      <p className="sign-in-lead">{t("signin.lead")}</p>
+      {outcomeText && (
         <p className="problem" role="alert">
-          {outcome}
+          {outcomeText}
         </p>
       )}
       {provider && (
@@ -95,12 +90,12 @@ export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
           <a className="button button-primary sign-in-provider" href={PROVIDER_SIGN_IN_URL}>
             {providerLabel}
           </a>
-          <p className="sign-in-or">or, for the built-in admin account</p>
+          <p className="sign-in-or">{t("signin.orPassword")}</p>
         </>
       )}
       <form onSubmit={submit} className="sign-in-form">
         <label>
-          <span>Email</span>
+          <span>{t("signin.email")}</span>
           <input
             type="email"
             value={email}
@@ -110,7 +105,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
           />
         </label>
         <label>
-          <span>Password</span>
+          <span>{t("signin.password")}</span>
           <input
             type="password"
             value={password}
@@ -119,9 +114,9 @@ export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
             required
           />
         </label>
-        {problem && (
+        {(problem || unreachable) && (
           <p className="problem" role="alert">
-            {problem}
+            {problem ?? t("signin.apiUnreachable")}
           </p>
         )}
         <button
@@ -129,7 +124,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: (me: Me) => void }) {
           className={provider ? "button" : "button button-primary"}
           disabled={busy || email.trim() === "" || password === ""}
         >
-          {busy ? "Signing in…" : "Sign in with password"}
+          {busy ? t("signin.busy") : t("signin.submit")}
         </button>
       </form>
     </section>

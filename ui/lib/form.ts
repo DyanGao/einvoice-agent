@@ -2,80 +2,96 @@
 // {"dotted.path": value} corrections the API expects.
 
 import type { Fields } from "./api";
+import type { Translator } from "./i18n";
+import type { MessageKey } from "./messages";
 
 export type Kind = "text" | "date" | "amount";
 
-export type FieldSpec = { path: string; label: string; kind: Kind };
+export type FieldSpec = { path: string; label: MessageKey; kind: Kind };
 
-export type Group = { title: string; fields: FieldSpec[] };
+export type Group = { title: MessageKey; fields: FieldSpec[] };
 
 export const GROUPS: Group[] = [
   {
-    title: "Invoice",
+    title: "group.invoice",
     fields: [
-      { path: "number", label: "Invoice number", kind: "text" },
-      { path: "issue_date", label: "Invoice date", kind: "date" },
-      { path: "due_date", label: "Due date", kind: "date" },
-      { path: "type_code", label: "Document type code", kind: "text" },
-      { path: "currency", label: "Currency", kind: "text" },
-      { path: "buyer_reference", label: "Buyer reference (Leitweg-ID)", kind: "text" },
-      { path: "po_ref", label: "Purchase order", kind: "text" },
+      { path: "number", label: "field.number", kind: "text" },
+      { path: "issue_date", label: "field.issue_date", kind: "date" },
+      { path: "due_date", label: "field.due_date", kind: "date" },
+      { path: "type_code", label: "field.type_code", kind: "text" },
+      { path: "currency", label: "field.currency", kind: "text" },
+      { path: "buyer_reference", label: "field.buyer_reference", kind: "text" },
+      { path: "po_ref", label: "field.po_ref", kind: "text" },
     ],
   },
   {
-    title: "Seller",
+    title: "group.seller",
     fields: [
-      { path: "seller.name", label: "Seller name", kind: "text" },
-      { path: "seller.vat_id", label: "Seller VAT ID", kind: "text" },
+      { path: "seller.name", label: "field.seller.name", kind: "text" },
+      { path: "seller.vat_id", label: "field.seller.vat_id", kind: "text" },
     ],
   },
   {
-    title: "Buyer",
+    title: "group.buyer",
     fields: [
-      { path: "buyer.name", label: "Buyer name", kind: "text" },
-      { path: "buyer.vat_id", label: "Buyer VAT ID", kind: "text" },
+      { path: "buyer.name", label: "field.buyer.name", kind: "text" },
+      { path: "buyer.vat_id", label: "field.buyer.vat_id", kind: "text" },
     ],
   },
   {
-    title: "Totals",
+    title: "group.totals",
     fields: [
-      { path: "line_net_total", label: "Sum of line amounts", kind: "amount" },
-      { path: "net_total", label: "Net total", kind: "amount" },
-      { path: "vat_total", label: "VAT total", kind: "amount" },
-      { path: "gross_total", label: "Gross total", kind: "amount" },
-      { path: "amount_due", label: "Amount due", kind: "amount" },
+      { path: "line_net_total", label: "field.line_net_total", kind: "amount" },
+      { path: "net_total", label: "field.net_total", kind: "amount" },
+      { path: "vat_total", label: "field.vat_total", kind: "amount" },
+      { path: "gross_total", label: "field.gross_total", kind: "amount" },
+      { path: "amount_due", label: "field.amount_due", kind: "amount" },
     ],
   },
 ];
 
-export type Column = { key: string; label: string; kind: Kind };
+export type Column = { key: string; label: MessageKey; kind: Kind };
 
 export const LINE_COLUMNS: Column[] = [
-  { key: "line_id", label: "No.", kind: "text" },
-  { key: "description", label: "Description", kind: "text" },
-  { key: "quantity", label: "Quantity", kind: "amount" },
-  { key: "unit_price", label: "Unit price", kind: "amount" },
-  { key: "net", label: "Net", kind: "amount" },
-  { key: "vat_rate", label: "VAT %", kind: "amount" },
+  { key: "line_id", label: "column.line_id", kind: "text" },
+  { key: "description", label: "column.description", kind: "text" },
+  { key: "quantity", label: "column.quantity", kind: "amount" },
+  { key: "unit_price", label: "column.unit_price", kind: "amount" },
+  { key: "net", label: "column.net", kind: "amount" },
+  { key: "vat_rate", label: "column.vat_rate", kind: "amount" },
 ];
 
 export const VAT_COLUMNS: Column[] = [
-  { key: "category", label: "Category", kind: "text" },
-  { key: "rate", label: "Rate %", kind: "amount" },
-  { key: "taxable_amount", label: "Taxable amount", kind: "amount" },
-  { key: "tax_amount", label: "Tax", kind: "amount" },
+  { key: "category", label: "column.category", kind: "text" },
+  { key: "rate", label: "column.rate", kind: "amount" },
+  { key: "taxable_amount", label: "column.taxable_amount", kind: "amount" },
+  { key: "tax_amount", label: "column.tax_amount", kind: "amount" },
 ];
 
-export const TABLES = [
-  { path: "lines", title: "Line items", columns: LINE_COLUMNS, rowName: "Line", add: "Add line" },
+type Table = {
+  path: string;
+  title: MessageKey;
+  columns: Column[];
+  rowName: MessageKey;
+  add: MessageKey;
+};
+
+export const TABLES: readonly Table[] = [
+  {
+    path: "lines",
+    title: "table.lines",
+    columns: LINE_COLUMNS,
+    rowName: "table.lines.row",
+    add: "table.lines.add",
+  },
   {
     path: "vat_breakdown",
-    title: "VAT breakdown",
+    title: "table.vat_breakdown",
     columns: VAT_COLUMNS,
-    rowName: "VAT row",
-    add: "Add VAT row",
+    rowName: "table.vat_breakdown.row",
+    add: "table.vat_breakdown.add",
   },
-] as const;
+];
 
 export type Row = Record<string, string>;
 
@@ -197,21 +213,23 @@ export function changesFrom(fields: Fields | null, form: FormState): Record<stri
   return changes;
 }
 
-const LABELS: Record<string, string> = Object.fromEntries([
+const LABELS: Record<string, MessageKey> = Object.fromEntries([
   ...GROUPS.flatMap((group) => group.fields.map((field) => [field.path, field.label])),
-  ["payment_ibans", "Payment IBANs"],
-  ["lines", "Line items"],
-  ["vat_breakdown", "VAT breakdown"],
+  ["payment_ibans", "field.payment_ibans"],
+  ["lines", "table.lines"],
+  ["vat_breakdown", "table.vat_breakdown"],
 ]);
 
-/** "lines.0.net" → "Line 1, Net". Unknown paths are shown as they are. */
-export function labelFor(path: string): string {
+/** "lines.0.net" → "Line 1, Net" (or "Position 1, Netto"). Unknown paths are shown as they are. */
+export function labelFor(i18n: Translator, path: string): string {
   const known = LABELS[path];
-  if (known) return known;
+  if (known) return i18n.t(known);
   const [head, index, key] = path.split(".");
   const table = TABLES.find((candidate) => candidate.path === head);
   if (!table || index === undefined) return path;
   const column = table.columns.find((candidate) => candidate.key === key);
-  const row = `${table.rowName} ${Number(index) + 1}`;
-  return column ? `${row}, ${column.label}` : row;
+  const row = { row: i18n.t(table.rowName), number: Number(index) + 1 };
+  return column
+    ? i18n.t("field.cell", { ...row, column: i18n.t(column.label) })
+    : i18n.t("field.row", row);
 }

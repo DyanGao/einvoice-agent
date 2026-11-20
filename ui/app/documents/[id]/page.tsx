@@ -30,6 +30,7 @@ import {
   type FormState,
   type Kind,
 } from "@/lib/form";
+import { useI18n, type Translator } from "@/lib/i18n";
 import {
   basisLabel,
   causeLabel,
@@ -37,17 +38,21 @@ import {
   findingLabel,
   formatLabel,
   REJECT_REASONS,
+  rejectReasonLabel,
   statusLabel,
-  when,
 } from "@/lib/labels";
 
 const REFRESH_MS = 3000;
 
-const NOTHING = "nothing";
-
-function shown(value: unknown): string {
-  if (value === null || value === undefined || value === "") return NOTHING;
+/** A value as text; null when there is none. */
+function shown(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
   return Array.isArray(value) || typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+
+/** A value for a sentence: "nothing" in the reader's language when empty. */
+function said(i18n: Translator, value: unknown): string {
+  return shown(value) ?? i18n.t("value.nothing");
 }
 
 /** What the reviewer should know about one field, taken from the server's answer. */
@@ -58,6 +63,12 @@ function marksFor(detail: Detail, path: string) {
   const original = valueAt(detail.original, path);
   const current = valueAt(detail.fields, path);
   const derived = (detail.fields?.derived_fields as string[] | undefined) ?? [];
+  // What was read before the reviewer changed it; null when unchanged.
+  // `text` null: nothing was read there.
+  const was: { text: string | null } | null =
+    detail.original !== null && JSON.stringify(original) !== JSON.stringify(current)
+      ? { text: shown(original) }
+      : null;
   return {
     // What the checks say about this field, if anything.
     findings: detail.findings.filter((finding) => finding.fields.includes(path)),
@@ -65,41 +76,42 @@ function marksFor(detail: Detail, path: string) {
     derived: derived.includes(path) && JSON.stringify(original) === JSON.stringify(current),
     missing: detail.missing.includes(path),
     confidence: confidence !== undefined && confidence < LOW_CONFIDENCE ? confidence : null,
-    was:
-      detail.original !== null && JSON.stringify(original) !== JSON.stringify(current)
-        ? shown(original)
-        : null,
+    was,
   };
 }
 
+function wasText(i18n: Translator, was: { text: string | null }): string {
+  return was.text === null
+    ? i18n.t("hint.nothingRead")
+    : i18n.t("hint.readAs", { value: was.text });
+}
+
 function Hints({ marks }: { marks: ReturnType<typeof marksFor> }) {
+  const i18n = useI18n();
+  const { t } = i18n;
   return (
     <>
       {marks.confidence !== null && (
-        <span className="hint hint-unsure">{Math.round(marks.confidence * 100)}% sure</span>
+        <span className="hint hint-unsure">
+          {t("hint.sure", { percent: i18n.percent(marks.confidence) })}
+        </span>
       )}
-      {marks.derived && (
-        <span className="hint hint-unsure">Filled in by a rule, not read from the document</span>
-      )}
-      {marks.missing && <span className="hint hint-missing">Needed for approval</span>}
+      {marks.derived && <span className="hint hint-unsure">{t("hint.derived")}</span>}
+      {marks.missing && <span className="hint hint-missing">{t("hint.needed")}</span>}
       {marks.findings.map((finding, index) => (
         <span key={index} className="hint hint-missing">
-          {findingLabel(finding.type)}
+          {findingLabel(i18n, finding.type)}
         </span>
       ))}
-      {marks.was !== null && (
-        <span className="hint">
-          {marks.was === NOTHING ? "Nothing was read here" : `Read as ${marks.was}`}
-        </span>
-      )}
+      {marks.was !== null && <span className="hint">{wasText(i18n, marks.was)}</span>}
     </>
   );
 }
 
 /** A table cell has no room for hints; they go into its tooltip. */
-function cellTitle(marks: ReturnType<typeof marksFor>): string | undefined {
+function cellTitle(i18n: Translator, marks: ReturnType<typeof marksFor>): string | undefined {
   const notes = marks.findings.map((finding) => finding.message);
-  if (marks.was !== null) notes.push(`Read as ${marks.was}`);
+  if (marks.was !== null) notes.push(wasText(i18n, marks.was));
   return notes.length > 0 ? notes.join("\n") : undefined;
 }
 
@@ -117,40 +129,61 @@ function withoutRulePrefix(violation: Violation): string {
     : violation.message;
 }
 
-function deliveryText(delivery: Delivery): string {
-  const target = connectorLabel(delivery.connector);
+function deliveryText(i18n: Translator, delivery: Delivery): string {
+  const { t } = i18n;
+  const target = connectorLabel(i18n, delivery.connector);
   if (delivery.status === "delivered") {
-    const at = delivery.delivered_at ? ` on ${when(delivery.delivered_at)}` : "";
-    return `Booked in ${target} as no. ${delivery.external_ref}${at}.`;
+    const booked = { target, ref: delivery.external_ref ?? "" };
+    return delivery.delivered_at
+      ? t("delivery.deliveredOn", { ...booked, when: i18n.when(delivery.delivered_at) })
+      : t("delivery.delivered", booked);
   }
   if (delivery.status === "failed") {
-    return `Not booked in ${target}: ${delivery.last_error ?? "the reason was not recorded"}.`;
+    return t("delivery.failed", { target, reason: delivery.last_error ?? t("delivery.noReason") });
   }
   return delivery.last_error
-    ? `Booking in ${target} is tried again (attempt ${delivery.attempts} failed: ${delivery.last_error}).`
-    : `Waiting to be booked in ${target}.`;
+    ? t("delivery.retrying", { target, attempts: delivery.attempts, reason: delivery.last_error })
+    : t("delivery.waiting", { target });
 }
 
-function auditText(event: AuditEvent): string {
+/** The reason a document was rejected, with the note, as a short phrase. */
+function rejectionReason(i18n: Translator, event: AuditEvent): string {
+  const detail = event.detail ?? {};
+  const reason = rejectReasonLabel(i18n, String(detail.reason));
+  return detail.note ? `${reason} (${String(detail.note)})` : reason;
+}
+
+function auditText(i18n: Translator, event: AuditEvent): string {
+  const { t } = i18n;
   const detail = event.detail ?? {};
   if (event.event === "field_corrected") {
-    return `${labelFor(String(detail.field))} changed from ${shown(detail.old)} to ${shown(detail.new)}`;
+    return t("audit.field_corrected", {
+      field: labelFor(i18n, String(detail.field)),
+      old: said(i18n, detail.old),
+      new: said(i18n, detail.new),
+    });
   }
-  if (event.event === "approved") return "Approved";
+  if (event.event === "approved") return t("audit.approved");
   if (event.event === "rejected") {
-    const reason = REJECT_REASONS[detail.reason as RejectReason] ?? String(detail.reason);
-    return detail.note ? `Rejected: ${reason} (${String(detail.note)})` : `Rejected: ${reason}`;
+    const reason = rejectReasonLabel(i18n, String(detail.reason));
+    return detail.note
+      ? t("audit.rejectedNote", { reason, note: String(detail.note) })
+      : t("audit.rejected", { reason });
   }
-  if (event.event === "reopened") return `Reopened for review: ${String(detail.note)}`;
+  if (event.event === "reopened") return t("audit.reopened", { note: String(detail.note) });
   const name = event.event.replaceAll("_", " ");
-  const text = name.charAt(0).toUpperCase() + name.slice(1);
+  const text = i18n.tx(`audit.${event.event}`, name.charAt(0).toUpperCase() + name.slice(1));
   // A re-match says what set it off: a later invoice or a new bank transfer.
-  return typeof detail.trigger === "string" ? `${text} again: ${detail.trigger}` : text;
+  return typeof detail.trigger === "string"
+    ? t("audit.again", { event: text, trigger: detail.trigger })
+    : text;
 }
 
 export default function ReviewPage() {
   const { id } = useParams<{ id: string }>();
   const reviewer = useReviewer();
+  const i18n = useI18n();
+  const { t, tn, when } = i18n;
   const [detail, setDetail] = useState<Detail | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -204,11 +237,11 @@ export default function ReviewPage() {
         <p className="problem" role="alert">
           {loadError}
         </p>
-        <Link href="/">Back to incoming invoices</Link>
+        <Link href="/">{t("doc.backFromError")}</Link>
       </div>
     );
   }
-  if (!detail || !form) return <p className="empty">Loading the document…</p>;
+  if (!detail || !form) return <p className="empty">{t("doc.loading")}</p>;
 
   const approved = detail.review_state === "approved";
   const editable = detail.review_state === "pending" && !waiting;
@@ -241,8 +274,10 @@ export default function ReviewPage() {
 
   // The name is asked for once, above; this says only what the rejection lacks.
   let rejectNeeds: string | null = null;
-  if (rejectReason === "") rejectNeeds = "Choose why it is rejected.";
-  else if (rejectReason === "other" && rejectNote.trim() === "") rejectNeeds = "Say which reason.";
+  if (rejectReason === "") rejectNeeds = t("doc.reject.needReason");
+  else if (rejectReason === "other" && rejectNote.trim() === "") {
+    rejectNeeds = t("doc.reject.needNote");
+  }
 
   const setScalar = (path: string, value: string) =>
     setForm({ ...form, scalars: { ...form.scalars, [path]: value } });
@@ -251,31 +286,29 @@ export default function ReviewPage() {
 
   let blocked: string | null = null;
   if (reviewer.problem) blocked = reviewer.problem;
-  else if (changeCount > 0) blocked = "Save your changes before approving.";
-  else if (detail.fields === null) blocked = "Fill in the invoice fields before approving.";
+  else if (changeCount > 0) blocked = t("doc.blocked.save");
+  else if (detail.fields === null) blocked = t("doc.blocked.fill");
   else if (detail.missing.length > 0) {
-    blocked = `Still needed: ${detail.missing.map(labelFor).join(", ")}.`;
+    const fields = detail.missing.map((path) => labelFor(i18n, path)).join(", ");
+    blocked = t("doc.blocked.needed", { fields });
   }
 
   const ibanMarks = marksFor(detail, "payment_ibans");
 
   return (
     <div className="review">
-      <section className="document-pane" aria-label="Document">
+      <section className="document-pane" aria-label={t("doc.region")}>
         {detail.content_type === "application/pdf" && (
           // The fragment asks the browser's PDF viewer for the page at full width, without side panels.
-          <iframe src={`${contentUrl(id)}#navpanes=0&view=FitH`} title="Original document" />
+          <iframe src={`${contentUrl(id)}#navpanes=0&view=FitH`} title={t("doc.original")} />
         )}
         {detail.content_type?.startsWith("image/") && (
-          <img src={contentUrl(id)} alt="Original document" />
+          <img src={contentUrl(id)} alt={t("doc.original")} />
         )}
         {detail.content_type === null && (
           <div className="no-preview">
-            <p>
-              This file has no page to show. Structured e-invoices are data, not a picture of an
-              invoice.
-            </p>
-            <a href={contentUrl(id)}>Download the original file</a>
+            <p>{t("doc.noPreview")}</p>
+            <a href={contentUrl(id)}>{t("doc.download")}</a>
           </div>
         )}
       </section>
@@ -283,50 +316,52 @@ export default function ReviewPage() {
       <section className="fields-pane">
         <header className="review-head">
           <Link href="/" className="back">
-            Incoming invoices
+            {t("doc.back")}
           </Link>
-          <h1>{detail.number ?? detail.filename ?? "Unnamed document"}</h1>
+          <h1>{detail.number ?? detail.filename ?? t("queue.unnamed")}</h1>
           <p className="review-meta">
-            {formatLabel(detail.format)}, {statusLabel(detail.status).toLowerCase()}. Received{" "}
-            {when(detail.created_at)}
-            {detail.filename ? ` as ${detail.filename}` : ""}.
+            {t(detail.filename ? "doc.metaFile" : "doc.meta", {
+              format: formatLabel(i18n, detail.format),
+              status: i18n.inSentence(statusLabel(i18n, detail.status)),
+              when: when(detail.created_at),
+              filename: detail.filename ?? "",
+            })}
           </p>
           {approved && approval && (
             <p className="stamp" data-testid="stamp">
-              <strong>Approved</strong>
+              <strong>{t("doc.stamp.approved")}</strong>
               <span>{approval.actor}</span>
               <span>{when(approval.created_at)}</span>
             </p>
           )}
           {rejected && rejection && (
             <p className="stamp stamp-rejected" data-testid="stamp">
-              <strong>Rejected</strong>
+              <strong>{t("doc.stamp.rejected")}</strong>
               <span>{rejection.actor}</span>
               <span>{when(rejection.created_at)}</span>
             </p>
           )}
         </header>
 
-        {waiting && <p className="notice">This document is still being read. The page updates by itself.</p>}
+        {waiting && <p className="notice">{t("doc.waiting")}</p>}
         {detail.error && (
           <p className="notice notice-problem">
-            <strong>Reading stopped:</strong> {detail.error}
+            <strong>{t("doc.readingStopped")}</strong> {detail.error}
           </p>
         )}
         {rejected && rejection && (
           <p className="notice">
-            Rejected, so it is not booked: {auditText(rejection).replace(/^Rejected: /, "").toLowerCase()}.
+            {t("doc.rejectedNotBooked", {
+              reason: i18n.inSentence(rejectionReason(i18n, rejection)),
+            })}
           </p>
         )}
         {rejected && (
           <details className="reject">
-            <summary>Reopen…</summary>
-            <p className="reject-hint">
-              If the rejection was a mistake, the document goes back to review. Nothing is booked
-              until it is approved.
-            </p>
+            <summary>{t("doc.reopen.open")}</summary>
+            <p className="reject-hint">{t("doc.reopen.hint")}</p>
             <label>
-              Why it is reopened
+              {t("doc.reopen.why")}
               <input
                 type="text"
                 value={reopenNote}
@@ -345,16 +380,13 @@ export default function ReviewPage() {
               disabled={busy || reopenNote.trim() === "" || reviewer.problem !== null}
               onClick={() => void reopen()}
             >
-              Reopen for review
+              {t("doc.reopen.submit")}
             </button>
             {reviewer.problem && <p className="blocked">{reviewer.problem}</p>}
           </details>
         )}
         {detail.review_state === "not_required" && (
-          <p className="notice">
-            Nothing here needs a person, so it can be booked without review. The fields are shown
-            as read.
-          </p>
+          <p className="notice">{t("doc.notRequired")}</p>
         )}
 
         {detail.deliveries.map((delivery) => (
@@ -362,18 +394,18 @@ export default function ReviewPage() {
             key={delivery.connector}
             className={delivery.status === "failed" ? "notice notice-problem" : "notice"}
           >
-            {deliveryText(delivery)}
+            {deliveryText(i18n, delivery)}
           </p>
         ))}
 
         {detail.review_state === "pending" && detail.decision?.route === "review" && (
-          <section className="group" aria-label="Why review">
-            <h2>Why a person needs to look</h2>
+          <section className="group" aria-label={t("doc.whyReview.region")}>
+            <h2>{t("doc.whyReview.title")}</h2>
             <ul className="violations">
               {detail.decision.reasons.map((reason, index) => (
                 <li key={index} className="violation">
-                  <strong>{causeLabel(reason.cause)}</strong>{" "}
-                  {reason.cause === "findings" ? "See the checks below." : reason.message}
+                  <strong>{causeLabel(i18n, reason.cause)}</strong>{" "}
+                  {reason.cause === "findings" ? t("doc.whyReview.seeChecks") : reason.message}
                 </li>
               ))}
             </ul>
@@ -382,7 +414,7 @@ export default function ReviewPage() {
 
         {detail.findings.length > 0 && (
           <section className="group">
-            <h2>Checks</h2>
+            <h2>{t("doc.checks")}</h2>
             <ul className="violations">
               {detail.findings.map((finding, index) => (
                 <li
@@ -391,7 +423,7 @@ export default function ReviewPage() {
                     finding.severity === "review" ? "violation violation-error" : "violation"
                   }
                 >
-                  <strong>{findingLabel(finding.type)}</strong> {finding.message}
+                  <strong>{findingLabel(i18n, finding.type)}</strong> {finding.message}
                 </li>
               ))}
             </ul>
@@ -399,24 +431,27 @@ export default function ReviewPage() {
         )}
 
         {detail.match && (
-          <section className="group" aria-label="Matching">
-            <h2>Matched in the ERP</h2>
+          <section className="group" aria-label={t("doc.match.region")}>
+            <h2>{t("doc.match.title")}</h2>
             <dl className="match">
-              <dt>Purchase order</dt>
+              <dt>{t("doc.match.order")}</dt>
               <dd>
-                {detail.match.po_number ?? "None"}{" "}
-                <span className="basis">{basisLabel(detail.match.po_basis)}</span>
+                {detail.match.po_number ?? t("doc.match.none")}{" "}
+                <span className="basis">{basisLabel(i18n, detail.match.po_basis)}</span>
               </dd>
-              <dt>Delivery</dt>
-              <dd>{detail.match.delivery_id ?? "None"}</dd>
-              <dt>Payments</dt>
+              <dt>{t("doc.match.delivery")}</dt>
+              <dd>{detail.match.delivery_id ?? t("doc.match.none")}</dd>
+              <dt>{t("doc.match.payments")}</dt>
               <dd>
                 {detail.match.payments.length === 0
-                  ? "None"
+                  ? t("doc.match.none")
                   : detail.match.payments
-                      .map((payment) => `${payment.bank_transaction_id} (${payment.amount})`)
+                      .map(
+                        (payment) =>
+                          `${payment.bank_transaction_id} (${i18n.money(payment.amount, null)})`,
+                      )
                       .join(", ")}{" "}
-                <span className="basis">{basisLabel(detail.match.payment_basis)}</span>
+                <span className="basis">{basisLabel(i18n, detail.match.payment_basis)}</span>
               </dd>
             </dl>
             <ul className="match-why">
@@ -431,7 +466,7 @@ export default function ReviewPage() {
                 disabled={busy}
                 onClick={() => void run(() => recheckDocument(id))}
               >
-                Match and check again
+                {t("doc.match.again")}
               </button>
             )}
           </section>
@@ -439,7 +474,7 @@ export default function ReviewPage() {
 
         {detail.validation && detail.validation.violations.length > 0 && (
           <section className="group">
-            <h2>Validator findings</h2>
+            <h2>{t("doc.validator")}</h2>
             <ul className="violations">
               {detail.validation.violations.map((violation, index) => (
                 <li key={index} className={`violation violation-${violation.severity}`}>
@@ -459,7 +494,7 @@ export default function ReviewPage() {
           <fieldset disabled={!editable || busy}>
             {GROUPS.map((group) => (
               <section className="group" key={group.title}>
-                <h2>{group.title}</h2>
+                <h2>{t(group.title)}</h2>
                 <div className="grid">
                   {group.fields.map((field) => {
                     const marks = marksFor(detail, field.path);
@@ -470,7 +505,7 @@ export default function ReviewPage() {
                         data-unsure={marks.confidence !== null || undefined}
                         data-missing={marks.missing || marks.findings.length > 0 || undefined}
                       >
-                        <label htmlFor={`f-${field.path}`}>{field.label}</label>
+                        <label htmlFor={`f-${field.path}`}>{t(field.label)}</label>
                         <input
                           id={`f-${field.path}`}
                           {...inputProps(field.kind)}
@@ -487,13 +522,13 @@ export default function ReviewPage() {
             ))}
 
             <section className="group">
-              <h2>Payment</h2>
+              <h2>{t("doc.payment")}</h2>
               <div
                 className="field"
                 data-unsure={ibanMarks.confidence !== null || undefined}
                 data-missing={ibanMarks.missing || ibanMarks.findings.length > 0 || undefined}
               >
-                <label htmlFor="f-payment_ibans">Payment IBANs, one per line</label>
+                <label htmlFor="f-payment_ibans">{t("doc.ibans")}</label>
                 <textarea
                   id="f-payment_ibans"
                   rows={2}
@@ -508,8 +543,8 @@ export default function ReviewPage() {
               const rows = form.tables[table.path] ?? [];
               return (
                 <section className="group" key={table.path}>
-                  <h2>{table.title}</h2>
-                  {rows.length === 0 && <p className="empty-rows">None read.</p>}
+                  <h2>{t(table.title)}</h2>
+                  {rows.length === 0 && <p className="empty-rows">{t("doc.noneRead")}</p>}
                   {rows.length > 0 && (
                     <div className="table-scroll">
                       <table className="rows">
@@ -517,7 +552,7 @@ export default function ReviewPage() {
                           <tr>
                             {table.columns.map((column) => (
                               <th key={column.key} className={column.kind === "amount" ? "number" : undefined}>
-                                {column.label}
+                                {t(column.label)}
                               </th>
                             ))}
                             <th />
@@ -536,10 +571,10 @@ export default function ReviewPage() {
                                     data-missing={
                                       marks.missing || marks.findings.length > 0 || undefined
                                     }
-                                    title={cellTitle(marks)}
+                                    title={cellTitle(i18n, marks)}
                                   >
                                     <input
-                                      aria-label={labelFor(path)}
+                                      aria-label={labelFor(i18n, path)}
                                       {...inputProps(column.kind)}
                                       className={column.kind === "amount" ? "number" : undefined}
                                       value={row[column.key] ?? ""}
@@ -561,7 +596,10 @@ export default function ReviewPage() {
                                 <button
                                   type="button"
                                   className="button button-quiet"
-                                  aria-label={`Remove ${table.rowName} ${index + 1}`}
+                                  aria-label={t("doc.removeRow", {
+                                    row: t(table.rowName),
+                                    number: index + 1,
+                                  })}
                                   onClick={() =>
                                     setRows(
                                       table.path,
@@ -569,7 +607,7 @@ export default function ReviewPage() {
                                     )
                                   }
                                 >
-                                  Remove
+                                  {t("doc.remove")}
                                 </button>
                               </td>
                             </tr>
@@ -589,7 +627,7 @@ export default function ReviewPage() {
                         ])
                       }
                     >
-                      {table.add}
+                      {t(table.add)}
                     </button>
                   )}
                 </section>
@@ -610,9 +648,7 @@ export default function ReviewPage() {
                   className="button"
                   disabled={busy || changeCount === 0 || reviewer.problem !== null}
                 >
-                  {changeCount > 0
-                    ? `Save ${changeCount} ${changeCount === 1 ? "change" : "changes"}`
-                    : "Save changes"}
+                  {changeCount > 0 ? tn("doc.save", changeCount) : t("doc.saveNone")}
                 </button>
                 <button
                   type="button"
@@ -620,31 +656,29 @@ export default function ReviewPage() {
                   disabled={busy || blocked !== null}
                   onClick={() => void approve()}
                 >
-                  Approve
+                  {t("doc.approve")}
                 </button>
               </div>
               {blocked && <p className="blocked">{blocked}</p>}
               <details className="reject">
-                <summary>Reject instead…</summary>
-                <p className="reject-hint">
-                  A rejected document is not booked unless someone reopens it.
-                </p>
+                <summary>{t("doc.reject.open")}</summary>
+                <p className="reject-hint">{t("doc.reject.hint")}</p>
                 <label>
-                  Reason
+                  {t("doc.reject.reason")}
                   <select
                     value={rejectReason}
                     onChange={(event) => setRejectReason(event.target.value as RejectReason | "")}
                   >
-                    <option value="">Choose…</option>
-                    {(Object.keys(REJECT_REASONS) as RejectReason[]).map((reason) => (
+                    <option value="">{t("doc.reject.choose")}</option>
+                    {REJECT_REASONS.map((reason) => (
                       <option key={reason} value={reason}>
-                        {REJECT_REASONS[reason]}
+                        {rejectReasonLabel(i18n, reason)}
                       </option>
                     ))}
                   </select>
                 </label>
                 <label>
-                  Note {rejectReason === "other" ? "" : "(optional)"}
+                  {rejectReason === "other" ? t("doc.reject.note") : t("doc.reject.noteOptional")}
                   <input
                     type="text"
                     value={rejectNote}
@@ -658,7 +692,7 @@ export default function ReviewPage() {
                   disabled={busy || rejectNeeds !== null || reviewer.problem !== null}
                   onClick={() => void reject()}
                 >
-                  Reject document
+                  {t("doc.reject.submit")}
                 </button>
                 {rejectNeeds && <p className="blocked">{rejectNeeds}</p>}
               </details>
@@ -667,11 +701,11 @@ export default function ReviewPage() {
         </form>
 
         <section className="group">
-          <h2>History</h2>
+          <h2>{t("doc.history")}</h2>
           <ol className="audit">
             {detail.audit.map((event) => (
               <li key={event.seq}>
-                <span className="audit-what">{auditText(event)}</span>
+                <span className="audit-what">{auditText(i18n, event)}</span>
                 <span className="audit-who">
                   {event.actor ? `${event.actor}, ` : ""}
                   {when(event.created_at)}

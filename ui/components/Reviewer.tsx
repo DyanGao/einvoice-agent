@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import Link from "next/link";
 
 import { getMe, SIGNED_OUT_EVENT, signOut, switchTenant, type Me } from "@/lib/api";
+import { useI18n, type Translator } from "@/lib/i18n";
 
 import { SignIn } from "./SignIn";
 
@@ -42,26 +43,23 @@ const ReviewerContext = createContext<Reviewer>({
 });
 
 /** Why this name cannot be recorded, or null if it can. */
-function problemWith(name: string): string | null {
-  if (name.trim() === "") return "Enter your name to save corrections or approve.";
-  if (name.length > 100) return "The name is too long (100 characters at most).";
+function problemWith(i18n: Translator, name: string): string | null {
+  if (name.trim() === "") return i18n.t("reviewer.needName");
+  if (name.length > 100) return i18n.t("reviewer.tooLong");
   // The name travels in an HTTP header, which only carries Latin-1.
-  if ([...name].some((char) => char.charCodeAt(0) > 255)) {
-    return "Use Latin letters only; this name cannot be sent to the API.";
-  }
+  if ([...name].some((char) => char.charCodeAt(0) > 255)) return i18n.t("reviewer.latinOnly");
   return null;
 }
 
-function problemFor(session: Session, name: string): string | null {
+function problemFor(i18n: Translator, session: Session, name: string): string | null {
   if (session.kind === "signed-in") {
-    return session.me.role === "viewer"
-      ? "You can read here, but your role (viewer) cannot change anything."
-      : null;
+    return session.me.role === "viewer" ? i18n.t("reviewer.viewerOnly") : null;
   }
-  return problemWith(name);
+  return problemWith(i18n, name);
 }
 
 export function ReviewerProvider({ children }: { children: ReactNode }) {
+  const i18n = useI18n();
   const [name, setNameState] = useState("");
   const [session, setSession] = useState<Session>({ kind: "checking" });
 
@@ -116,7 +114,7 @@ export function ReviewerProvider({ children }: { children: ReactNode }) {
         session,
         name: session.kind === "signed-in" ? "" : name,
         setName,
-        problem: problemFor(session, name),
+        problem: problemFor(i18n, session, name),
         signedIn,
         signOut: leave,
       }}
@@ -128,27 +126,26 @@ export function ReviewerProvider({ children }: { children: ReactNode }) {
 
 export const useReviewer = () => useContext(ReviewerContext);
 
-const ROLE_LABELS = { viewer: "Viewer", reviewer: "Reviewer", admin: "Admin" } as const;
-
 /** The masthead's right side: the name field, or who is signed in. */
 export function ReviewerField() {
   const { session, name, setName, signOut } = useReviewer();
+  const { t } = useI18n();
   if (session.kind === "signed-in") {
     const { me } = session;
     return (
       <div className="account">
         <TenantChoice me={me} />
         <span>
-          Signed in as <strong>{me.name}</strong>
-          <span className="account-role">{ROLE_LABELS[me.role]}</span>
+          {t("account.signedInAs")} <strong>{me.name}</strong>
+          <span className="account-role">{t(`role.${me.role}`)}</span>
         </span>
         {me.role === "admin" && (
           <Link href="/admin" className="account-link">
-            Admin
+            {t("account.admin")}
           </Link>
         )}
         <button type="button" className="button-quiet" onClick={signOut}>
-          Sign out
+          {t("account.signOut")}
         </button>
       </div>
     );
@@ -156,11 +153,11 @@ export function ReviewerField() {
   if (session.kind !== "open") return null;
   return (
     <label className="reviewer">
-      <span>Reviewing as</span>
+      <span>{t("reviewer.label")}</span>
       <input
         value={name}
         onChange={(event) => setName(event.target.value)}
-        placeholder="Your name"
+        placeholder={t("reviewer.placeholder")}
         autoComplete="name"
         maxLength={100}
       />
@@ -170,6 +167,7 @@ export function ReviewerField() {
 
 /** The company this session works in; a choice for someone in several. */
 function TenantChoice({ me }: { me: Me }) {
+  const { t } = useI18n();
   const [problem, setProblem] = useState<string | null>(null);
   if (me.tenants.length < 2) {
     return <span className="account-tenant">{me.tenant.name}</span>;
@@ -180,16 +178,16 @@ function TenantChoice({ me }: { me: Me }) {
       // Every page loads again, for the other company.
       .then(() => window.location.assign("/"))
       .catch((error: unknown) =>
-        setProblem(error instanceof Error ? error.message : "Could not switch."),
+        setProblem(error instanceof Error ? error.message : t("account.switchFailed")),
       );
   };
   return (
     <label className="account-tenant">
-      <span className="visually-hidden">Company</span>
+      <span className="visually-hidden">{t("account.company")}</span>
       <select
         value={me.tenant.id}
         onChange={(event) => choose(event.target.value)}
-        aria-label="Company"
+        aria-label={t("account.company")}
         title={problem ?? undefined}
       >
         {me.tenants.map((tenant) => (
