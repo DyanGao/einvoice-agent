@@ -41,10 +41,18 @@ def find_document(session: Session, data: bytes, tenant_id: str) -> DocumentRow 
     )
 
 
-def record_duplicate(session: Session, document: DocumentRow, filename: str | None) -> None:
+def record_duplicate(
+    session: Session,
+    document: DocumentRow,
+    filename: str | None,
+    source: dict[str, str] | None = None,
+) -> None:
     """The same bytes arrived again: nothing is reprocessed, but it is noted."""
+    detail: dict[str, object] = {"filename": filename}
+    if source:
+        detail["source"] = source
     document.audit_events.append(
-        AuditEventRow(event="received_again", actor=SYSTEM_ACTOR, detail={"filename": filename})
+        AuditEventRow(event="received_again", actor=SYSTEM_ACTOR, detail=detail)
     )
 
 
@@ -54,9 +62,15 @@ def record_queued_again(document: DocumentRow, waited_minutes: int) -> None:
 
 
 def create_received(
-    session: Session, data: bytes, filename: str | None, tenant_id: str
+    session: Session,
+    data: bytes,
+    filename: str | None,
+    tenant_id: str,
+    source: dict[str, str] | None = None,
 ) -> DocumentRow:
-    """Store an incoming document of a tenant before anything is known about it."""
+    """Store an incoming document of a tenant before anything is known about
+    it. `source` says where it came from (a mail's sender, subject,
+    Message-ID): kept for the history, as data, never read as instructions."""
     document = DocumentRow(
         tenant_id=tenant_id,
         sha256=hashlib.sha256(data).hexdigest(),
@@ -66,7 +80,10 @@ def create_received(
         review_state=ReviewState.PENDING.value,
         content=data,
     )
-    document.audit_events.append(_event("received", filename=filename, bytes=len(data)))
+    detail: dict[str, object] = {"filename": filename, "bytes": len(data)}
+    if source:
+        detail["source"] = source
+    document.audit_events.append(_event("received", **detail))
     session.add(document)
     session.flush()
     return document

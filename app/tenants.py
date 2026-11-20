@@ -28,7 +28,14 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -40,6 +47,9 @@ from app.settings import DEFAULT_MAX_PAGES, Settings
 logger = logging.getLogger(__name__)
 
 _ENV_NAME = re.compile(r"[A-Z][A-Z0-9_]*")
+_LOOPBACK = {"localhost", "127.0.0.1", "::1"}
+# Settings that name the environment variable holding a secret.
+SECRET_NAMES = ("webhook_secret_env", "imap_password_env")
 # What a tenant's own admin may change in the admin UI. Everything else
 # reaches the server's network or files (an ERP URL, a folder, a webhook) and
 # is the installation operator's, through `einvoice tenant-set` (owner's
@@ -69,6 +79,17 @@ class TenantConfig(BaseModel):
     max_pages: int = Field(default=DEFAULT_MAX_PAGES, ge=1, le=500)
     # An order found by the lines and amount alone may be booked on (D9).
     auto_on_order_found_by_content: bool = False
+    # The mailbox invoices are sent to (app/mailbox.py). No host: no mailbox.
+    imap_host: str | None = None
+    imap_port: int = Field(default=993, ge=1, le=65535)
+    # Implicit TLS (IMAPS). Without it only to this machine, for a test server.
+    imap_tls: bool = True
+    imap_user: str | None = None
+    # The NAME of the environment variable holding the mailbox password.
+    imap_password_env: str | None = None
+    imap_folder: str = "INBOX"
+    # Where a handled mail goes; None: it stays and is flagged. Never deleted.
+    imap_processed_folder: str | None = None
 
     @field_validator("erp_url", "erp_ui_url", "webhook_url")
     @classmethod
@@ -77,12 +98,22 @@ class TenantConfig(BaseModel):
             raise ValueError(f"not an http(s) URL: {value!r}")
         return value
 
-    @field_validator("webhook_secret_env")
+    @field_validator("webhook_secret_env", "imap_password_env")
     @classmethod
     def _env_name(cls, value: str | None) -> str | None:
         if value is not None and not _ENV_NAME.fullmatch(value):
             raise ValueError(f"not an environment variable name: {value!r}")
         return value
+
+    @model_validator(mode="after")
+    def _mailbox(self) -> "TenantConfig":
+        if self.imap_host is None:
+            return self
+        if self.imap_user is None or self.imap_password_env is None:
+            raise ValueError("a mailbox needs imap_user and imap_password_env")
+        if not self.imap_tls and self.imap_host not in _LOOPBACK:
+            raise ValueError("a mailbox on another machine is only read over TLS (imap_tls)")
+        return self
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "TenantConfig":
@@ -145,11 +176,10 @@ def update_config(
     set, so it follows the base again (.env for the default tenant). Only
     what was set is stored. The tenant's secret may only be named, and only
     as TENANT_…"""
-    secret = changes.get("webhook_secret_env")
-    if isinstance(secret, str) and not secret.startswith(TENANT_SECRET_PREFIX):
-        raise ValueError(
-            f"webhook_secret_env must name a variable starting with {TENANT_SECRET_PREFIX}"
-        )
+    for key in SECRET_NAMES:
+        secret = changes.get(key)
+        if isinstance(secret, str) and not secret.startswith(TENANT_SECRET_PREFIX):
+            raise ValueError(f"{key} must name a variable starting with {TENANT_SECRET_PREFIX}")
     row = session.get(TenantSettingsRow, tenant_id)
     own = dict(row.config) if row is not None else {}
     for key, value in changes.items():

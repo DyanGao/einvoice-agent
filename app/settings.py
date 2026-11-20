@@ -91,6 +91,8 @@ class Settings:
     bank_watch_seconds: float = 300.0
     # How often decided invoices are delivered (app/deliver.py).
     delivery_seconds: float = 10.0
+    # How often the mailbox poller reads every tenant's mailbox (app/mailbox.py).
+    mailbox_seconds: float = 60.0
     # Folder for the DATEV-style booking lists; None = no CSV export.
     export_dir: str | None = None
     # How invoices get into the ERP: "api" (POST /booked-invoices) or, where
@@ -141,6 +143,7 @@ class Settings:
             erp_timeout_seconds=float(os.environ.get("ERP_TIMEOUT_SECONDS", "5")),
             bank_watch_seconds=float(os.environ.get("BANK_WATCH_SECONDS", "300")),
             delivery_seconds=float(os.environ.get("DELIVERY_SECONDS", "10")),
+            mailbox_seconds=float(os.environ.get("MAILBOX_SECONDS", "60")),
             export_dir=os.environ.get("EXPORT_DIR") or None,
             erp_channel=os.environ.get("ERP_CHANNEL") or "api",
             erp_ui_url=os.environ.get("ERP_UI_URL") or None,
