@@ -20,6 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from app.db import rls
 from app.models import Invoice
 
 Json = JSON().with_variant(JSONB(), "postgresql")
@@ -346,3 +347,8 @@ def invoice_columns(invoice: Invoice) -> dict:
         "gross_total": invoice.gross_total,
         "data": invoice.model_dump(mode="json"),
     }
+
+
+# Databases made from these tables on Postgres get row-level security too;
+# migrated ones get it from their migration (app/db/rls.py).
+event.listen(Base.metadata, "after_create", rls.install)
