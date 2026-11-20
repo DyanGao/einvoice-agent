@@ -17,6 +17,7 @@ from app.checks.service import Checker
 from app.db import DEFAULT_TENANT_ID
 from app.db.engine import database_engine
 from app.db.instance_lock import AlreadyRunning, InstanceLock, LockLost
+from app.db.rls import tenant_transaction
 from app.erp import ErpUnavailable, HttpErpClient
 from app.rematch import BankData, watch_bank
 from app.settings import Settings
@@ -24,12 +25,17 @@ from app.settings import Settings
 logger = logging.getLogger(__name__)
 
 
-def run_once(session_factory: sessionmaker[Session], erp: BankData, checker: Checker) -> list[str]:
-    """One watch in one transaction: all of it is stored, or none. The ERP in
-    .env is the default tenant's until tenants have their own settings (v1.0
-    Stage 2, increment 4)."""
-    with session_factory.begin() as session:
-        return watch_bank(session, erp, checker, DEFAULT_TENANT_ID)
+def run_once(
+    session_factory: sessionmaker[Session],
+    erp: BankData,
+    checker: Checker,
+    tenant_id: str = DEFAULT_TENANT_ID,
+) -> list[str]:
+    """One watch of the tenant's ERP in one transaction acting for the tenant:
+    all of it is stored, or none. The ERP in .env is the default tenant's
+    until tenants have their own settings (v1.0 Stage 2, increment 4)."""
+    with tenant_transaction(session_factory, tenant_id) as session:
+        return watch_bank(session, erp, checker, tenant_id)
 
 
 def main() -> None:

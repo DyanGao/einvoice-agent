@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import db
-from app.db.rls import act_for
+from app.db.rls import tenant_transaction
 from app.pipeline import DocumentStatus
 from app.queue import JobQueue
 
@@ -38,16 +38,14 @@ def ingest(
     note_duplicate: bool = True,
 ) -> Ingested:
     """Store the tenant's document and queue it. The same bytes are never
-    stored twice for one tenant. Folder watch and the CLI act for the default
-    tenant until they learn --tenant (v1.0 Stage 2, increment 3).
+    stored twice for one tenant.
 
     The job is queued only after the row is committed, so a worker can never
     look for a document that does not exist yet. If queueing fails the
     document stays `received` and `requeue_received` picks it up later.
     """
     name = Path(filename).name[:255] if filename else None
-    with session_factory.begin() as session:
-        act_for(session, tenant_id)
+    with tenant_transaction(session_factory, tenant_id) as session:
         existing = db.find_document(session, data, tenant_id)
         if existing is not None:
             if note_duplicate:
@@ -59,7 +57,8 @@ def ingest(
 
 
 def requeue_received(session_factory: sessionmaker[Session], queue: JobQueue) -> int:
-    """Queue every document that was stored but never processed."""
+    """Queue every document that was stored but never processed, of every
+    tenant (only ids are read; the job itself acts for the tenant)."""
     with session_factory() as session:
         ids = session.scalars(
             select(db.DocumentRow.id).where(db.DocumentRow.status == DocumentStatus.RECEIVED.value)
@@ -75,8 +74,10 @@ def scan_folder(
     queue: JobQueue,
     max_bytes: int,
     now: float | None = None,
+    tenant_id: str = db.DEFAULT_TENANT_ID,
 ) -> list[Ingested]:
-    """Ingest every settled, regular, non-hidden file directly in `folder`.
+    """Ingest every settled, regular, non-hidden file directly in `folder`,
+    as the tenant's documents (one folder per tenant).
 
     Files are left where they are; a file already known by content is skipped
     without touching its audit trail, so polling does not flood it.
@@ -92,7 +93,14 @@ def scan_folder(
         if stat.st_size > max_bytes:
             logger.warning("skipping %s: larger than %d bytes", path.name, max_bytes)
             continue
-        result = ingest(session_factory, queue, path.read_bytes(), path.name, note_duplicate=False)
+        result = ingest(
+            session_factory,
+            queue,
+            path.read_bytes(),
+            path.name,
+            tenant_id=tenant_id,
+            note_duplicate=False,
+        )
         if not result.duplicate:
             new.append(result)
     return new
@@ -111,21 +119,22 @@ def requeue_stuck(
     down at upload). Documents whose job is still waiting or running are left
     alone, so nothing is processed twice. Raises QueueUnavailable if the queue
     is down; the documents stay `received` for the next sweep."""
+    # Across all tenants: this sweep only looks for lost jobs.
     with session_factory() as session:
         candidates = session.execute(
-            select(db.DocumentRow.id, db.DocumentRow.created_at).where(
+            select(db.DocumentRow.id, db.DocumentRow.tenant_id, db.DocumentRow.created_at).where(
                 db.DocumentRow.status == DocumentStatus.RECEIVED.value,
                 db.DocumentRow.created_at < now - older_than,
             )
         ).all()
     queued = []
-    for document_id, created_at in candidates:
+    for document_id, tenant_id, created_at in candidates:
         if pending(document_id):
             continue
         queue.enqueue(document_id)
         if created_at.tzinfo is None:  # SQLite returns naive UTC datetimes
             created_at = created_at.replace(tzinfo=UTC)
-        with session_factory.begin() as session:
+        with tenant_transaction(session_factory, tenant_id) as session:
             db.record_queued_again(
                 session.get(db.DocumentRow, document_id),
                 waited_minutes=int((now - created_at).total_seconds() // 60),

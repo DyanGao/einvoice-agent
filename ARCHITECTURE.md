@@ -96,9 +96,13 @@ transaction switches to the role `einvoice_tenant` (no login, no BYPASSRLS) and 
 `app.tenant_id`, both only until the transaction ends. Policies on `documents` and
 `seen_bank_transactions` compare `tenant_id`; the tables hanging off a document are visible where their
 document is. The role may change only those tables and cannot read users, memberships, tokens or
-sessions. Work not yet done per tenant (worker, bank watch, delivery loop, CLI, migrations) runs as the
-login role, which the policies do not limit; that changes with increment 3. New tables that hold
-tenant data need their grant and policy in their migration.
+sessions. Background work runs the same way, one tenant at a time: the worker first asks, as the login
+role, whose the queued document is, then does everything else acting for that tenant; the folder watch
+and the CLI's `process`, `watch`, `user-add` and `token-create` take `--tenant`; the bank watch and the
+delivery loop work in tenant transactions (for `default` until tenants have their own ERP). Only the
+look-ups that must see across tenants run as the login role: whose a document is, the sweep for lost
+jobs, the sign-in tables, migrations. New tables that hold tenant data need their grant and policy in
+their migration.
 
 The invoice itself (`app/models/invoice.py`) is the EN 16931 subset of D8, with per-field confidence.
 What was read but not yet approved is an `InvoiceDraft` (`app/extract/draft.py`): any field may be

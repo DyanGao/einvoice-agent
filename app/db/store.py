@@ -9,6 +9,7 @@ from app.db.tables import (
     DocumentRow,
     DraftRow,
     InvoiceRow,
+    TenantRow,
     ValidationRow,
     invoice_columns,
 )
@@ -16,6 +17,20 @@ from app.models import DocumentFormat
 from app.pipeline import DocumentStatus, Outcome
 
 SYSTEM_ACTOR = "system"
+
+
+def tenant_by_slug(session: Session, slug: str) -> TenantRow:
+    """The tenant with this slug (as the CLI's --tenant names it)."""
+    tenant = session.scalar(select(TenantRow).where(TenantRow.slug == slug))
+    if tenant is None:
+        raise LookupError(f"no tenant {slug!r}")
+    return tenant
+
+
+def tenant_of(session: Session, document_id: str) -> str | None:
+    """Whose document this is. Background work asks this as the login role,
+    before it switches to the tenant, so it is the one look-up across tenants."""
+    return session.scalar(select(DocumentRow.tenant_id).where(DocumentRow.id == document_id))
 
 
 def find_document(session: Session, data: bytes, tenant_id: str) -> DocumentRow | None:
