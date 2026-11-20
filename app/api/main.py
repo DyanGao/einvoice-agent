@@ -313,7 +313,9 @@ def create_app(
                         "sign-in is off (AUTH=off): only requests to localhost are answered",
                     )
                 name = typed_name(x_reviewer) if named else "anonymous"
-                return Actor(name=name, role=Role.ADMIN, verified=False)
+                return Actor(
+                    name=name, role=Role.ADMIN, tenant_id=db.DEFAULT_TENANT_ID, verified=False
+                )
             actor = identify(request, active)
             if actor is None:
                 raise HTTPException(
@@ -328,13 +330,19 @@ def create_app(
     def document(
         document_id: str,
         active: Annotated[Session, Depends(session)],
-        _: Annotated[Actor, Depends(require(Role.VIEWER))],
+        actor: Annotated[Actor, Depends(require(Role.VIEWER))],
     ) -> db.DocumentRow:
-        """Signed in first: a stranger must not learn which documents exist."""
+        """Signed in first: a stranger must not learn which documents exist.
+        Another tenant's document does not exist either (404, not 403)."""
         row = active.get(db.DocumentRow, document_id)
-        if row is None:
+        if row is None or row.tenant_id != actor.tenant_id:
             raise HTTPException(404, "document not found")
         return row
+
+    def checker_for(row: db.DocumentRow) -> Checker | None:
+        """The checks ask the ERP in .env: the default tenant's, until tenants
+        have their own settings (v1.0 Stage 2, increment 4)."""
+        return checker if row.tenant_id == db.DEFAULT_TENANT_ID else None
 
     Db = Annotated[Session, Depends(session)]
     Doc = Annotated[db.DocumentRow, Depends(document)]
@@ -352,7 +360,7 @@ def create_app(
         return {"status": "ok"}
 
     def start_session(active: Session, actor: Actor, request: Request, response: Response):
-        session_id = auth.start_session(active, actor.user_id, datetime.now(UTC))
+        session_id = auth.start_session(active, actor.user_id, actor.tenant_id, datetime.now(UTC))
         response.set_cookie(
             SESSION_COOKIE,
             session_id,
@@ -490,14 +498,14 @@ def create_app(
         return _me(actor)
 
     @app.post("/documents", status_code=202)
-    async def upload(file: UploadFile, response: Response, _: Uploader) -> dict:
+    async def upload(file: UploadFile, response: Response, who: Uploader) -> dict:
         data = await file.read(settings.max_upload_bytes + 1)
         if not data:
             raise HTTPException(400, "empty file")
         if len(data) > settings.max_upload_bytes:
             raise HTTPException(413, f"file larger than {settings.max_upload_bytes} bytes")
         try:
-            result = ingest(session_factory, queue, data, file.filename)
+            result = ingest(session_factory, queue, data, file.filename, tenant_id=who.tenant_id)
         except QueueUnavailable as exc:
             raise HTTPException(
                 503, f"document stored but not queued ({exc}); run `einvoice requeue`"
@@ -509,12 +517,16 @@ def create_app(
     @app.get("/documents")
     def list_documents(
         active: Db,
-        _: Viewer,
+        who: Viewer,
         review_state: db.ReviewState | None = None,
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
         offset: Annotated[int, Query(ge=0)] = 0,
     ) -> dict:
-        query = select(db.DocumentRow).order_by(db.DocumentRow.created_at.desc())
+        query = (
+            select(db.DocumentRow)
+            .where(db.DocumentRow.tenant_id == who.tenant_id)
+            .order_by(db.DocumentRow.created_at.desc())
+        )
         if review_state is not None:
             query = query.where(db.DocumentRow.review_state == review_state.value)
         rows = active.scalars(query.limit(limit).offset(offset)).all()
@@ -544,8 +556,9 @@ def create_app(
             raise HTTPException(409, str(exc)) from exc
         except db.ReviewError as exc:
             raise HTTPException(422, str(exc)) from exc
-        if checker is not None and changed:
-            checker.check(active, row)
+        checks = checker_for(row)
+        if checks is not None and changed:
+            checks.check(active, row)
         return {"changed": changed, **_detail(row)}
 
     @app.post("/documents/{document_id}/recheck")
@@ -553,7 +566,8 @@ def create_app(
         """Match and check again. What is in the ERP and on file changes after
         an invoice was processed: its payment arrives, the other invoices of a
         combined transfer come in, a supplier's master data is corrected."""
-        if checker is None:
+        checks = checker_for(row)
+        if checks is None:
             raise HTTPException(409, "no checks are configured for this installation")
         if row.review_state == db.ReviewState.APPROVED.value:
             raise HTTPException(409, "document is already approved")
@@ -561,7 +575,7 @@ def create_app(
             raise HTTPException(409, "document was rejected")
         if row.draft is None:
             raise HTTPException(409, "nothing was read from this document, so nothing to check")
-        checker.check(active, row)
+        checks.check(active, row)
         return _detail(row)
 
     @app.post("/documents/{document_id}/approve")
@@ -576,14 +590,14 @@ def create_app(
         return _detail(row)
 
     @app.get("/review/duplicates")
-    def duplicate_copies(active: Db, _: Viewer) -> dict:
+    def duplicate_copies(active: Db, who: Viewer) -> dict:
         """Plain copies of an earlier invoice, waiting for review only for being
         copies (app/db/duplicates.py): what "reject all duplicates" would reject."""
 
         return {
             "copies": [
                 {**_summary(copy.document), "original": _summary(copy.original)}
-                for copy in redundant_copies(active)
+                for copy in redundant_copies(active, who.tenant_id)
             ]
         }
 
@@ -591,7 +605,7 @@ def create_app(
     def reject_duplicate_copies(body: CopiesToReject, active: Db, who: Reviewer) -> dict:
         """Reject the listed documents that are still plain copies; the rest are
         skipped, so a list shown earlier cannot reject what has changed since."""
-        result = reject_copies(active, body.ids, who.name, who.user_id)
+        result = reject_copies(active, who.tenant_id, body.ids, who.name, who.user_id)
         return {"rejected": result.rejected, "skipped": result.skipped}
 
     @app.post("/documents/{document_id}/reject")

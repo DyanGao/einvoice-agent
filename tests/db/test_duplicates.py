@@ -40,7 +40,7 @@ def send(session_factory, checker, data, name="rechnung") -> str:
 
 def ids(session_factory) -> list[str]:
     with session_factory() as session:
-        return [copy.document.id for copy in redundant_copies(session)]
+        return [copy.document.id for copy in redundant_copies(session, db.DEFAULT_TENANT_ID)]
 
 
 def state(session_factory, document_id) -> str:
@@ -52,7 +52,7 @@ def test_invoice_sent_again_in_another_file_is_a_redundant_copy(session_factory,
     original = send(session_factory, checker, render_ubl(entry.invoice, XRECHNUNG))
     copy = send(session_factory, checker, render_cii(entry.invoice, XRECHNUNG))
     with session_factory() as session:
-        (found,) = redundant_copies(session)
+        (found,) = redundant_copies(session, db.DEFAULT_TENANT_ID)
         assert (found.document.id, found.original.id) == (copy, original)
 
 
@@ -102,7 +102,7 @@ def test_bulk_reject_rejects_the_copies_with_a_note_naming_the_original(
     original = send(session_factory, checker, render_ubl(entry.invoice, XRECHNUNG))
     copy = send(session_factory, checker, render_cii(entry.invoice, XRECHNUNG))
     with session_factory.begin() as session:
-        result = reject_copies(session, [copy, original, "missing"], "anna")
+        result = reject_copies(session, db.DEFAULT_TENANT_ID, [copy, original, "missing"], "anna")
     assert (result.rejected, result.skipped) == ([copy], [original, "missing"])
     with session_factory() as session:
         event = session.get(db.DocumentRow, copy).audit_events[-1]

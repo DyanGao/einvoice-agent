@@ -18,7 +18,7 @@ LIMIT = timedelta(minutes=10)
 def received(session_factory, data=XML, minutes_ago=30) -> str:
     """A document stored and never processed, `minutes_ago` before NOW."""
     with session_factory.begin() as session:
-        document = db.create_received(session, data, "rechnung.xml")
+        document = db.create_received(session, data, "rechnung.xml", db.DEFAULT_TENANT_ID)
         document.created_at = NOW - timedelta(minutes=minutes_ago)
         session.flush()
         return document.id

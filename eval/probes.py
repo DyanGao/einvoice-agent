@@ -31,7 +31,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.checks.service import Checker
-from app.db import Base, DocumentRow, DraftRow
+from app.db import DEFAULT_TENANT_ID, Base, DocumentRow, DraftRow
 from app.db.review import ReviewState
 from app.extract.base import Extractor
 from app.extract.complete import CompletingExtractor
@@ -103,6 +103,7 @@ def production_chain(mode: str, recordings: Path) -> Extractor:
 def _extracted(key: str, draft: InvoiceDraft) -> DocumentRow:
     data = draft.model_dump(mode="json")
     return DocumentRow(
+        tenant_id=DEFAULT_TENANT_ID,
         sha256=hashlib.sha256(key.encode()).hexdigest(),
         filename=f"{key}.pdf",
         format=DocumentFormat.PDF_TEXT.value,

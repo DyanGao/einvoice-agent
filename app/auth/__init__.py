@@ -2,9 +2,11 @@
 
 People sign in through the identity provider (`app/auth/oidc.py`) or, for the
 built-in admin account used for first setup, with a password. Scripts and
-integrations use API tokens. Either way the request acts as a user with one
-role: viewer (reads), reviewer (corrects, approves, rejects, reopens, uploads)
-or admin (everything, and accounts).
+integrations use API tokens. Either way the request acts as a user in one
+tenant, with the role the user has there (a membership): viewer (reads),
+reviewer (corrects, approves, rejects, reopens, uploads) or admin
+(everything, and accounts). A session works in one tenant, a token acts in
+the tenant it was made for.
 
 Nothing that could be used to sign in is stored as it is: passwords as salted
 scrypt hashes, tokens and session ids as SHA-256 (they are long and random, so
@@ -21,7 +23,7 @@ from enum import StrEnum
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.tables import ApiTokenRow, SessionRow, UserRow
+from app.db.tables import DEFAULT_TENANT_ID, ApiTokenRow, MembershipRow, SessionRow, UserRow
 
 TOKEN_PREFIX = "eia_"  # noqa: S105 -- a marker, not a secret
 SESSION_LIFETIME = timedelta(hours=8)
@@ -42,11 +44,12 @@ class Role(StrEnum):
 
 @dataclass(frozen=True)
 class Actor:
-    """Who a request acts as. `verified` is False only when sign-in is off and
-    the name was typed into the UI."""
+    """Who a request acts as, and for which tenant. `verified` is False only
+    when sign-in is off and the name was typed into the UI."""
 
     name: str
     role: Role
+    tenant_id: str
     user_id: str | None = None
     email: str | None = None
     verified: bool = True
@@ -73,13 +76,57 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(candidate.hex(), digest)
 
 
-def _actor(user: UserRow) -> Actor:
-    return Actor(name=user.display_name, role=Role(user.role), user_id=user.id, email=user.email)
+def _membership(session: Session, user_id: str, tenant_id: str) -> MembershipRow | None:
+    return session.get(MembershipRow, (user_id, tenant_id))
+
+
+def _actor(session: Session, user: UserRow, tenant_id: str) -> Actor | None:
+    """The user acting in the tenant; None if they are not a member of it."""
+    membership = _membership(session, user.id, tenant_id)
+    if membership is None:
+        return None
+    return Actor(
+        name=user.display_name,
+        role=Role(membership.role),
+        tenant_id=tenant_id,
+        user_id=user.id,
+        email=user.email,
+    )
+
+
+def _first_tenant(session: Session, user: UserRow) -> Actor | None:
+    """Where a person starts working after signing in: the tenant they
+    joined first. Switching comes with the admin UI (Stage 2, increment 5)."""
+    tenant_id = session.scalar(
+        select(MembershipRow.tenant_id)
+        .where(MembershipRow.user_id == user.id)
+        .order_by(MembershipRow.created_at, MembershipRow.tenant_id)
+        .limit(1)
+    )
+    return None if tenant_id is None else _actor(session, user, tenant_id)
+
+
+def add_membership(session: Session, user_id: str, tenant_id: str, role: Role) -> MembershipRow:
+    """Give the user a role in the tenant, or change the role they have there."""
+    membership = _membership(session, user_id, tenant_id)
+    if membership is None:
+        membership = MembershipRow(user_id=user_id, tenant_id=tenant_id, role=Role(role).value)
+        session.add(membership)
+    else:
+        membership.role = Role(role).value
+    session.flush()
+    return membership
 
 
 def create_user(
-    session: Session, email: str, display_name: str, role: Role, password: str | None = None
+    session: Session,
+    email: str,
+    display_name: str,
+    role: Role,
+    password: str | None = None,
+    tenant_id: str = DEFAULT_TENANT_ID,
 ) -> UserRow:
+    """A person with `role` in `tenant_id`."""
     email = email.strip().lower()
     if session.scalar(select(UserRow).where(func.lower(UserRow.email) == email)) is not None:
         raise ValueError(f"a user with the email {email} already exists")
@@ -88,11 +135,11 @@ def create_user(
     user = UserRow(
         email=email,
         display_name=display_name.strip(),
-        role=Role(role).value,
         password_hash=None if password is None else hash_password(password),
     )
     session.add(user)
     session.flush()
+    add_membership(session, user.id, tenant_id, role)
     return user
 
 
@@ -101,21 +148,22 @@ def find_user(session: Session, email: str) -> UserRow | None:
 
 
 def sign_in(session: Session, email: str, password: str) -> Actor | None:
-    """The built-in account's password sign-in. The same answer, and about the
-    same time, whether the email is unknown or the password wrong."""
+    """The built-in account's password sign-in, into the first tenant the user
+    joined. The same answer, and about the same time, whether the email is
+    unknown or the password wrong."""
     user = find_user(session, email)
     if user is None or user.password_hash is None:
         verify_password(password, hash_password("timing"))
         return None
     if not verify_password(password, user.password_hash) or user.disabled:
         return None
-    return _actor(user)
+    return _first_tenant(session, user)
 
 
 class SignInRefused(Exception):
     """The provider knows the person, but this installation does not let them
     in. `reason` is a code for the UI: unverified_email, unknown_user,
-    disabled or other_account."""
+    disabled, other_account or no_tenant."""
 
     def __init__(self, reason: str, detail: str) -> None:
         super().__init__(detail)
@@ -150,12 +198,22 @@ def sign_in_with_provider(
         session.flush()
     if user.disabled:
         raise SignInRefused("disabled", f"{user.email} is disabled")
-    return _actor(user)
+    actor = _first_tenant(session, user)
+    if actor is None:
+        raise SignInRefused("no_tenant", f"{user.email} is not a member of any tenant")
+    return actor
 
 
-def create_token(session: Session, user_id: str, name: str) -> str:
+def create_token(
+    session: Session, user_id: str, name: str, tenant_id: str = DEFAULT_TENANT_ID
+) -> str:
+    """A token acting as the user in the tenant, with the role they have there."""
+    if _membership(session, user_id, tenant_id) is None:
+        raise ValueError(f"the user is not a member of tenant {tenant_id}")
     plain = TOKEN_PREFIX + secrets.token_urlsafe(32)
-    session.add(ApiTokenRow(user_id=user_id, name=name, token_hash=_sha256(plain)))
+    session.add(
+        ApiTokenRow(user_id=user_id, tenant_id=tenant_id, name=name, token_hash=_sha256(plain))
+    )
     session.flush()
     return plain
 
@@ -176,15 +234,28 @@ def authenticate_token(session: Session, plain: str, now: datetime) -> Actor | N
     user = session.get(UserRow, row.user_id)
     if user is None or user.disabled:
         return None
-    row.last_used_at = now
-    return _actor(user)
+    actor = _actor(session, user, row.tenant_id)
+    if actor is not None:
+        row.last_used_at = now
+    return actor
 
 
 def start_session(
-    session: Session, user_id: str, now: datetime, lifetime: timedelta = SESSION_LIFETIME
+    session: Session,
+    user_id: str,
+    tenant_id: str,
+    now: datetime,
+    lifetime: timedelta = SESSION_LIFETIME,
 ) -> str:
     session_id = secrets.token_urlsafe(32)
-    session.add(SessionRow(id_hash=_sha256(session_id), user_id=user_id, expires_at=now + lifetime))
+    session.add(
+        SessionRow(
+            id_hash=_sha256(session_id),
+            user_id=user_id,
+            tenant_id=tenant_id,
+            expires_at=now + lifetime,
+        )
+    )
     session.flush()
     return session_id
 
@@ -201,7 +272,8 @@ def authenticate_session(session: Session, session_id: str, now: datetime) -> Ac
     user = session.get(UserRow, row.user_id)
     if user is None or user.disabled:
         return None
-    return _actor(user)
+    # A membership taken away ends the session's access at once.
+    return _actor(session, user, row.tenant_id)
 
 
 def end_session(session: Session, session_id: str) -> None:

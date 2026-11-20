@@ -72,13 +72,14 @@ def fully_paid(document: DocumentRow) -> bool:
 
 
 def open_invoices(
-    session: Session, supplier_id: str, exclude: str | None = None
+    session: Session, tenant_id: str, supplier_id: str, exclude: str | None = None
 ) -> list[DocumentRow]:
-    """The supplier's documents whose payments are not all matched yet."""
+    """The tenant's documents of the supplier whose payments are not all
+    matched yet. Supplier ids come from the tenant's own ERP."""
     query = (
         select(DocumentRow)
         .join(MatchRow, MatchRow.document_id == DocumentRow.id)
-        .where(MatchRow.supplier_id == supplier_id)
+        .where(DocumentRow.tenant_id == tenant_id, MatchRow.supplier_id == supplier_id)
         # A rejected invoice is not owed, so no transfer pays it.
         .where(DocumentRow.review_state != ReviewState.REJECTED.value)
         .order_by(DocumentRow.created_at, DocumentRow.id)
@@ -102,13 +103,15 @@ def rematch(session: Session, checker: Checker, document: DocumentRow, trigger: 
 def rematch_supplier(
     session: Session,
     checker: Checker,
+    tenant_id: str,
     supplier_id: str,
     trigger: str,
     exclude: str | None = None,
 ) -> list[str]:
-    """Match the supplier's open invoices again; the ids of those it did."""
+    """Match the tenant's open invoices of the supplier again; the ids of
+    those it did."""
     done = []
-    for document in open_invoices(session, supplier_id, exclude):
+    for document in open_invoices(session, tenant_id, supplier_id, exclude):
         rematch(session, checker, document, trigger)
         done.append(document.id)
     return done
@@ -125,6 +128,7 @@ def after_processing(session: Session, checker: Checker, document: DocumentRow) 
         return rematch_supplier(
             session,
             checker,
+            document.tenant_id,
             document.match.supplier_id,
             trigger=f"new invoice {document.draft.data.get('number')} of the supplier",
             exclude=document.id,
@@ -138,18 +142,21 @@ def after_processing(session: Session, checker: Checker, document: DocumentRow) 
         return []
 
 
-def watch_bank(session: Session, erp: BankData, checker: Checker) -> list[str]:
-    """Act on the transfers that are new since the last watch; their ids.
+def watch_bank(session: Session, erp: BankData, checker: Checker, tenant_id: str) -> list[str]:
+    """Act on the transfers in the tenant's ERP that are new since the last
+    watch; their ids.
 
     The first watch sees every transaction as new and matches every open
     invoice of a supplier that was paid anything once. Raises ErpUnavailable
     when the ERP does not answer: nothing is recorded as seen, so the next
     watch tries the same transfers again.
     """
-    latest = session.scalar(select(func.max(SeenBankTransactionRow.booking_date)))
+    latest = _latest_seen(session, tenant_id)
     since = None if latest is None else latest - LOOK_BACK
     transactions = erp.transactions_since(since)
-    seen_query = select(SeenBankTransactionRow.id)
+    seen_query = select(SeenBankTransactionRow.id).where(
+        SeenBankTransactionRow.tenant_id == tenant_id
+    )
     if since is not None:
         seen_query = seen_query.where(SeenBankTransactionRow.booking_date >= since)
     seen = set(session.scalars(seen_query))
@@ -164,11 +171,14 @@ def watch_bank(session: Session, erp: BankData, checker: Checker) -> list[str]:
         if owner is not None:  # rent, salaries, tax: no supplier, nothing to match
             by_supplier.setdefault(owner.id, []).append(tx.id)
     for supplier_id, ids in sorted(by_supplier.items()):
-        rematch_supplier(session, checker, supplier_id, trigger=_trigger(ids))
+        rematch_supplier(session, checker, tenant_id, supplier_id, trigger=_trigger(ids))
 
-    session.add_all(SeenBankTransactionRow(id=tx.id, booking_date=tx.booking_date) for tx in new)
+    session.add_all(
+        SeenBankTransactionRow(tenant_id=tenant_id, id=tx.id, booking_date=tx.booking_date)
+        for tx in new
+    )
     session.flush()
-    _forget_old(session)
+    _forget_old(session, tenant_id)
     if new:
         logger.info(
             "bank watch: %d new transactions, %d suppliers matched again",
@@ -183,12 +193,21 @@ def _trigger(ids: Sequence[str]) -> str:
     return f"new bank transaction{'s' if len(ids) > 1 else ''} {shown}"
 
 
-def _forget_old(session: Session) -> None:
-    """Keep only what the next watch's look-back can still return."""
-    latest = session.scalar(select(func.max(SeenBankTransactionRow.booking_date)))
+def _latest_seen(session: Session, tenant_id: str):
+    return session.scalar(
+        select(func.max(SeenBankTransactionRow.booking_date)).where(
+            SeenBankTransactionRow.tenant_id == tenant_id
+        )
+    )
+
+
+def _forget_old(session: Session, tenant_id: str) -> None:
+    """Keep only what the tenant's next watch's look-back can still return."""
+    latest = _latest_seen(session, tenant_id)
     if latest is not None:
         session.execute(
             delete(SeenBankTransactionRow).where(
-                SeenBankTransactionRow.booking_date < latest - LOOK_BACK
+                SeenBankTransactionRow.tenant_id == tenant_id,
+                SeenBankTransactionRow.booking_date < latest - LOOK_BACK,
             )
         )

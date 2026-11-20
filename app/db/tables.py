@@ -5,7 +5,18 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, LargeBinary, Numeric, String, UniqueConstraint
+from sqlalchemy import (
+    DDL,
+    JSON,
+    DateTime,
+    ForeignKey,
+    LargeBinary,
+    Numeric,
+    PrimaryKeyConstraint,
+    String,
+    UniqueConstraint,
+    event,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -26,11 +37,44 @@ class Base(DeclarativeBase):
     pass
 
 
+# Every installation has this tenant: what existed before tenants belongs to
+# it, and until per-tenant settings exist (v1.0 Stage 2, increment 4) the
+# ERP, connectors and decision settings in .env are its own.
+DEFAULT_TENANT_ID = "default"
+
+
+class TenantRow(Base):
+    """A company served by this installation. Nothing of one tenant is visible
+    to another: documents, their matches and bookings, tokens and sessions."""
+
+    __tablename__ = "tenants"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    slug: Mapped[str] = mapped_column(String(40), unique=True)
+    name: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+# Databases made from the tables (tests, the demo, the UI test server) get the
+# default tenant too; on Postgres the migration inserts it.
+event.listen(
+    TenantRow.__table__,
+    "after_create",
+    DDL(
+        "INSERT INTO tenants (id, slug, name, created_at) "
+        "VALUES ('default', 'default', 'Default', CURRENT_TIMESTAMP)"
+    ),
+)
+
+
 class DocumentRow(Base):
     __tablename__ = "documents"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
-    sha256: Mapped[str] = mapped_column(String(64), unique=True)
+    # No default: whoever stores a document must say whose it is.
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
+    # The same file sent to two companies is two documents.
+    sha256: Mapped[str] = mapped_column(String(64))
     filename: Mapped[str | None] = mapped_column(String(255))
     format: Mapped[str] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20), index=True)
@@ -58,6 +102,8 @@ class DocumentRow(Base):
     deliveries: Mapped[list["DeliveryRow"]] = relationship(
         back_populates="document", order_by="DeliveryRow.connector"
     )
+
+    __table_args__ = (UniqueConstraint("tenant_id", "sha256"),)
 
 
 class InvoiceRow(Base):
@@ -217,22 +263,26 @@ class SeenBankTransactionRow(Base):
 
     __tablename__ = "seen_bank_transactions"
 
-    id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    # Each tenant has its own ERP, so its own bank transactions.
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"))
+    id: Mapped[str] = mapped_column(String(50))
     booking_date: Mapped[date] = mapped_column(index=True)
     seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (PrimaryKeyConstraint("tenant_id", "id"),)
 
 
 class UserRow(Base):
     """A person who signs in, or the owner of an API token. `email` is stored
     lower-case. `password_hash` only for the built-in admin account(s); everyone
-    else signs in through the identity provider."""
+    else signs in through the identity provider. A person may work for several
+    tenants, with a role in each (MembershipRow)."""
 
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
     email: Mapped[str] = mapped_column(String(254), unique=True)
     display_name: Mapped[str] = mapped_column(String(100))
-    role: Mapped[str] = mapped_column(String(20))  # viewer | reviewer | admin
     password_hash: Mapped[str | None] = mapped_column(String(200))
     disabled: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -244,6 +294,17 @@ class UserRow(Base):
     __table_args__ = (UniqueConstraint("oidc_issuer", "oidc_subject"),)
 
 
+class MembershipRow(Base):
+    """A user's role in one tenant: viewer | reviewer | admin."""
+
+    __tablename__ = "memberships"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), primary_key=True)
+    role: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class ApiTokenRow(Base):
     """A token for scripts and integrations, acting as its user. Only a SHA-256
     of the token is kept; the token itself is shown once, when created."""
@@ -252,6 +313,8 @@ class ApiTokenRow(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    # The tenant the token acts in: an integration belongs to one company.
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
     name: Mapped[str] = mapped_column(String(100))
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -267,6 +330,8 @@ class SessionRow(Base):
 
     id_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    # The tenant the person is working in.
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
 
