@@ -192,6 +192,56 @@ ENGLISH: dict[str, str] = {
     "delivery.form_status": "ERP answered {status} for {url}",
     "delivery.form_several": "the ERP holds {count} bookings for reference {reference}: {ids}",
     "delivery.form_differs": "booking {booking} in the ERP: {refuse}: {fields_differing}",
+    # Why the API refused a request (app/api/main.py)
+    "api.reviewer_name_required": "X-Reviewer header with the reviewer's name is required",
+    "api.csrf_header": "a change made with the session cookie needs {header}",
+    "api.open_mode_localhost": (
+        "sign-in is off (AUTH=off): only requests to localhost are answered"
+    ),
+    "api.sign_in": "sign in, or send an API token",
+    "api.needs_role": "needs the {role} role",
+    "role.viewer": "viewer",
+    "role.reviewer": "reviewer",
+    "role.admin": "admin",
+    "api.document_not_found": "document not found",
+    "api.sign_in_off": "sign-in is off (AUTH=off)",
+    "api.no_provider": "no identity provider is configured (OIDC_ISSUER)",
+    "api.too_many_sign_ins": "too many failed sign-ins; try again in {minutes} minute(s)",
+    "api.wrong_password": "wrong email or password",
+    "api.provider_unreachable": "the identity provider cannot be reached",
+    "api.not_signed_in": "not signed in",
+    "api.token_cannot_switch": "an API token acts in the tenant it was made for",
+    "api.no_such_tenant": "no such tenant among yours",
+    "api.members_cli": "sign-in is off (AUTH=off): manage members with the einvoice CLI",
+    "api.member_already": "{email} is a member already",
+    "api.member_refused": "{detail}",
+    "api.operator_settings": (
+        "{settings}: set by the installation's operator (einvoice tenant-set)"
+    ),
+    "api.invalid_settings": "settings that cannot work: {detail}",
+    "api.empty_file": "empty file",
+    "api.file_too_large": "file larger than {bytes} bytes",
+    "api.not_queued": "document stored but not queued ({detail}); run `einvoice requeue`",
+    "api.no_checks": "no checks are configured for this installation",
+    "api.nothing_to_check": "nothing was read from this document, so nothing to check",
+    # Why a review action was refused (app/db/review.py)
+    "review.already_approved": "document is already approved",
+    "review.rejected": "document was rejected",
+    "review.not_processed": "document has not been processed yet",
+    "review.no_draft": "document has no draft to approve",
+    "review.not_editable": "field cannot be edited: {path}",
+    "review.unknown_field": "unknown field: {path}",
+    "review.invalid_value": "invalid value: {problems}",
+    "review.fields_missing": "cannot approve, fields missing or invalid: {fields}",
+    "review.unknown_reason": "unknown reason {reason}; one of: {allowed}",
+    "review.note_needed": "a rejection for another reason needs a note saying which",
+    "review.not_rejected": "document is not rejected",
+    "review.reopen_note": "reopening needs a note saying why",
+    # Changes to a tenant's members that are refused (app/auth)
+    "members.not_member": "not a member of this tenant",
+    "members.own_admin": "you cannot take away your own admin role",
+    "members.last_admin": "the tenant would be left without an admin",
+    "members.self_remove": "you cannot remove yourself",
 }
 
 _FIELDS = Formatter()

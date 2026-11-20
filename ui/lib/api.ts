@@ -116,10 +116,13 @@ export type Detail = Summary & {
 
 export type UploadResult = { id: string; status: string; duplicate: boolean };
 
+/** What the API refused, in English; `said` is its code when the API sent one,
+ * for the UI's language. Status 0: the API could not be reached at all. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly said: Said | null = null,
   ) {
     super(message);
   }
@@ -137,7 +140,8 @@ async function send(path: string, init?: RequestInit): Promise<Response> {
     throw new ApiError(0, `The API at ${API_URL} is not reachable. Start it with "make api".`);
   }
   if (!response.ok) {
-    throw new ApiError(response.status, await errorText(response));
+    const { message, said } = await refusal(response);
+    throw new ApiError(response.status, message, said);
   }
   return response;
 }
@@ -158,17 +162,18 @@ function reviewerHeader(reviewer: string): Record<string, string> {
   return reviewer ? { "X-Reviewer": reviewer } : {};
 }
 
-async function errorText(response: Response): Promise<string> {
+async function refusal(response: Response): Promise<{ message: string; said: Said | null }> {
   const fallback = `The API answered ${response.status} ${response.statusText}`.trim();
   const text = await response.text();
   try {
-    const detail = (JSON.parse(text) as { detail?: unknown }).detail;
-    if (typeof detail === "string") return detail;
-    if (detail !== undefined) return JSON.stringify(detail);
+    const body = JSON.parse(text) as { detail?: unknown; text?: Said };
+    const said = body.text ?? null;
+    if (typeof body.detail === "string") return { message: body.detail, said };
+    if (body.detail !== undefined) return { message: JSON.stringify(body.detail), said };
   } catch {
     // Not JSON (for example a proxy error page): the status line is all we have.
   }
-  return fallback;
+  return { message: fallback, said: null };
 }
 
 export function contentUrl(id: string): string {

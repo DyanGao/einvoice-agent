@@ -52,7 +52,7 @@ export default function QueuePage() {
       setCopies(duplicates.copies);
       setError(null);
     } catch (problem) {
-      setError(problem instanceof Error ? problem.message : String(problem));
+      setError(i18n.error(problem));
     }
   }, []);
 
@@ -76,7 +76,7 @@ export default function QueuePage() {
         const result = await uploadDocument(file);
         results.push({ file: file.name, id: result.id, failed: false, duplicate: result.duplicate });
       } catch (problem) {
-        const reason = problem instanceof Error ? problem.message : String(problem);
+        const reason = i18n.error(problem);
         results.push({ file: file.name, failed: true, reason });
       }
     }
@@ -100,7 +100,7 @@ export default function QueuePage() {
       );
       setConfirming(false);
     } catch (problem) {
-      setRejectNote(problem instanceof Error ? problem.message : String(problem));
+      setRejectNote(i18n.error(problem));
     } finally {
       setRejecting(false);
       await load();

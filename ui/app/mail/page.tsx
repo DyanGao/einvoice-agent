@@ -32,7 +32,8 @@ function Outcome({ part }: { part: MailPart }) {
 }
 
 export default function MailPage() {
-  const { t, when } = useI18n();
+  const i18n = useI18n();
+  const { t, when } = i18n;
   const [mails, setMails] = useState<Mail[] | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -41,7 +42,7 @@ export default function MailPage() {
     listMail()
       .then((answer) => setMails(answer.mails))
       .catch((error: unknown) => {
-        if (error instanceof Error) setProblem(error.message);
+        if (error instanceof Error) setProblem(i18n.error(error));
         else setFailed(true);
       });
   }, []);
