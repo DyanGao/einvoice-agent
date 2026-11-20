@@ -15,9 +15,10 @@ whatever the query says.
   or sessions. The login role (which may be a superuser, as in Compose) only
   takes it on for the transaction, with SET LOCAL ROLE.
 
-Work that is not yet done per tenant (the worker, bank watch and delivery
-loop until increment 3, the CLI, migrations) runs as the login role and is
-not limited by these policies.
+Background work (worker, folder watch, bank watch, delivery loop, the CLI)
+runs in `tenant_transaction`s too. Only what has to see across tenants runs
+as the login role: finding which tenant a queued document belongs to, the
+sweep for documents whose job was lost, the sign-in tables, migrations.
 
 The migration `migrations/versions/20261120_*_row_level_security.py` installs
 the same statements in migrated databases; databases made from the tables
@@ -25,8 +26,11 @@ the same statements in migrated databases; databases made from the tables
 that both end up with the same policies.
 """
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 TENANT_ROLE = "einvoice_tenant"
 SETTING = "app.tenant_id"
@@ -97,3 +101,12 @@ def act_for(session: Session, tenant_id: str) -> None:
             "tenant": tenant_id,
         },
     )
+
+
+@contextmanager
+def tenant_transaction(session_factory: sessionmaker[Session], tenant_id: str) -> Iterator[Session]:
+    """A transaction acting for the tenant from its first statement:
+    committed at the end, rolled back on an exception."""
+    with session_factory.begin() as session:
+        act_for(session, tenant_id)
+        yield session

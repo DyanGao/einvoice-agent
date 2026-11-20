@@ -16,6 +16,8 @@ from app.db.store import (
     record_duplicate,
     record_queued_again,
     store_outcome,
+    tenant_by_slug,
+    tenant_of,
 )
 from app.db.tables import (
     DEFAULT_TENANT_ID,
@@ -70,4 +72,6 @@ __all__ = [
     "record_duplicate",
     "record_queued_again",
     "store_outcome",
+    "tenant_by_slug",
+    "tenant_of",
 ]

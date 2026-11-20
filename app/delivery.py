@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.connectors.base import Booking, Connector, DeliveryFailed
 from app.db.review import ReviewState
+from app.db.rls import tenant_transaction
 from app.db.tables import DEFAULT_TENANT_ID, AuditEventRow, DeliveryRow, DocumentRow
 from app.extract.draft import InvoiceDraft
 
@@ -215,10 +216,10 @@ def deliver_due(
     committed on its own."""
     done = []
     for connector in connectors:
-        with session_factory() as session:
+        with tenant_transaction(session_factory, tenant_id) as session:
             candidates = _candidates(session, connector, tenant_id)
         for document_id in candidates:
-            with session_factory.begin() as session:
+            with tenant_transaction(session_factory, tenant_id) as session:
                 document = session.get(DocumentRow, document_id, with_for_update=True)
                 claim = _claim(session, document, connector, now) if may_deliver(document) else None
             if claim is None:
@@ -227,11 +228,11 @@ def deliver_due(
                 ref = connector.deliver(claim.booking, claim.key)
             except DeliveryFailed as exc:
                 logger.warning("document %s to %s: %s", document_id, connector.name, exc)
-                with session_factory.begin() as session:
+                with tenant_transaction(session_factory, tenant_id) as session:
                     _record(session, claim, connector, now, error=exc)
                 done.append((document_id, connector.name, "failed"))
                 continue
-            with session_factory.begin() as session:
+            with tenant_transaction(session_factory, tenant_id) as session:
                 _record(session, claim, connector, now, ref=ref)
             done.append((document_id, connector.name, "delivered"))
     return done

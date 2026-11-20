@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app import db, rematch
 from app.checks.service import Checker
+from app.db.rls import tenant_transaction
 from app.extract.base import Extractor
 from app.pipeline import DocumentStatus, Validator, process_document
 from app.pipeline.document import MAX_PAGES
@@ -27,18 +28,24 @@ def run_document_job(
     The slow part (validator, model) runs outside any database transaction.
     With a checker, the business-rule checks run on the result right away,
     and the same supplier's open invoices are matched again (app/rematch.py).
+
+    Everything but finding out whose document it is runs acting for its
+    tenant, so row-level security holds here as in a request.
     """
     with session_factory() as session:
+        tenant_id = db.tenant_of(session, document_id)
+    if tenant_id is None:
+        raise LookupError(f"no document {document_id}")
+
+    with tenant_transaction(session_factory, tenant_id) as session:
         document = session.get(db.DocumentRow, document_id)
-        if document is None:
-            raise LookupError(f"no document {document_id}")
         if document.status != DocumentStatus.RECEIVED.value:
             return document.status
         data = document.content
 
     outcome = process_document(data, validator, extractor, max_pages)
 
-    with session_factory.begin() as session:
+    with tenant_transaction(session_factory, tenant_id) as session:
         document = session.get(db.DocumentRow, document_id, with_for_update=True)
         if document.status != DocumentStatus.RECEIVED.value:
             # Another worker finished it while this one was processing.
