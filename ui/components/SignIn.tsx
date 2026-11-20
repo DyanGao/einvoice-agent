@@ -17,6 +17,7 @@ const OUTCOMES: Record<string, string> = {
   unverified_email:
     "The sign-in service did not confirm your email address, so it cannot be matched to an account here.",
   disabled: "Your account here is disabled. Ask an admin.",
+  no_tenant: "Your account is not part of any company here yet. Ask an admin to add you to one.",
   other_account:
     "Your email address here is linked to another account at the sign-in service. Sign in with that one, or ask an admin.",
   failed: "Sign-in did not work. Please try again.",
