@@ -272,6 +272,33 @@ application enforces this: with `EXTRACTOR_MODEL=ollama/…`, everything the mod
 (`reader_not_calibrated`); e-invoices, which no model reads, are decided as before. The table above is
 what the threshold alone would do.
 
+### Mailbox (v1.0 Stage 3)
+
+`make eval-mailbox` (in memory, with crashes) and `make test-mailbox` (the same mailbox through
+GreenMail, a real IMAP server), both CI gates. A synthetic mailbox of **200 mails**, generated the same way
+every time (but for five password-protected PDFs, encrypted with a random salt): single and several
+invoices (XML, PDF), ZIPs with invoices and a text file, the same invoice sent again, forwarded mails,
+mails with nothing attached, oversized, empty and unsupported files, PDFs behind a password, ZIPs inside
+ZIPs, a ZIP bomb, broken ZIPs, malformed MIME (broken base64), inline logos, and injection text in
+subject, body and filename.
+
+| | In memory, 10 crashes | Through IMAP (GreenMail) |
+|---|---|---|
+| Mails whose record lists exactly the expected outcome per file | **200 of 200** | **200 of 200** |
+| Mails recorded | 200 (each once) | 200 |
+| Distinct invoices stored | 167 of 167, none twice | 167 of 167, none twice |
+| Injected invoices whose fields, route or match changed | **0 of 12** | 0 of 12 |
+
+The crashes come at five chosen mails while fetching and five between storing an invoice and marking
+the mail; the poller is restarted after each. The injection probe processes each invoice that came with
+injection text next to the same invoice received cleanly in another tenant: what the mail says is
+recorded as data and reaches neither extraction, matching nor the decision.
+
+**What the eval found:** a mail read again after a crash between storing and marking listed its own
+invoice as "already received". It now counts as the mail's own (`_first_from`), and a test keeps it so.
+**What it does not show:** real mail servers beyond GreenMail, real Microsoft or Google sign-in, and mail
+from real senders (encodings, clients, sizes).
+
 ## Worst 10 cases
 
 The ten cases, from every eval and both splits, that did or could have done the most damage, worst

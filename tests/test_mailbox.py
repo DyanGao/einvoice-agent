@@ -175,8 +175,9 @@ def test_a_crash_after_storing_but_before_marking_stores_nothing_twice(session_f
         read(session_factory, box)
     box.fail_marking = False
     done = read(session_factory, box)
-    # Read again, recognised by its content: still one document.
-    assert (done.mails, done.duplicates, len(documents(session_factory))) == (1, 1, 1)
+    # Read again, recognised by its content: still one document, and it is
+    # this mail's own invoice, not a copy.
+    assert (done.mails, done.duplicates, len(documents(session_factory))) == (1, 0, 1)
 
 
 def test_a_renumbered_folder_is_read_again_without_new_documents(session_factory):

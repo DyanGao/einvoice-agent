@@ -112,6 +112,9 @@ jobs:
       - name: Exception eval
         run: make eval-exceptions
 
+      - name: Mailbox eval
+        run: make eval-mailbox
+
       # The README table from what the evals above left in eval/out. Scans
       # replay only where they were recorded, so here they show "not run";
       # this checks the report still builds, it does not rewrite the README.
