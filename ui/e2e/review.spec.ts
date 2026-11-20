@@ -187,3 +187,14 @@ test("a mistaken rejection is reopened for review, with a note", async ({ page }
   await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
   await expect(page.getByTestId("stamp")).toHaveCount(0);
 });
+
+test("the mail page shows what arrived and why a file was refused", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Mail" }).click();
+  await expect(page.getByRole("heading", { name: "Mail" })).toBeVisible();
+  const rows = page.getByRole("row");
+  await expect(rows.filter({ hasText: "Frage zur Rechnung" })).toContainText("nothing attached");
+  await expect(rows.filter({ hasText: "Ihre Rechnung" })).toContainText(
+    "gesperrt.pdf refused: PDF protected by a password",
+  );
+});

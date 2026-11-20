@@ -109,6 +109,12 @@ a restart loses and duplicates nothing, and a mail read twice adds no document (
 bytes). A handled mail is flagged (`\Seen $EInvoiceDone`) or moved, never deleted; mails are read
 with `BODY.PEEK`. Plain IMAP without TLS only to this machine. Tested against a fake mailbox and
 against GreenMail in Docker (`make test-mailbox`, also in CI).
+Every mail read is kept (`mails`, with RLS), in the same transaction as its UID, with what became of
+each attached file: stored as an invoice, already known, or refused with a reason — too large, empty,
+not an invoice format, a PDF or ZIP behind a password, a ZIP inside a ZIP, a ZIP with too many files,
+a ZIP bomb (unpacks to over 100 times its packed size), unreadable. ZIPs are opened in memory one
+level deep, every member read with the size limit rather than trusting the ZIP's own sizes. A mail
+with nothing attached is kept too. The review UI lists them on its Mail page.
 
 **Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
 identity provider; someone from another tenant gets a role here too), change role, remove (their

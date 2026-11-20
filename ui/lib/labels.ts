@@ -127,3 +127,25 @@ const BASIS: Record<string, string> = {
 };
 
 export const basisLabel = (basis: string) => BASIS[basis] ?? basis;
+
+/** Why a file in a mail was not taken as an invoice (app/mailbox.py). */
+const MAIL_REASON: Record<string, string> = {
+  too_large: "too large",
+  empty: "empty",
+  unsupported_type: "not an invoice format (XML, PDF, PNG, JPEG or a ZIP of them)",
+  encrypted_pdf: "PDF protected by a password",
+  encrypted_zip: "ZIP protected by a password",
+  nested_zip: "ZIP inside a ZIP (only one level is opened)",
+  zip_bomb: "unpacks to far more than any invoice",
+  unreadable: "could not be read",
+};
+
+export function mailReasonLabel(reason: string | null): string {
+  if (!reason) return "";
+  // The code comes first; "zip_too_many_files (61, at most 50)" carries details.
+  const space = reason.indexOf(" ");
+  const code = space === -1 ? reason : reason.slice(0, space);
+  const details = space === -1 ? "" : reason.slice(space + 1);
+  if (code === "zip_too_many_files") return `ZIP with too many files ${details}`.trim();
+  return MAIL_REASON[code] ?? code.replaceAll("_", " ");
+}

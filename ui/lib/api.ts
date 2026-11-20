@@ -354,3 +354,26 @@ export function changeTenantSettings(changes: Record<string, unknown>): Promise<
     body: JSON.stringify({ changes }),
   });
 }
+
+/** What became of one file attached to a mail. */
+export type MailPart = {
+  filename: string | null;
+  content_type: string;
+  bytes: number;
+  outcome: "ingested" | "known" | "refused";
+  reason: string | null;
+  document_id: string | null;
+};
+
+export type Mail = {
+  id: string;
+  read_at: string;
+  sender: string;
+  subject: string;
+  sent: string;
+  parts: MailPart[];
+};
+
+export function listMail(): Promise<{ mails: Mail[] }> {
+  return request("/mail?limit=100");
+}

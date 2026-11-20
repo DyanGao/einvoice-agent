@@ -192,7 +192,10 @@ def test_a_renumbered_folder_is_read_again_without_new_documents(session_factory
 
 def test_an_oversized_attachment_is_left_out(session_factory):
     done = read(session_factory, Mailbox([mail("gross", [pdf()])]), max_bytes=100)
-    assert (done.too_large, documents(session_factory)) == (1, [])
+    assert (done.refused, documents(session_factory)) == (1, [])
+    with session_factory() as session:
+        (record,) = session.query(db.MailRow).all()
+        assert [part["reason"] for part in record.parts] == ["too_large"]
 
 
 def test_each_tenant_reads_into_its_own_documents(session_factory):

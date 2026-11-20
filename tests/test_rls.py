@@ -96,6 +96,22 @@ def seeded(session_factory):
         session.add_all(
             [db.MailboxStateRow(tenant_id=t, mailbox="u@h/INBOX", uidvalidity=1) for t in (A, B)]
         )
+        session.add_all(
+            [
+                db.MailRow(
+                    tenant_id=t,
+                    mailbox="u@h/INBOX",
+                    uidvalidity=1,
+                    uid=1,
+                    message_id="<m@h>",
+                    sender="s",
+                    subject="s",
+                    sent="",
+                    parts=[],
+                )
+                for t in (A, B)
+            ]
+        )
     return session_factory
 
 

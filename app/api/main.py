@@ -770,6 +770,36 @@ def create_app(
         _write_feedback_case(settings, row)
         return _detail(row)
 
+    @app.get("/mail")
+    def list_mail(
+        active: Db,
+        who: Viewer,
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+        offset: Annotated[int, Query(ge=0)] = 0,
+    ) -> dict:
+        """The mails the mailbox poller read, newest first, with what became of
+        each attached file: so nothing sent in disappears without trace."""
+        rows = active.scalars(
+            select(db.MailRow)
+            .where(db.MailRow.tenant_id == who.tenant_id)
+            .order_by(db.MailRow.created_at.desc(), db.MailRow.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        return {
+            "mails": [
+                {
+                    "id": row.id,
+                    "read_at": row.created_at.isoformat(),
+                    "sender": row.sender,
+                    "subject": row.subject,
+                    "sent": row.sent,
+                    "parts": row.parts,
+                }
+                for row in rows
+            ]
+        }
+
     @app.get("/review/duplicates")
     def duplicate_copies(active: Db, who: Viewer) -> dict:
         """Plain copies of an earlier invoice, waiting for review only for being

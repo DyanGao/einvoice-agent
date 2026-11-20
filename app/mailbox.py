@@ -22,11 +22,14 @@ One poller per database (instance lock), like the bank watch.
 import contextlib
 import email
 import imaplib
+import io
 import logging
+import mimetypes
 import os
 import re
 import ssl
 import time
+import zipfile
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from email.message import Message
@@ -34,10 +37,12 @@ from email.policy import default as default_policy
 from pathlib import Path
 from typing import Protocol
 
+from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.rls import tenant_transaction
-from app.db.tables import MailboxStateRow
+from app.db.tables import MailboxStateRow, MailRow
 from app.ingest import ingest
 from app.queue import JobQueue
 from app.tenants import TenantConfig
@@ -50,6 +55,15 @@ ACCEPTED_TYPES = {"application/xml", "text/xml", "application/pdf", "image/png",
 ACCEPTED_SUFFIXES = {".xml", ".pdf", ".png", ".jpg", ".jpeg"}
 # Set on a handled mail that stays in its folder, with \Seen.
 DONE_KEYWORD = "$EInvoiceDone"
+ZIP_TYPES = {"application/zip", "application/x-zip-compressed"}
+# A ZIP is opened one level deep, and only so far: at most this many files,
+# no file larger than the upload limit, all together at most this many
+# times the upload limit, and none that unpacks to more than this many times
+# its packed size (a ZIP bomb).
+ZIP_MAX_MEMBERS = 50
+ZIP_MAX_TOTAL_FACTOR = 4
+ZIP_MAX_RATIO = 100
+INGESTED, KNOWN, REFUSED = "ingested", "known", "refused"
 _HEADER_LENGTH = 300
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]+")
 
@@ -161,25 +175,126 @@ def _header(message: Message, name: str) -> str:
     return _CONTROL.sub(" ", value).strip()[:_HEADER_LENGTH]
 
 
+def _is_invoice_type(content_type: str, filename: str | None) -> bool:
+    suffix = Path(filename).suffix.lower() if filename else ""
+    return content_type in ACCEPTED_TYPES or suffix in ACCEPTED_SUFFIXES
+
+
+def _is_zip(content_type: str, filename: str | None) -> bool:
+    suffix = Path(filename).suffix.lower() if filename else ""
+    return content_type in ZIP_TYPES or suffix == ".zip"
+
+
 def attachments(message: Message) -> Iterator[Attachment]:
-    """The parts of a mail that may be invoices, forwarded mails included.
-    Images count only as real attachments, not inline (logos, signatures)."""
+    """Every part of a mail that was attached, forwarded mails included: what
+    has a filename or is marked as an attachment. The text of the mail and
+    inline images (logos, signatures) are not attachments."""
     for part in message.walk():
         if part.is_multipart():
             continue
         filename = part.get_filename()
-        content_type = part.get_content_type()
         disposition = part.get_content_disposition()
-        suffix = Path(filename).suffix.lower() if filename else ""
-        if content_type not in ACCEPTED_TYPES and suffix not in ACCEPTED_SUFFIXES:
+        # Images only when really attached: logos in a signature are embedded.
+        if part.get_content_maintype() == "image" and disposition != "attachment":
+            continue
+        if disposition == "inline" and part.get_content_maintype() == "text":
             continue
         if filename is None and disposition != "attachment":
             continue
-        if content_type.startswith("image/") and disposition != "attachment":
+        try:
+            data = part.get_payload(decode=True) or b""
+        except (ValueError, TypeError):
+            data = b""
+        yield Attachment(filename, part.get_content_type(), data)
+
+
+@dataclass
+class Part:
+    """What became of one attached file. outcome: ingested | known | refused."""
+
+    filename: str | None
+    content_type: str
+    size: int
+    outcome: str
+    reason: str | None = None
+    document_id: str | None = None
+
+    def as_record(self) -> dict:
+        return {
+            "filename": self.filename,
+            "content_type": self.content_type,
+            "bytes": self.size,
+            "outcome": self.outcome,
+            "reason": self.reason,
+            "document_id": self.document_id,
+        }
+
+
+def _encrypted_pdf(data: bytes) -> bool:
+    """A PDF that needs a password cannot be read, by a person or a model."""
+    if not data.startswith(b"%PDF-"):
+        return False
+    try:
+        return PdfReader(io.BytesIO(data)).is_encrypted
+    except (PdfReadError, ValueError, KeyError, TypeError):
+        return False  # broken in another way: the pipeline says so
+
+
+def _unzipped(item: Attachment, max_bytes: int) -> tuple[list[Attachment], list[Part]]:
+    """The files in a ZIP, one level deep. A ZIP's own idea of its sizes is
+    not trusted: every member is read with a limit."""
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(item.data))
+        members = [info for info in archive.infolist() if not info.is_dir()]
+    except (zipfile.BadZipFile, ValueError, OSError):
+        return [], [Part(item.filename, item.content_type, len(item.data), REFUSED, "unreadable")]
+    if len(members) > ZIP_MAX_MEMBERS:
+        reason = f"zip_too_many_files ({len(members)}, at most {ZIP_MAX_MEMBERS})"
+        return [], [Part(item.filename, item.content_type, len(item.data), REFUSED, reason)]
+    files, refused, total = [], [], 0
+    for info in members:
+        name = Path(info.filename).name or None
+        content_type = mimetypes.guess_type(name or "")[0] or "application/octet-stream"
+        if info.flag_bits & 0x1:
+            refused.append(Part(name, content_type, info.file_size, REFUSED, "encrypted_zip"))
             continue
-        data = part.get_payload(decode=True)
-        if data:
-            yield Attachment(filename, content_type, data)
+        if _is_zip(content_type, name):
+            refused.append(Part(name, content_type, info.file_size, REFUSED, "nested_zip"))
+            continue
+        if not _is_invoice_type(content_type, name):
+            refused.append(Part(name, content_type, info.file_size, REFUSED, "unsupported_type"))
+            continue
+        try:
+            with archive.open(info) as member:
+                data = member.read(max_bytes + 1)
+        except (zipfile.BadZipFile, ValueError, OSError, RuntimeError):
+            refused.append(Part(name, content_type, info.file_size, REFUSED, "unreadable"))
+            continue
+        total += len(data)
+        if len(data) > max_bytes or total > ZIP_MAX_TOTAL_FACTOR * max_bytes:
+            refused.append(Part(name, content_type, len(data), REFUSED, "too_large"))
+            continue
+        if info.compress_size and len(data) > ZIP_MAX_RATIO * info.compress_size:
+            refused.append(Part(name, content_type, len(data), REFUSED, "zip_bomb"))
+            continue
+        files.append(Attachment(name, content_type, data))
+    return files, refused
+
+
+def _classify(item: Attachment, max_bytes: int) -> tuple[list[Attachment], list[Part]]:
+    """The invoices among an attached file (several for a ZIP), and what is
+    refused, with the reason."""
+    size = len(item.data)
+    refuse = lambda reason: ([], [Part(item.filename, item.content_type, size, REFUSED, reason)])  # noqa: E731
+    if size == 0:
+        return refuse("empty")
+    if size > max_bytes:
+        return refuse("too_large")
+    if _is_zip(item.content_type, item.filename):
+        return _unzipped(item, max_bytes)
+    if not _is_invoice_type(item.content_type, item.filename):
+        return refuse("unsupported_type")
+    return [item], []
 
 
 @dataclass
@@ -190,14 +305,16 @@ class Round:
     documents: list[str] = field(default_factory=list)
     duplicates: int = 0
     without_invoice: int = 0
-    too_large: int = 0
+    refused: int = 0
 
 
 def mailbox_key(config: TenantConfig) -> str:
     return f"{config.imap_user}@{config.imap_host}/{config.imap_folder}"
 
 
-def _start(session_factory: sessionmaker[Session], tenant_id: str, key: str, uidvalidity: int):
+def _start(
+    session_factory: sessionmaker[Session], tenant_id: str, key: str, uidvalidity: int
+) -> int:
     """The last UID handled in this mailbox folder, 0 when it is new or the
     server renumbered it (UIDVALIDITY changed)."""
     with tenant_transaction(session_factory, tenant_id) as session:
@@ -217,9 +334,20 @@ def _start(session_factory: sessionmaker[Session], tenant_id: str, key: str, uid
         return state.last_uid
 
 
-def _handled(session_factory: sessionmaker[Session], tenant_id: str, key: str, uid: int) -> None:
+def _handled(
+    session_factory: sessionmaker[Session],
+    tenant_id: str,
+    key: str,
+    uid: int,
+    record: MailRow,
+) -> None:
+    """The mail's record and the UID handled, in one transaction: a mail is
+    recorded exactly when it counts as read."""
     with tenant_transaction(session_factory, tenant_id) as session:
-        session.get(MailboxStateRow, (tenant_id, key)).last_uid = uid
+        state = session.get(MailboxStateRow, (tenant_id, key))
+        state.last_uid = uid
+        record.uidvalidity = state.uidvalidity
+        session.add(record)
 
 
 def poll(
@@ -231,8 +359,9 @@ def poll(
     max_bytes: int,
 ) -> Round:
     """Read the tenant's new mails once. Each mail: its invoices ingested,
-    then the mail marked done, then its UID recorded — so a crash anywhere
-    in between costs at most reading one mail again, which stores nothing new."""
+    then the mail marked done, then the mail recorded with its UID — so a
+    crash anywhere in between costs at most reading one mail again, which
+    stores nothing new."""
     key = mailbox_key(config)
     last = _start(session_factory, tenant_id, key, connection.select(config.imap_folder))
     done = Round()
@@ -247,30 +376,64 @@ def poll(
             "message_id": _header(message, "Message-ID"),
             "date": _header(message, "Date"),
         }
-        found = 0
-        for part in attachments(message):
-            if len(part.data) > max_bytes:
-                done.too_large += 1
-                logger.warning("tenant %s, mail %s: %s is too large", tenant_id, uid, part.filename)
-                continue
-            found += 1
-            result = ingest(
-                session_factory,
-                queue,
-                part.data,
-                part.filename,
-                tenant_id=tenant_id,
-                source=source,
-            )
-            if result.duplicate:
-                done.duplicates += 1
-            else:
-                done.documents.append(result.document_id)
-        if found == 0:
+        parts: list[Part] = []
+        for item in attachments(message):
+            invoices, refused = _classify(item, max_bytes)
+            parts.extend(refused)
+            for invoice in invoices:
+                if _encrypted_pdf(invoice.data):
+                    parts.append(
+                        Part(
+                            invoice.filename,
+                            invoice.content_type,
+                            len(invoice.data),
+                            REFUSED,
+                            "encrypted_pdf",
+                        )
+                    )
+                    continue
+                result = ingest(
+                    session_factory,
+                    queue,
+                    invoice.data,
+                    invoice.filename,
+                    tenant_id=tenant_id,
+                    source=source,
+                )
+                outcome = KNOWN if result.duplicate else INGESTED
+                parts.append(
+                    Part(
+                        invoice.filename,
+                        invoice.content_type,
+                        len(invoice.data),
+                        outcome,
+                        document_id=result.document_id,
+                    )
+                )
+                if result.duplicate:
+                    done.duplicates += 1
+                else:
+                    done.documents.append(result.document_id)
+        refused = [part for part in parts if part.outcome == REFUSED]
+        done.refused += len(refused)
+        if not any(part.outcome != REFUSED for part in parts):
             done.without_invoice += 1
-            logger.info("tenant %s, mail %s: no invoice attached", tenant_id, uid)
+        for part in refused:
+            logger.info(
+                "tenant %s, mail %s: %s refused (%s)", tenant_id, uid, part.filename, part.reason
+            )
         connection.mark_done(uid)
-        _handled(session_factory, tenant_id, key, uid)
+        record = MailRow(
+            tenant_id=tenant_id,
+            mailbox=key,
+            uid=uid,
+            message_id=source["message_id"],
+            sender=source["from"],
+            subject=source["subject"],
+            sent=source["date"],
+            parts=[part.as_record() for part in parts],
+        )
+        _handled(session_factory, tenant_id, key, uid, record)
         done.mails += 1
     return done
 
