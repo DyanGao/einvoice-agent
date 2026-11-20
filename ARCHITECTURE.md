@@ -99,6 +99,17 @@ installation-wide. `einvoice tenant-add`, `tenant-set`, `tenant-show` manage the
 bank watch and delivery loop build each tenant's checker and connectors from them, and one tenant's
 broken settings (a missing secret) only stop that tenant's deliveries.
 
+**Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
+identity provider; someone from another tenant gets a role here too), change role, remove (their
+sessions and tokens here stop at once); nobody can demote or remove themselves, and a tenant is never
+left without an admin. Settings: the page limit and the decision setting. Everything that reaches the
+server's network or files (ERP, folders, browser allowlist, webhook and its secret's name) and creating
+tenants stay with the installation's operator and the CLI; the page only shows them (owner's decision,
+2026-11-20). A person in several tenants switches in the masthead (`POST /auth/tenant`, browser
+sessions only: a token acts in the tenant it was made for). The admin routes read the account tables
+in a transaction of their own, filtered by the admin's tenant in the code: the request's own
+transaction runs as the tenant role, which cannot read them.
+
 **Row-level security.** Postgres keeps the tenants apart as well (`app/db/rls.py`). A request's
 transaction switches to the role `einvoice_tenant` (no login, no BYPASSRLS) and sets
 `app.tenant_id`, both only until the transaction ends. Policies on `documents` and

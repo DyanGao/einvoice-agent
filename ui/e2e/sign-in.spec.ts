@@ -69,6 +69,14 @@ test("a viewer reads, and is told why nothing can be changed", async ({ page }) 
   ).toBeVisible();
 });
 
+test("a viewer has no admin page", async ({ page }) => {
+  await signInWithPassword(page, VIEWER);
+  await expect(page.locator(".account")).toContainText("Viewer");
+  await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
+  await page.goto("/admin");
+  await expect(page.getByText("This page needs the admin role in Default.")).toBeVisible();
+});
+
 test("signing in through the identity provider", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Sign in with Test Login" }).click();
@@ -91,4 +99,57 @@ test("when the session ends while working, the sign-in page comes back", async (
   await page.context().clearCookies();
   await page.getByLabel("Invoice files").setInputFiles(PDF);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+});
+
+test("the admin manages members, and the settings that are theirs", async ({ page }) => {
+  await signInWithPassword(page, ADMIN);
+  await page.getByRole("link", { name: "Admin" }).click();
+  await expect(page.getByRole("heading", { name: "Admin · Default" })).toBeVisible();
+  const members = page.getByRole("table");
+  await expect(members.getByText("viewer@example.test")).toBeVisible();
+  // An admin cannot take their own role away, nor remove themselves.
+  await expect(page.getByLabel("Role of Ada Admin")).toBeDisabled();
+
+  const add = page.getByRole("form", { name: "Add a member" });
+  await add.getByLabel("Email").fill("nina@example.test");
+  await add.getByLabel("Name").fill("Nina Neu");
+  await add.getByRole("button", { name: "Add member" }).click();
+  await expect(page.getByText("nina@example.test was added.")).toBeVisible();
+  await expect(members.getByText("Nina Neu")).toBeVisible();
+
+  await page.getByLabel("Role of Nina Neu").selectOption("viewer");
+  await expect(page.getByText("Nina Neu is now viewer.")).toBeVisible();
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await members.getByRole("row", { name: /Nina Neu/ }).getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByText("Nina Neu was removed.")).toBeVisible();
+  await expect(members.getByText("Nina Neu")).toHaveCount(0);
+
+  await page.getByLabel("Pages read automatically, at most").fill("5");
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByText("Settings saved.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Pages read automatically, at most")).toHaveValue("5");
+  // What reaches the server's network and files is only shown.
+  await expect(page.getByText("Set by the server's operator")).toBeVisible();
+  await expect(page.locator(".operator-settings")).toContainText("ERP");
+});
+
+test("someone in two companies switches between them", async ({ page }) => {
+  await signInWithPassword(page, ADMIN);
+  const company = page.getByLabel("Company");
+  await expect(company).toHaveValue("default");
+  await page.getByRole("button", { name: /All documents/ }).click();
+  await expect(page.getByRole("link", { name: NUMBER })).toBeVisible();
+
+  await company.selectOption({ label: "Acme GmbH" });
+  await expect(page.getByLabel("Company")).toHaveValue(/.+/);
+  await expect(page.getByLabel("Company").locator("option:checked")).toHaveText("Acme GmbH");
+  // None of the other company's invoices.
+  await expect(page.getByText("Nothing is waiting for review.")).toBeVisible();
+  await page.getByRole("button", { name: /All documents/ }).click();
+  await expect(page.getByRole("link", { name: NUMBER })).toHaveCount(0);
+
+  await page.getByLabel("Company").selectOption({ label: "Default" });
+  await expect(page.getByLabel("Company").locator("option:checked")).toHaveText("Default");
 });
