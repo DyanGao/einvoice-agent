@@ -35,6 +35,7 @@ from app.db.tables import (
     SeenBankTransactionRow,
     SessionRow,
     TenantRow,
+    TenantSettingsRow,
     UserRow,
     ValidationRow,
 )
@@ -59,6 +60,7 @@ __all__ = [
     "SeenBankTransactionRow",
     "SessionRow",
     "TenantRow",
+    "TenantSettingsRow",
     "UserRow",
     "ValidationRow",
     "apply_outcome",

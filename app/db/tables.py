@@ -295,6 +295,19 @@ class UserRow(Base):
     __table_args__ = (UniqueConstraint("oidc_issuer", "oidc_subject"),)
 
 
+class TenantSettingsRow(Base):
+    """A tenant's own settings (app/tenants.py: TenantConfig), never a secret:
+    a secret is named by the environment variable that holds it."""
+
+    __tablename__ = "tenant_settings"
+
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), primary_key=True)
+    config: Mapped[dict[str, Any]] = mapped_column(Json)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
+
+
 class MembershipRow(Base):
     """A user's role in one tenant: viewer | reviewer | admin."""
 

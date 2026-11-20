@@ -12,7 +12,7 @@ import logging
 import secrets
 from collections.abc import Iterator
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,7 +26,7 @@ from app.auth import Actor, Role, SignInRefused
 from app.auth.limits import SignInLimiter
 from app.auth.oidc import LoginAttempt, OidcClient, OidcError
 from app.checks import Severity
-from app.checks.service import Checker, build_checker
+from app.checks.service import Checker
 from app.db.duplicates import redundant_copies, reject_copies
 from app.db.rls import act_for
 from app.extract.draft import InvoiceDraft
@@ -34,6 +34,9 @@ from app.ingest import ingest
 from app.models import DocumentFormat
 from app.queue import JobQueue, QueueUnavailable
 from app.settings import Settings
+
+if TYPE_CHECKING:
+    from app.tenants import TenantServices
 
 logger = logging.getLogger(__name__)
 
@@ -230,11 +233,14 @@ def create_app(
     checker: Checker | None = None,
     oidc: OidcClient | None = None,
     limiter: SignInLimiter | None = None,
+    tenants: "TenantServices | None" = None,
 ) -> FastAPI:
     """`checker` re-runs the business-rule checks after a correction, so the
     findings always describe the draft as it stands. None: no checks.
     `oidc` talks to the identity provider; None: the one in `settings`, if any.
-    `limiter` counts failed password sign-ins; None: a new one."""
+    `limiter` counts failed password sign-ins; None: a new one.
+    `tenants` gives each tenant its own checker (its ERP); without it,
+    `checker` serves the default tenant only."""
     app = FastAPI(title="einvoice-agent")
     if oidc is None and settings.oidc is not None:
         oidc = OidcClient(settings.oidc)
@@ -352,8 +358,9 @@ def create_app(
         return row
 
     def checker_for(row: db.DocumentRow) -> Checker | None:
-        """The checks ask the ERP in .env: the default tenant's, until tenants
-        have their own settings (v1.0 Stage 2, increment 4)."""
+        """The document's tenant's checks, against that tenant's ERP."""
+        if tenants is not None:
+            return tenants.checker(row.tenant_id)
         return checker if row.tenant_id == db.DEFAULT_TENANT_ID else None
 
     Db = Annotated[Session, Depends(session)]
@@ -650,11 +657,13 @@ def create_app_from_env() -> FastAPI:
     """For `uvicorn --factory app.api.main:create_app_from_env`."""
     from app.db.engine import database_engine
     from app.queue import RqQueue
+    from app.tenants import TenantServices
 
     settings = Settings.from_env()
+    session_factory = sessionmaker(database_engine(settings.database_url))
     return create_app(
-        sessionmaker(database_engine(settings.database_url)),
+        session_factory,
         RqQueue(settings.redis_url),
         settings,
-        build_checker(settings.erp_url, settings.erp_timeout_seconds),
+        tenants=TenantServices(session_factory, settings),
     )

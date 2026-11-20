@@ -79,8 +79,9 @@ def document(tenant_id: str, key: str) -> db.DocumentRow:
 
 @pytest.fixture
 def seeded(session_factory):
-    """Two tenants, each with one fully populated document and one seen bank
-    transaction, written as the login role (not limited by the policies)."""
+    """Two tenants, each with one fully populated document, one seen bank
+    transaction and its settings, written as the login role (not limited by
+    the policies)."""
     with session_factory.begin() as session:
         session.add(db.TenantRow(id=B, slug="acme", name="Acme GmbH"))
         session.flush()
@@ -91,6 +92,7 @@ def seeded(session_factory):
                 for t in (A, B)
             ]
         )
+        session.add_all([db.TenantSettingsRow(tenant_id=t, config={}) for t in (A, B)])
     return session_factory
 
 
