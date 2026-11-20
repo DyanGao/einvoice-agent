@@ -8,7 +8,8 @@ no model calls. It also writes the sample invoice the browser test uploads.
 
 With `--auth on` sign-in is required (ui/e2e/sign-in.spec.ts): test accounts
 with made-up passwords, and a stand-in identity provider under /fake-idp that
-signs the browser in as ANNA without asking.
+signs the browser in as ANNA without asking — or, when OIDC_ISSUER and the
+other OIDC_* variables are set, the real provider they name.
 """
 
 import argparse
@@ -179,7 +180,12 @@ def main() -> None:
         inline_queue(session_factory, extractor=UncertainExtractor(), checker=checker),
         session_factory,
     )
-    if args.auth == "on":
+    if args.auth == "on" and settings.oidc is not None:
+        # A real provider from OIDC_ISSUER etc. (e.g. Keycloak in Docker), to
+        # try sign-in against the real thing by hand; no stand-in.
+        add_test_accounts(session_factory)
+        app = create_app(session_factory, queue, settings, checker)
+    elif args.auth == "on":
         add_test_accounts(session_factory)
         provider = fake_identity_provider(args.port)
         oidc = OidcClient(provider.config, provider.http())
