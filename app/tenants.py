@@ -2,10 +2,12 @@
 invoices are matched against and booked into, where else bookings go, how
 many pages a PDF may have, and one decision setting.
 
-A tenant's settings live in `tenant_settings`. The default tenant without a
-row there takes them from `.env`, as before tenants existed, so an
-installation with one company keeps working unchanged; `einvoice tenant-set
-default ...` gives it a row, which then wins.
+A tenant's settings live in `tenant_settings`: only what it set itself. The
+rest comes from its base: `.env` for the default tenant (as before tenants
+existed, so an installation with one company keeps working unchanged), the
+field defaults for every other tenant. `einvoice tenant-set default
+max_pages=5` changes that one setting; the default tenant's ERP still follows
+`.env` until it is set too.
 
 Secrets are never stored here. A tenant names the environment variable that
 holds its webhook secret (`webhook_secret_env`, starting with TENANT_), and
@@ -38,6 +40,11 @@ from app.settings import DEFAULT_MAX_PAGES, Settings
 logger = logging.getLogger(__name__)
 
 _ENV_NAME = re.compile(r"[A-Z][A-Z0-9_]*")
+# What a tenant's own admin may change in the admin UI. Everything else
+# reaches the server's network or files (an ERP URL, a folder, a webhook) and
+# is the installation operator's, through `einvoice tenant-set` (owner's
+# decision, 2026-11-20).
+TENANT_ADMIN_KEYS = ("max_pages", "auto_on_order_found_by_content")
 # What a tenant may point at: never the installation's own secrets.
 TENANT_SECRET_PREFIX = "TENANT_"  # noqa: S105 -- a name prefix, not a secret
 
@@ -93,13 +100,22 @@ class TenantConfig(BaseModel):
         )
 
 
-def config_for(session: Session, tenant_id: str, settings: Settings) -> TenantConfig:
-    row = session.get(TenantSettingsRow, tenant_id)
-    if row is not None:
-        return TenantConfig.model_validate(row.config)
+def _base(tenant_id: str, settings: Settings) -> TenantConfig:
+    """What a tenant has before it sets anything: .env for the default
+    tenant, nothing for the others."""
     if tenant_id == DEFAULT_TENANT_ID:
         return TenantConfig.from_settings(settings)
     return TenantConfig()
+
+
+def config_for(session: Session, tenant_id: str, settings: Settings) -> TenantConfig:
+    """The tenant's settings: what it set itself, over its base. So the
+    default tenant follows .env in everything it has not set."""
+    row = session.get(TenantSettingsRow, tenant_id)
+    base = _base(tenant_id, settings)
+    if row is None or not row.config:
+        return base
+    return TenantConfig.model_validate({**base.model_dump(), **row.config})
 
 
 def parse_assignments(assignments: list[str]) -> dict[str, object]:
@@ -125,29 +141,33 @@ def parse_assignments(assignments: list[str]) -> dict[str, object]:
 def update_config(
     session: Session, tenant_id: str, changes: dict[str, object], settings: Settings
 ) -> TenantConfig:
-    """Change some of the tenant's settings. A cleared key goes back to its
-    default. The tenant's secret may only be named, and only as TENANT_…"""
+    """Set some of the tenant's settings; a key given as None is no longer
+    set, so it follows the base again (.env for the default tenant). Only
+    what was set is stored. The tenant's secret may only be named, and only
+    as TENANT_…"""
     secret = changes.get("webhook_secret_env")
     if isinstance(secret, str) and not secret.startswith(TENANT_SECRET_PREFIX):
         raise ValueError(
             f"webhook_secret_env must name a variable starting with {TENANT_SECRET_PREFIX}"
         )
-    current = config_for(session, tenant_id, settings).model_dump()
+    row = session.get(TenantSettingsRow, tenant_id)
+    own = dict(row.config) if row is not None else {}
     for key, value in changes.items():
         if value is None:
-            current.pop(key, None)
+            own.pop(key, None)
         else:
-            current[key] = value
+            own[key] = value
     try:
-        config = TenantConfig.model_validate(current)
+        config = TenantConfig.model_validate({**_base(tenant_id, settings).model_dump(), **own})
     except ValidationError as exc:
         raise ValueError(str(exc)) from exc
-    row = session.get(TenantSettingsRow, tenant_id)
-    data = config.model_dump(mode="json", exclude_defaults=True)
+    # Stored as validated, and only the keys the tenant set.
+    validated = config.model_dump(mode="json")
+    own = {key: validated[key] for key in own}
     if row is None:
-        session.add(TenantSettingsRow(tenant_id=tenant_id, config=data))
+        session.add(TenantSettingsRow(tenant_id=tenant_id, config=own))
     else:
-        row.config = data
+        row.config = own
     session.flush()
     return config
 

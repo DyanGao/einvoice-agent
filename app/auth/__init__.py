@@ -23,7 +23,14 @@ from enum import StrEnum
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.tables import DEFAULT_TENANT_ID, ApiTokenRow, MembershipRow, SessionRow, UserRow
+from app.db.tables import (
+    DEFAULT_TENANT_ID,
+    ApiTokenRow,
+    MembershipRow,
+    SessionRow,
+    TenantRow,
+    UserRow,
+)
 
 TOKEN_PREFIX = "eia_"  # noqa: S105 -- a marker, not a secret
 SESSION_LIFETIME = timedelta(hours=8)
@@ -281,3 +288,85 @@ def end_session(session: Session, session_id: str) -> None:
     if row is not None:
         session.delete(row)
         session.flush()
+
+
+class MembershipError(ValueError):
+    """A change to who is in a tenant that would leave it without an admin,
+    or lock someone out by their own hand."""
+
+
+def tenants_of(session: Session, user_id: str) -> list[tuple[TenantRow, Role]]:
+    """Every tenant the user is in, with their role there, in the order joined."""
+    rows = session.execute(
+        select(TenantRow, MembershipRow.role)
+        .join(MembershipRow, MembershipRow.tenant_id == TenantRow.id)
+        .where(MembershipRow.user_id == user_id)
+        .order_by(MembershipRow.created_at, MembershipRow.tenant_id)
+    )
+    return [(tenant, Role(role)) for tenant, role in rows]
+
+
+def members_of(session: Session, tenant_id: str) -> list[tuple[UserRow, Role]]:
+    rows = session.execute(
+        select(UserRow, MembershipRow.role)
+        .join(MembershipRow, MembershipRow.user_id == UserRow.id)
+        .where(MembershipRow.tenant_id == tenant_id)
+        .order_by(UserRow.display_name, UserRow.email)
+    )
+    return [(user, Role(role)) for user, role in rows]
+
+
+def _admins(session: Session, tenant_id: str) -> int:
+    return session.scalar(
+        select(func.count())
+        .select_from(MembershipRow)
+        .where(MembershipRow.tenant_id == tenant_id, MembershipRow.role == Role.ADMIN.value)
+    )
+
+
+def change_role(
+    session: Session, tenant_id: str, user_id: str, role: Role, acting_user_id: str | None
+) -> None:
+    membership = _membership(session, user_id, tenant_id)
+    if membership is None:
+        raise LookupError("not a member of this tenant")
+    if membership.role == Role.ADMIN.value and Role(role) != Role.ADMIN:
+        if user_id == acting_user_id:
+            raise MembershipError("you cannot take away your own admin role")
+        if _admins(session, tenant_id) <= 1:
+            raise MembershipError("the tenant would be left without an admin")
+    membership.role = Role(role).value
+    session.flush()
+
+
+def remove_member(
+    session: Session, tenant_id: str, user_id: str, acting_user_id: str | None
+) -> None:
+    """Take the user out of the tenant: their sessions and tokens there stop
+    working at once (both need the membership). The user stays, as they may
+    be in other tenants and the audit trail names them."""
+    membership = _membership(session, user_id, tenant_id)
+    if membership is None:
+        raise LookupError("not a member of this tenant")
+    if user_id == acting_user_id:
+        raise MembershipError("you cannot remove yourself")
+    if membership.role == Role.ADMIN.value and _admins(session, tenant_id) <= 1:
+        raise MembershipError("the tenant would be left without an admin")
+    session.delete(membership)
+    session.flush()
+
+
+def switch_tenant(session: Session, session_id: str, tenant_id: str, now: datetime) -> Actor | None:
+    """Work in another tenant the user is in, in this browser session.
+    None if the session is gone or the user is not in that tenant."""
+    row = session.get(SessionRow, _sha256(session_id))
+    if row is None or _aware(row.expires_at) <= now:
+        return None
+    user = session.get(UserRow, row.user_id)
+    if user is None or user.disabled:
+        return None
+    actor = _actor(session, user, tenant_id)
+    if actor is not None:
+        row.tenant_id = tenant_id
+        session.flush()
+    return actor

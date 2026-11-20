@@ -64,13 +64,14 @@ def test_a_user_an_admin_added_is_signed_in_and_sent_to_the_ui(client, provider,
     add_user(session_factory)
     response = sign_in(client, provider)
     assert response.headers["location"] == f"{UI_ORIGIN}/"
-    me = client.get("/auth/me")
-    assert me.json() == {
+    me = client.get("/auth/me").json()
+    assert {key: me[key] for key in ("auth", "name", "email", "role")} == {
         "auth": "on",
         "name": "Anna Berg",
         "email": "anna@example.com",
         "role": "reviewer",
     }
+    assert me["tenant"]["slug"] == "default"
 
 
 def test_the_session_cookie_is_http_only_and_strict(client, provider, session_factory):

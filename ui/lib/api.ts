@@ -250,7 +250,18 @@ export type SignInOptions =
   | { auth: "off" }
   | { auth: "on"; provider: boolean; provider_name: string | null };
 
-export type Me = { auth: "on"; name: string; email: string | null; role: Role };
+export type Tenant = { id: string; slug: string; name: string };
+
+export type Me = {
+  auth: "on";
+  name: string;
+  email: string | null;
+  role: Role;
+  /** The tenant (company) this session works in. */
+  tenant: Tenant;
+  /** Every tenant the person is in, with their role there. */
+  tenants: (Tenant & { role: Role })[];
+};
 
 export function getSignInOptions(): Promise<SignInOptions> {
   return send("/auth/options").then((response) => response.json());
@@ -281,3 +292,65 @@ export async function signOut(): Promise<void> {
 
 /** A browser navigation, not a fetch: the identity provider's page takes over. */
 export const PROVIDER_SIGN_IN_URL = `${API_URL}/auth/oidc/start`;
+
+/** Work in another of one's tenants in this browser session. */
+export function switchTenant(tenantId: string): Promise<Me> {
+  return request("/auth/tenant", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tenant_id: tenantId }),
+  });
+}
+
+export type Member = {
+  user_id: string;
+  email: string;
+  name: string;
+  role: Role;
+  disabled: boolean;
+  /** The built-in password account; everyone else signs in through the provider. */
+  password: boolean;
+};
+
+export function listMembers(): Promise<{ members: Member[] }> {
+  return request("/admin/members");
+}
+
+export function addMember(email: string, name: string, role: Role): Promise<Member> {
+  return request("/admin/members", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, name, role }),
+  });
+}
+
+export function changeMemberRole(userId: string, role: Role): Promise<Member> {
+  return request(`/admin/members/${encodeURIComponent(userId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function removeMember(userId: string): Promise<void> {
+  await send(`/admin/members/${encodeURIComponent(userId)}`, { method: "DELETE" });
+}
+
+export type TenantSettings = {
+  tenant: Tenant;
+  settings: Record<string, unknown>;
+  /** What the tenant's admin may change here; the rest is the operator's. */
+  editable: string[];
+};
+
+export function getTenantSettings(): Promise<TenantSettings> {
+  return request("/admin/settings");
+}
+
+export function changeTenantSettings(changes: Record<string, unknown>): Promise<TenantSettings> {
+  return request("/admin/settings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ changes }),
+  });
+}

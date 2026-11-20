@@ -89,7 +89,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 - [x] v0.3 matching + checks + decision engine _(rule-based matching instead of a model agent)_
 - [x] v0.4 connectors (export, webhook, mock ERP, Playwright fallback) and the whole stack in Docker
 - [x] v0.5 eval report published _([docs/eval-report.md](docs/eval-report.md): 3-run variance, OCR-text and hosted vs. local ablations, third-party set, hardening; synthetic data only, and it says so)_
-- [ ] v1.0 sign-in, multi-tenant, IMAP ingest, German/English UI _(in progress: sign-in with roles, API tokens and OIDC, in the API and the review UI)_
+- [ ] v1.0 sign-in, multi-tenant, IMAP ingest, German/English UI _(in progress: sign-in with roles, API tokens and OIDC; several companies per installation, kept apart by Postgres row-level security, each with its own ERP and settings and an admin page)_
 
 ## Tech stack
 Python 3.12 (FastAPI, Pydantic, SQLAlchemy + Alembic, lxml) · KoSIT validator (Java, in a container) · factur-x / pypdf · Tesseract OCR + Claude (vision, structured output), or a local vision model through Ollama (`qwen2.5vl:7b`, measured, every reading reviewed) · PostgreSQL · Redis + RQ · Playwright (browser connector and UI tests) · Next.js / React / TypeScript review UI · Docker Compose · pytest, ruff, uv

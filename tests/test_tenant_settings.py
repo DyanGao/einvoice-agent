@@ -268,3 +268,22 @@ def test_a_tenant_without_an_erp_is_not_watched(session_factory, settings, acme,
     erps = {f"{ERP_B} 5.0": Bank()}
     acted = watch_once(session_factory, services(session_factory, settings, world), erps)
     assert list(acted) == [acme]
+
+
+def test_the_default_tenant_keeps_following_env_in_what_it_has_not_set(session_factory, settings):
+    configure(session_factory, db.DEFAULT_TENANT_ID, settings, max_pages=3)
+    moved = replace(settings, erp_url=ERP_B)
+    with session_factory() as session:
+        config = config_for(session, db.DEFAULT_TENANT_ID, moved)
+        stored = session.get(db.TenantSettingsRow, db.DEFAULT_TENANT_ID).config
+    # .env changed after the page limit was set: the ERP follows it.
+    assert (config.max_pages, config.erp_url) == (3, ERP_B)
+    assert stored == {"max_pages": 3}
+
+
+def test_clearing_a_setting_of_the_default_tenant_goes_back_to_env(session_factory, settings):
+    env = replace(settings, max_pages=7)
+    configure(session_factory, db.DEFAULT_TENANT_ID, env, max_pages=3)
+    with session_factory.begin() as session:
+        config = update_config(session, db.DEFAULT_TENANT_ID, {"max_pages": None}, env)
+    assert config.max_pages == 7

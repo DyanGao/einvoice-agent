@@ -11,6 +11,7 @@ import json
 import logging
 import secrets
 from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -34,6 +35,7 @@ from app.ingest import ingest
 from app.models import DocumentFormat
 from app.queue import JobQueue, QueueUnavailable
 from app.settings import Settings
+from app.tenants import TENANT_ADMIN_KEYS, config_for, update_config
 
 if TYPE_CHECKING:
     from app.tenants import TenantServices
@@ -70,6 +72,24 @@ UI_HEADER_VALUE = "einvoice-ui"
 _READS = frozenset({"GET", "HEAD", "OPTIONS"})
 # Swagger UI and ReDoc, which a strict Content-Security-Policy would break.
 _PAGES_WITH_SCRIPTS = ("/docs", "/redoc")
+
+
+class TenantChoice(BaseModel):
+    tenant_id: str
+
+
+class NewMember(BaseModel):
+    email: str
+    name: str
+    role: Role
+
+
+class RoleChange(BaseModel):
+    role: Role
+
+
+class SettingsChanges(BaseModel):
+    changes: dict[str, Any]
 
 
 class Reopening(BaseModel):
@@ -124,8 +144,23 @@ def _summary(document: db.DocumentRow) -> dict:
     }
 
 
-def _me(actor: Actor) -> dict:
-    return {"auth": "on", "name": actor.name, "email": actor.email, "role": actor.role.value}
+def _tenant(tenant: db.TenantRow) -> dict:
+    return {"id": tenant.id, "slug": tenant.slug, "name": tenant.name}
+
+
+def _me(session: Session, actor: Actor) -> dict:
+    """Who is signed in, the tenant they work in, and every tenant they could
+    switch to. `session` must still be able to read the sign-in tables."""
+    tenants = auth.tenants_of(session, actor.user_id) if actor.user_id else []
+    current = session.get(db.TenantRow, actor.tenant_id)
+    return {
+        "auth": "on",
+        "name": actor.name,
+        "email": actor.email,
+        "role": actor.role.value,
+        "tenant": _tenant(current),
+        "tenants": [{**_tenant(tenant), "role": role.value} for tenant, role in tenants],
+    }
 
 
 def _detail(document: db.DocumentRow) -> dict:
@@ -275,7 +310,7 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.ui_origin],
-        allow_methods=["GET", "POST", "PATCH"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Content-Type", "X-Reviewer", "Authorization", UI_HEADER],
         allow_credentials=True,
     )
@@ -368,6 +403,7 @@ def create_app(
     Viewer = Annotated[Actor, Depends(require(Role.VIEWER))]
     Uploader = Annotated[Actor, Depends(require(Role.REVIEWER))]
     Reviewer = Annotated[Actor, Depends(require(Role.REVIEWER, named=True))]
+    Admin = Annotated[Actor, Depends(require(Role.ADMIN))]
 
     @app.get("/", include_in_schema=False)
     def root() -> RedirectResponse:
@@ -436,7 +472,7 @@ def create_app(
             raise HTTPException(401, "wrong email or password")
         limiter.succeeded(body.email)
         start_session(active, actor, request, response)
-        return _me(actor)
+        return _me(active, actor)
 
     @app.get("/auth/oidc/start")
     def oidc_start(request: Request) -> RedirectResponse:
@@ -514,7 +550,133 @@ def create_app(
         actor = identify(request, active)
         if actor is None:
             raise HTTPException(401, "not signed in")
-        return _me(actor)
+        return _me(active, actor)
+
+    def browser_session(request: Request, active: Db) -> Actor:
+        """Signed in with the session cookie: checked before anything else of
+        the request is looked at."""
+        if settings.auth == "off":
+            raise HTTPException(409, "sign-in is off (AUTH=off)")
+        if request.headers.get("Authorization", "").startswith("Bearer "):
+            raise HTTPException(409, "an API token acts in the tenant it was made for")
+        actor = identify(request, active)
+        if actor is None:
+            raise HTTPException(401, "not signed in", headers={"WWW-Authenticate": "Bearer"})
+        return actor
+
+    @app.post("/auth/tenant")
+    def choose_tenant(
+        body: TenantChoice,
+        request: Request,
+        active: Db,
+        _: Annotated[Actor, Depends(browser_session)],
+    ) -> dict:
+        """Work in another tenant one is in, in this browser session. A token
+        acts in the tenant it was made for and cannot switch."""
+        actor = auth.switch_tenant(
+            active, request.cookies[SESSION_COOKIE], body.tenant_id, datetime.now(UTC)
+        )
+        if actor is None:
+            # Like a document of another tenant: not there, rather than forbidden.
+            raise HTTPException(404, "no such tenant among yours")
+        return _me(active, actor)
+
+    @contextmanager
+    def accounts() -> Iterator[Session]:
+        """A transaction of its own for the members and settings pages: the
+        request's own one acts for the tenant (row-level security) and may
+        not read the sign-in tables. Everything here is filtered by the
+        admin's tenant in the code."""
+        if settings.auth == "off":
+            raise HTTPException(
+                409, "sign-in is off (AUTH=off): manage members with the einvoice CLI"
+            )
+        with session_factory.begin() as session:
+            yield session
+
+    def member(user: db.UserRow, role: Role) -> dict:
+        return {
+            "user_id": user.id,
+            "email": user.email,
+            "name": user.display_name,
+            "role": role.value,
+            "disabled": user.disabled,
+            # The built-in password account(s); everyone else uses the provider.
+            "password": user.password_hash is not None,
+        }
+
+    @app.get("/admin/members")
+    def list_members(who: Admin) -> dict:
+        with accounts() as session:
+            return {"members": [member(u, r) for u, r in auth.members_of(session, who.tenant_id)]}
+
+    @app.post("/admin/members", status_code=201)
+    def add_member(body: NewMember, who: Admin) -> dict:
+        """Someone new signs in through the identity provider; someone who is
+        already a user (in another tenant) gets a role here too."""
+        with accounts() as session:
+            user = auth.find_user(session, body.email)
+            try:
+                if user is None:
+                    user = auth.create_user(
+                        session, body.email, body.name, body.role, tenant_id=who.tenant_id
+                    )
+                elif session.get(db.MembershipRow, (user.id, who.tenant_id)) is not None:
+                    raise HTTPException(409, f"{user.email} is a member already")
+                else:
+                    auth.add_membership(session, user.id, who.tenant_id, body.role)
+            except ValueError as exc:
+                raise HTTPException(422, str(exc)) from exc
+            return member(user, body.role)
+
+    @app.patch("/admin/members/{user_id}")
+    def change_member(user_id: str, body: RoleChange, who: Admin) -> dict:
+        with accounts() as session:
+            try:
+                auth.change_role(session, who.tenant_id, user_id, body.role, who.user_id)
+            except LookupError as exc:
+                raise HTTPException(404, str(exc)) from exc
+            except auth.MembershipError as exc:
+                raise HTTPException(409, str(exc)) from exc
+            return member(session.get(db.UserRow, user_id), body.role)
+
+    @app.delete("/admin/members/{user_id}", status_code=204)
+    def remove_member(user_id: str, who: Admin) -> Response:
+        with accounts() as session:
+            try:
+                auth.remove_member(session, who.tenant_id, user_id, who.user_id)
+            except LookupError as exc:
+                raise HTTPException(404, str(exc)) from exc
+            except auth.MembershipError as exc:
+                raise HTTPException(409, str(exc)) from exc
+        return Response(status_code=204)
+
+    @app.get("/admin/settings")
+    def tenant_settings(who: Admin) -> dict:
+        """The tenant's settings. Those that reach the server's network and
+        files are the operator's (einvoice tenant-set) and only shown."""
+        with accounts() as session:
+            config = config_for(session, who.tenant_id, settings)
+            return {
+                "tenant": _tenant(session.get(db.TenantRow, who.tenant_id)),
+                "settings": config.model_dump(mode="json"),
+                "editable": list(TENANT_ADMIN_KEYS),
+            }
+
+    @app.patch("/admin/settings")
+    def change_tenant_settings(body: SettingsChanges, who: Admin) -> dict:
+        refused = sorted(set(body.changes) - set(TENANT_ADMIN_KEYS))
+        if refused:
+            raise HTTPException(
+                403,
+                f"{', '.join(refused)}: set by the installation's operator (einvoice tenant-set)",
+            )
+        with accounts() as session:
+            try:
+                update_config(session, who.tenant_id, body.changes, settings)
+            except ValueError as exc:
+                raise HTTPException(422, str(exc)) from exc
+        return tenant_settings(who)
 
     @app.post("/documents", status_code=202)
     async def upload(file: UploadFile, response: Response, who: Uploader) -> dict:

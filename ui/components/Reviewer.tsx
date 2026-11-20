@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
-import { getMe, SIGNED_OUT_EVENT, signOut, type Me } from "@/lib/api";
+import Link from "next/link";
+
+import { getMe, SIGNED_OUT_EVENT, signOut, switchTenant, type Me } from "@/lib/api";
 
 import { SignIn } from "./SignIn";
 
@@ -132,12 +134,19 @@ const ROLE_LABELS = { viewer: "Viewer", reviewer: "Reviewer", admin: "Admin" } a
 export function ReviewerField() {
   const { session, name, setName, signOut } = useReviewer();
   if (session.kind === "signed-in") {
+    const { me } = session;
     return (
       <div className="account">
+        <TenantChoice me={me} />
         <span>
-          Signed in as <strong>{session.me.name}</strong>
-          <span className="account-role">{ROLE_LABELS[session.me.role]}</span>
+          Signed in as <strong>{me.name}</strong>
+          <span className="account-role">{ROLE_LABELS[me.role]}</span>
         </span>
+        {me.role === "admin" && (
+          <Link href="/admin" className="account-link">
+            Admin
+          </Link>
+        )}
         <button type="button" className="button-quiet" onClick={signOut}>
           Sign out
         </button>
@@ -155,6 +164,40 @@ export function ReviewerField() {
         autoComplete="name"
         maxLength={100}
       />
+    </label>
+  );
+}
+
+/** The company this session works in; a choice for someone in several. */
+function TenantChoice({ me }: { me: Me }) {
+  const [problem, setProblem] = useState<string | null>(null);
+  if (me.tenants.length < 2) {
+    return <span className="account-tenant">{me.tenant.name}</span>;
+  }
+  const choose = (tenantId: string) => {
+    setProblem(null);
+    switchTenant(tenantId)
+      // Every page loads again, for the other company.
+      .then(() => window.location.assign("/"))
+      .catch((error: unknown) =>
+        setProblem(error instanceof Error ? error.message : "Could not switch."),
+      );
+  };
+  return (
+    <label className="account-tenant">
+      <span className="visually-hidden">Company</span>
+      <select
+        value={me.tenant.id}
+        onChange={(event) => choose(event.target.value)}
+        aria-label="Company"
+        title={problem ?? undefined}
+      >
+        {me.tenants.map((tenant) => (
+          <option key={tenant.id} value={tenant.id}>
+            {tenant.name}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }

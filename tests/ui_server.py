@@ -30,12 +30,13 @@ from sqlalchemy.pool import StaticPool
 
 from app import db
 from app.api.main import create_app
-from app.auth import Role, create_user
+from app.auth import Role, add_membership, create_user
 from app.auth.oidc import OidcClient
 from app.checks.service import Checker
 from app.extract import BaselineExtractor
 from app.queue import JobQueue
 from app.settings import OidcConfig, Settings
+from app.tenants import create_tenant
 from eval.generators.canonical import XRECHNUNG
 from eval.generators.world import PAID_ONCE, PO_EXACT, build_world
 from eval.generators.xrechnung import render_cii, render_ubl
@@ -65,10 +66,18 @@ VIEWER = ("viewer@example.test", "Vera Viewer", Role.VIEWER, "ui-test-viewer-pas
 ANNA = ("anna@example.com", "Anna Example", Role.REVIEWER, None)
 
 
+# A second company, with ADMIN in it too, for the company switcher.
+ACME = ("acme", "Acme GmbH")
+
+
 def add_test_accounts(session_factory: sessionmaker) -> None:
     with session_factory.begin() as session:
-        for email, name, role, password in (ADMIN, VIEWER, ANNA):
-            create_user(session, email, name, role, password)
+        users = {
+            email: create_user(session, email, name, role, password)
+            for email, name, role, password in (ADMIN, VIEWER, ANNA)
+        }
+        acme = create_tenant(session, *ACME)
+        add_membership(session, users[ADMIN[0]].id, acme.id, Role.ADMIN)
 
 
 def fake_identity_provider(port: int) -> FakeProvider:
