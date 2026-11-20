@@ -89,8 +89,16 @@ sessions(id_hash, user_id, tenant_id, expires_at, ...)     # the tenant a person
 request acts for one tenant (the session's or the token's), and every query, the duplicate check and
 payment matching see only that tenant: another tenant's document is a 404. Until tenants have their
 own settings, the ERP, connectors and decision settings in `.env` are the `default` tenant's; other
-tenants' documents are neither checked against that ERP nor delivered to it. Row-level security in
-Postgres follows (increment 2).
+tenants' documents are neither checked against that ERP nor delivered to it.
+
+**Row-level security.** Postgres keeps the tenants apart as well (`app/db/rls.py`). A request's
+transaction switches to the role `einvoice_tenant` (no login, no BYPASSRLS) and sets
+`app.tenant_id`, both only until the transaction ends. Policies on `documents` and
+`seen_bank_transactions` compare `tenant_id`; the tables hanging off a document are visible where their
+document is. The role may change only those tables and cannot read users, memberships, tokens or
+sessions. Work not yet done per tenant (worker, bank watch, delivery loop, CLI, migrations) runs as the
+login role, which the policies do not limit; that changes with increment 3. New tables that hold
+tenant data need their grant and policy in their migration.
 
 The invoice itself (`app/models/invoice.py`) is the EN 16931 subset of D8, with per-field confidence.
 What was read but not yet approved is an `InvoiceDraft` (`app/extract/draft.py`): any field may be

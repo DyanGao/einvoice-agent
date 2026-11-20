@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import db
+from app.db.rls import act_for
 from app.pipeline import DocumentStatus
 from app.queue import JobQueue
 
@@ -46,6 +47,7 @@ def ingest(
     """
     name = Path(filename).name[:255] if filename else None
     with session_factory.begin() as session:
+        act_for(session, tenant_id)
         existing = db.find_document(session, data, tenant_id)
         if existing is not None:
             if note_duplicate:

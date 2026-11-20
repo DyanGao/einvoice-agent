@@ -28,6 +28,7 @@ from app.auth.oidc import LoginAttempt, OidcClient, OidcError
 from app.checks import Severity
 from app.checks.service import Checker, build_checker
 from app.db.duplicates import redundant_copies, reject_copies
+from app.db.rls import act_for
 from app.extract.draft import InvoiceDraft
 from app.ingest import ingest
 from app.models import DocumentFormat
@@ -313,14 +314,25 @@ def create_app(
                         "sign-in is off (AUTH=off): only requests to localhost are answered",
                     )
                 name = typed_name(x_reviewer) if named else "anonymous"
-                return Actor(
+                actor = Actor(
                     name=name, role=Role.ADMIN, tenant_id=db.DEFAULT_TENANT_ID, verified=False
                 )
-            actor = identify(request, active)
+                act_for(active, actor.tenant_id)
+                return actor
+            # Once per request: after act_for the transaction may no longer
+            # read the sign-in tables.
+            actor = getattr(request.state, "actor", None)
             if actor is None:
-                raise HTTPException(
-                    401, "sign in, or send an API token", headers={"WWW-Authenticate": "Bearer"}
-                )
+                actor = identify(request, active)
+                if actor is None:
+                    raise HTTPException(
+                        401,
+                        "sign in, or send an API token",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+                request.state.actor = actor
+                # Postgres hides every other tenant's rows from here on.
+                act_for(active, actor.tenant_id)
             if not actor.role.allows(role):
                 raise HTTPException(403, f"needs the {role} role")
             return actor
