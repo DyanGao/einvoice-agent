@@ -14,6 +14,7 @@ import time
 import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
+from app import crypto
 from app.checks.service import Checker
 from app.db import DEFAULT_TENANT_ID
 from app.db.engine import database_engine
@@ -69,6 +70,7 @@ def main() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)  # one line per request otherwise
     settings = Settings.from_env()
     engine = database_engine(settings.database_url)
+    crypto.configure_from_env(engine)  # refuses to start without MASTER_KEY
     try:
         lock = InstanceLock(engine, "bank watch").acquire()
     except AlreadyRunning as exc:

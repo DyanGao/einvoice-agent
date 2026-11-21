@@ -512,6 +512,7 @@ def connect(config: TenantConfig, tokens: TokenSource | None = None) -> ImapConn
 
 
 def main() -> None:
+    from app import crypto
     from app.db.engine import database_engine
     from app.db.instance_lock import AlreadyRunning, InstanceLock, LockLost
     from app.queue import RqQueue
@@ -521,6 +522,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     settings = Settings.from_env()
     engine = database_engine(settings.database_url)
+    crypto.configure_from_env(engine)  # refuses to start without MASTER_KEY
     try:
         lock = InstanceLock(engine, "mailbox poller").acquire()
     except AlreadyRunning as exc:

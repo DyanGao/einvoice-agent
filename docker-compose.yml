@@ -22,6 +22,9 @@ x-app: &app
     # are answered. Set AUTH=on in .env to require it (add an admin first:
     # docker compose exec api einvoice user-add ... --password).
     AUTH: ${AUTH:-off}
+    # Encryption at rest (v1.0): the services refuse to start without
+    # MASTER_KEY in .env; `make master-key` writes one. ENCRYPTION=off only
+    # for development.
   restart: unless-stopped
 
 x-after-migrate: &after-migrate

@@ -18,6 +18,10 @@ einvoice tenant-add SLUG --name NAME
 einvoice tenant-set SLUG KEY=VALUE...
                              change a company's settings (app/tenants.py); KEY= clears
 einvoice tenant-show SLUG    print a company's settings
+einvoice key-generate        print a new MASTER_KEY for .env (encryption at rest, app/crypto.py)
+einvoice seal [--apply] [--open]
+                             seal the originals stored before encryption (app/sealing.py);
+                             --open stores them plain again; counts only without --apply
 
 process, watch, user-add and token-create act for one tenant: --tenant SLUG,
 "default" if not given.
@@ -34,12 +38,13 @@ from pathlib import Path
 import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import auth, db, tenants
+from app import auth, crypto, db, tenants
 from app.db.engine import database_engine
 from app.db.rls import tenant_transaction
 from app.ingest import requeue_received, scan_folder
 from app.pipeline import DocumentStatus, Outcome, Validator, process_structured
 from app.queue import JobQueue, RqQueue
+from app.sealing import seal_documents
 from app.settings import Settings
 from app.texts_backfill import backfill
 from app.validate import KositValidator
@@ -70,6 +75,10 @@ def main(
         help="find the codes of texts stored before they had any, so the UI shows them in German",
     )
     backfill.add_argument("--apply", action="store_true", help="write them (without: only count)")
+    commands.add_parser("key-generate", help="print a new MASTER_KEY for .env")
+    seal = commands.add_parser("seal", help="seal the originals stored before encryption")
+    seal.add_argument("--apply", action="store_true", help="write (without: only count)")
+    seal.add_argument("--open", action="store_true", help="store them plain again instead")
     user_add = commands.add_parser("user-add", help="add a user")
     user_add.add_argument("email")
     user_add.add_argument("--name", required=True)
@@ -94,24 +103,31 @@ def main(
     tenant_show.add_argument("slug")
     args = parser.parse_args(argv)
 
+    if args.command == "key-generate":
+        # Printed for the person who asked, once; never stored by us.
+        print(crypto.new_master_key())
+        return 0
     settings = Settings.from_env()
+    if args.command == "seal":
+        session_factory = session_factory or _database(settings)
+        return _seal(session_factory, apply=args.apply, open_all=args.open)
     if args.command == "texts-backfill":
-        session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
+        session_factory = session_factory or _database(settings)
         return _texts_backfill(session_factory, apply=args.apply)
     if args.command in ("tenant-add", "tenant-set", "tenant-show"):
-        session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
+        session_factory = session_factory or _database(settings)
         return _tenants(args, session_factory, settings)
     if args.command in ("user-add", "token-create", "token-revoke"):
-        session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
+        session_factory = session_factory or _database(settings)
         prompt = password_prompt or (lambda: getpass.getpass("Password (12+ characters): "))
         return _accounts(args, session_factory, prompt)
     if args.command == "watch" or (args.command == "process" and not args.no_store):
-        session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
+        session_factory = session_factory or _database(settings)
         tenant_id = _tenant_id(session_factory, args.tenant)
         if tenant_id is None:
             return 2
     if args.command in ("watch", "requeue"):
-        session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
+        session_factory = session_factory or _database(settings)
         queue = queue or RqQueue(settings.redis_url)
         if args.command == "requeue":
             print(f"queued {requeue_received(session_factory, queue)} documents")
@@ -134,6 +150,24 @@ def main(
         all_valid = all_valid and report["status"] == DocumentStatus.VALID.value
         print(json.dumps(report, ensure_ascii=False))
     return 0 if all_valid else 1
+
+
+def _database(settings: Settings) -> sessionmaker[Session]:
+    """The application's database, with the keys its documents are sealed with."""
+    engine = database_engine(settings.database_url)
+    crypto.configure_from_env(engine)
+    return sessionmaker(engine)
+
+
+def _seal(session_factory: sessionmaker[Session], *, apply: bool, open_all: bool) -> int:
+    report = seal_documents(session_factory, apply=apply, open_all=open_all)
+    verb = ("opened" if open_all else "sealed") if apply else ("to open" if open_all else "to seal")
+    state = "plain" if open_all else "sealed"
+    for slug in report.changed:
+        print(f"{slug}: {report.changed[slug]} {verb}, {report.already[slug]} {state} already")
+    if not apply and any(report.changed.values()):
+        print("nothing written; run again with --apply to write")
+    return 0
 
 
 def _texts_backfill(session_factory: sessionmaker[Session], *, apply: bool) -> int:

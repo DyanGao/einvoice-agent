@@ -21,6 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from app import crypto
 from app.db import rls
 from app.models import Invoice
 
@@ -69,6 +70,24 @@ event.listen(
 )
 
 
+class TenantKeyRow(Base):
+    """A tenant's data key, wrapped by the master key (app/crypto.py). Not
+    under row-level security: without the master key it opens nothing, and
+    the keyring reads it outside any tenant's transaction."""
+
+    __tablename__ = "tenant_keys"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
+    version: Mapped[int]
+    wrapped: Mapped[bytes] = mapped_column(LargeBinary)
+    # Which master key wrapped it (MasterKey.id), to say so when another is set.
+    master_id: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (UniqueConstraint("tenant_id", "version"),)
+
+
 class DocumentRow(Base):
     __tablename__ = "documents"
 
@@ -81,7 +100,9 @@ class DocumentRow(Base):
     format: Mapped[str] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20), index=True)
     error: Mapped[str | None]
-    content: Mapped[bytes] = mapped_column(LargeBinary)
+    # The original file, sealed with the tenant's data key (app/crypto.py,
+    # v1.0 Stage 6); `content` below is the file itself.
+    sealed_content: Mapped[bytes] = mapped_column("content", LargeBinary)
     # pending | approved | not_required (see app.db.review.ReviewState)
     review_state: Mapped[str] = mapped_column(String(20), index=True, default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -116,6 +137,33 @@ class DocumentRow(Base):
     )
 
     __table_args__ = (UniqueConstraint("tenant_id", "sha256"),)
+
+    @property
+    def content(self) -> bytes:
+        """The original as received, opened on first use."""
+        plain = getattr(self, "_plain_content", None)
+        if plain is None:
+            plain = crypto.open_sealed(self.sealed_content, CONTENT_PLACE)
+            self._plain_content = plain
+        return plain
+
+    @content.setter
+    def content(self, value: bytes) -> None:
+        # Sealed when written (_seal_content): the tenant may be set after it.
+        self._plain_content = value
+        self._needs_seal = True
+        self.sealed_content = value
+
+
+CONTENT_PLACE = "documents.content"
+
+
+@event.listens_for(DocumentRow, "before_insert")
+@event.listens_for(DocumentRow, "before_update")
+def _seal_content(mapper, connection, target: DocumentRow) -> None:
+    if getattr(target, "_needs_seal", False):
+        target.sealed_content = crypto.seal(target.tenant_id, target._plain_content, CONTENT_PLACE)
+        target._needs_seal = False
 
 
 class InvoiceRow(Base):

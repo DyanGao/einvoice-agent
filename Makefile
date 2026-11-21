@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions eval-credits decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif eval-belege eval-local keycloak keycloak-down mailbox test-mailbox eval-mailbox german-texts german-texts-check
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions eval-credits decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local master-key stack-check demo-gif eval-belege eval-local keycloak keycloak-down mailbox test-mailbox eval-mailbox german-texts german-texts-check
 
 # The README demo in Docker: sample_invoices/ through processing, checks,
 # decision and delivery into a fresh mock ERP, in a database of its own. Needs
@@ -177,31 +177,45 @@ eval-scans-baseline: ocr-data
 	uv run python -m eval.score eval/out/scans --system baseline --split dev
 	uv run python -m eval.score eval/out/scans --system baseline --split test
 
+# The services read .env when there is one (MASTER_KEY, ANTHROPIC_API_KEY, ...).
+ENV_FILE = $(if $(wildcard .env),--env-file .env,)
+
+# The master key stored invoices are encrypted with (app/crypto.py), written
+# to .env once. Keep a copy outside this machine and its backups: without it
+# the stored invoices cannot be read, and with it anyone holding a backup can.
+master-key:
+	@if grep -q '^MASTER_KEY=' .env 2>/dev/null; then \
+		echo "MASTER_KEY is in .env already"; \
+	else \
+		echo "MASTER_KEY=$$(openssl rand -base64 32)" >> .env && \
+		echo "wrote a new MASTER_KEY to .env: keep a copy somewhere safe, apart from the database backups"; \
+	fi
+
 # HTTP API on localhost only (no authentication yet).
 api:
-	uv run uvicorn --factory app.api.main:create_app_from_env --host 127.0.0.1 --port 8000
+	uv run $(ENV_FILE) uvicorn --factory app.api.main:create_app_from_env --host 127.0.0.1 --port 8000
 
 # Background worker; reads REDIS_URL like the API does. SimpleWorker runs jobs
 # in-process (no fork), which also works on macOS.
 worker:
-	uv run python -m app.worker
+	uv run $(ENV_FILE) python -m app.worker
 
 # Asks the ERP every BANK_WATCH_SECONDS for bank transfers it has not seen and
 # matches the open invoices of the suppliers they went to (needs ERP_URL).
 watch:
-	uv run python -m app.watch
+	uv run $(ENV_FILE) python -m app.watch
 
 # Books every approved or auto-decided invoice, exactly once, every
 # DELIVERY_SECONDS: in the ERP (ERP_URL; the mock ERP: make erp) and in the
 # DATEV-style CSV booking lists (EXPORT_DIR) and a signed webhook
 # (WEBHOOK_URL + WEBHOOK_SECRET), whichever are set.
 deliver:
-	uv run python -m app.deliver
+	uv run $(ENV_FILE) python -m app.deliver
 
 # Reads every tenant's mailbox (its imap_* settings) every MAILBOX_SECONDS and
 # ingests the attached invoices, once each (app/mailbox.py).
 mailbox:
-	uv run python -m app.mailbox
+	uv run $(ENV_FILE) python -m app.mailbox
 
 # The mailbox poller against a real IMAP server: GreenMail in Docker on
 # localhost, synthetic mails only; the container is removed afterwards.

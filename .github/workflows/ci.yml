@@ -95,6 +95,7 @@ jobs:
       # an invoice uploaded to the API is processed, decided and booked.
       - name: Full stack in Docker
         run: |
+          make master-key
           make stack
           make stack-check
 
