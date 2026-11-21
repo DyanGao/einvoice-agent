@@ -22,6 +22,10 @@ def _reject_float(value: Any) -> Any:
 
 Amount = Annotated[Decimal, BeforeValidator(_reject_float)]
 
+# BT-3 type codes with a meaning of their own here.
+INVOICE = "380"
+CREDIT_NOTE = "381"
+
 
 class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -58,6 +62,8 @@ class Invoice(_Model):
     due_date: date | None = None  # BT-9
     buyer_reference: str | None = None  # BT-10 (Leitweg-ID in XRechnung)
     po_ref: str | None = None  # BT-13
+    # BT-25: the invoice a credit note (381) or corrected invoice (384) refers to.
+    preceding_ref: str | None = None
 
     seller: Party
     buyer: Party
@@ -79,4 +85,6 @@ class Invoice(_Model):
 
     @property
     def is_credit_note(self) -> bool:
-        return self.type_code == "381"
+        """Its amounts are positive, as on an invoice: the sign comes from the type
+        (ARCHITECTURE.md, D13)."""
+        return self.type_code == CREDIT_NOTE

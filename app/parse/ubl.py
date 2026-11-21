@@ -50,6 +50,7 @@ def parse_ubl(root: etree._Element) -> Invoice:
         due_date=None if due_date is None else to_date(due_date, ISO_DATE, "BT-9 due date"),
         buyer_reference=R.text(root, "cbc:BuyerReference"),
         po_ref=_po_ref(root),
+        preceding_ref=R.text(root, "cac:BillingReference/cac:InvoiceDocumentReference/cbc:ID"),
         seller=_party(root, "cac:AccountingSupplierParty/cac:Party", "BT-27 seller name"),
         buyer=_party(root, "cac:AccountingCustomerParty/cac:Party", "BT-44 buyer name"),
         payment_ibans=compact_ids(

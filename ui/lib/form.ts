@@ -22,6 +22,7 @@ export const GROUPS: Group[] = [
       { path: "currency", label: "field.currency", kind: "text" },
       { path: "buyer_reference", label: "field.buyer_reference", kind: "text" },
       { path: "po_ref", label: "field.po_ref", kind: "text" },
+      { path: "preceding_ref", label: "field.preceding_ref", kind: "text" },
     ],
   },
   {

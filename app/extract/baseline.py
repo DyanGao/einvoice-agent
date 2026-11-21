@@ -54,6 +54,13 @@ _DATE_PATTERNS = (
 
 _LABELS = {
     "number": (
+        # A credit note's own number first: it may also name the invoice it
+        # corrects with "Rechnung Nr." (preceding_ref below).
+        "Gutschriftsnummer",
+        "Gutschrift Nr.",
+        "Gutschrift-Nr.",
+        "Credit note number",
+        "Credit note no.",
         "Rechnungsnummer",
         "Rechnungs-Nr.",
         "Rechnung Nr.",
@@ -78,6 +85,15 @@ _LABELS = {
         "PO number",
         "Purchase order",
         "Your order",
+    ),
+    # BT-25: the invoice a credit note corrects.
+    "preceding_ref": (
+        "zu Rechnung Nr.",
+        "zur Rechnung Nr.",
+        "Bezug: Rechnung",
+        "Ursprüngliche Rechnung",
+        "Original invoice",
+        "Referenced invoice",
     ),
     "buyer_reference": (
         "Leitweg-ID",
@@ -114,6 +130,8 @@ _LABELS = {
 }
 _TAX_WORDS = ("USt", "MwSt", "VAT", "Tax")
 _TITLE_WORDS = ("rechnung", "invoice")
+# A credit note's title. Not "Rechnungskorrektur" (384, a corrected invoice).
+_CREDIT_WORDS = ("gutschrift", "credit note")
 
 
 def parse_amount(text: str) -> Decimal | None:
@@ -241,6 +259,12 @@ def _buyer_name(lines: list[str], seller_vat_line: int | None) -> str | None:
     return None
 
 
+def _number(lines: list[str], preceding_ref: str | None) -> str | None:
+    """The document's own number; not the invoice a credit note names."""
+    own = [line for line in lines if preceding_ref is None or preceding_ref not in line]
+    return _first_cell(_after_label(own, _LABELS["number"]))
+
+
 def extract_from_text(text: str) -> InvoiceDraft:
     lines = [line.rstrip() for line in text.splitlines()]
     non_empty = [line for line in lines if line.strip()]
@@ -257,16 +281,19 @@ def extract_from_text(text: str) -> InvoiceDraft:
     issue_text = _after_label(lines, _LABELS["issue_date"])
     due_text = _after_label(lines, _LABELS["due_date"])
     has_title = any(word in text.lower() for word in _TITLE_WORDS)
+    credit = any(word in text.lower() for word in _CREDIT_WORDS)
+    preceding_ref = _first_cell(_after_label(lines, _LABELS["preceding_ref"]))
     tax_amounts = [group.tax_amount for group in breakdown if group.tax_amount is not None]
 
     return InvoiceDraft(
-        number=_first_cell(_after_label(lines, _LABELS["number"])),
+        number=_number(lines, preceding_ref),
         issue_date=parse_date(issue_text) if issue_text else None,
-        type_code="380" if has_title else None,
+        type_code="381" if credit else "380" if has_title else None,
         currency="EUR",  # rule: German accounts payable, euro unless stated otherwise
         due_date=parse_date(due_text) if due_text else None,
         buyer_reference=_first_cell(_after_label(lines, _LABELS["buyer_reference"])),
         po_ref=_first_cell(_after_label(lines, _LABELS["po_ref"])),
+        preceding_ref=preceding_ref,
         seller=PartyDraft(name=non_empty[0].strip(), vat_id=vat_ids[0] if vat_ids else None),
         buyer=PartyDraft(
             name=_buyer_name(lines, seller_vat_line),

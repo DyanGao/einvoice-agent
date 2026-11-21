@@ -10,6 +10,8 @@ arithmetic.
 
 A printed value is never replaced, and every field filled in here is named in
 the draft's derived_fields so that nobody takes it for a value that was read.
+One exception, a convention rather than a value: a credit note's amounts are
+stored positive (app/extract/credit.py).
 """
 
 import re
@@ -17,6 +19,7 @@ from collections.abc import Callable
 from decimal import Decimal
 
 from app.extract.base import Extractor
+from app.extract.credit import positive_credit
 from app.extract.draft import InvoiceDraft, VatBreakdownDraft
 
 # Accounts payable in Germany: an invoice that names no currency is in euro.
@@ -48,8 +51,9 @@ def _small_business_exemption(draft: InvoiceDraft, text: str | None) -> VatBreak
 
 def complete(draft: InvoiceDraft, text: str | None = None) -> InvoiceDraft:
     """`text` is the document's own text (PDF text layer or OCR), if any."""
+    # First, so that every rule below sees a credit note's amounts as positive.
+    draft, derived = positive_credit(draft)
     updates: dict[str, object] = {}
-    derived: list[str] = []
 
     exempt = _small_business_exemption(draft, text)
     if exempt is not None:
@@ -82,7 +86,7 @@ def complete(draft: InvoiceDraft, text: str | None = None) -> InvoiceDraft:
     if draft.currency is None:
         updates["currency"] = DEFAULT_CURRENCY
         derived.append("currency")
-    if not updates:
+    if not updates and not derived:
         return draft
     return draft.model_copy(update={**updates, "derived_fields": (*draft.derived_fields, *derived)})
 

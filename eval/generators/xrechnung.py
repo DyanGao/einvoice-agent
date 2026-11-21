@@ -71,7 +71,15 @@ def _ubl_tax_category(tag: str, rate: Decimal) -> str:
     )
 
 
+# A UBL credit note is a document of its own, with its own names for these.
+_UBL = {
+    "380": ("Invoice", "InvoiceTypeCode", "InvoiceLine", "InvoicedQuantity"),
+    "381": ("CreditNote", "CreditNoteTypeCode", "CreditNoteLine", "CreditedQuantity"),
+}
+
+
 def render_ubl(invoice: CanonicalInvoice, profile: str) -> bytes:
+    root, type_tag, line_tag, quantity_tag = _UBL.get(invoice.type_code, _UBL["380"])
     cur = f'currencyID="{invoice.currency}"'
     payment_means = "".join(
         f"<cac:PaymentMeans><cbc:PaymentMeansCode>{CREDIT_TRANSFER}</cbc:PaymentMeansCode>"
@@ -94,30 +102,36 @@ def render_ubl(invoice: CanonicalInvoice, profile: str) -> bytes:
         for group in invoice.tax_groups
     )
     lines = "".join(
-        "<cac:InvoiceLine>"
+        f"<cac:{line_tag}>"
         f"<cbc:ID>{_x(item.line_id)}</cbc:ID>"
-        f'<cbc:InvoicedQuantity unitCode="{item.unit_code}">{item.quantity}</cbc:InvoicedQuantity>'
+        f'<cbc:{quantity_tag} unitCode="{item.unit_code}">{item.quantity}</cbc:{quantity_tag}>'
         f"{_ubl_amount('LineExtensionAmount', item.net, cur)}"
         f"<cac:Item><cbc:Name>{_x(item.name)}</cbc:Name>"
         f"{_ubl_tax_category('ClassifiedTaxCategory', item.vat_rate)}</cac:Item>"
         f"<cac:Price>{_ubl_amount('PriceAmount', item.unit_price, cur)}</cac:Price>"
-        "</cac:InvoiceLine>"
+        f"</cac:{line_tag}>"
         for item in invoice.items
     )
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<ubl:Invoice xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"'
+        f'<ubl:{root} xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:{root}-2"'
         ' xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"'
         ' xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">'
         f"<cbc:CustomizationID>{GUIDELINE_IDS[profile]}</cbc:CustomizationID>"
         "<cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>"
         f"<cbc:ID>{_x(invoice.number)}</cbc:ID>"
         f"<cbc:IssueDate>{invoice.issue_date.isoformat()}</cbc:IssueDate>"
+        # A credit note has no header due date in UBL; the generator gives it none.
         + _opt(invoice.due_date and invoice.due_date.isoformat(), "<cbc:DueDate>{}</cbc:DueDate>")
-        + f"<cbc:InvoiceTypeCode>{invoice.type_code}</cbc:InvoiceTypeCode>"
+        + f"<cbc:{type_tag}>{invoice.type_code}</cbc:{type_tag}>"
         f"<cbc:DocumentCurrencyCode>{invoice.currency}</cbc:DocumentCurrencyCode>"
         + _opt(invoice.buyer_reference, "<cbc:BuyerReference>{}</cbc:BuyerReference>")
         + _opt(invoice.po_ref, "<cac:OrderReference><cbc:ID>{}</cbc:ID></cac:OrderReference>")
+        + _opt(
+            invoice.preceding_ref,
+            "<cac:BillingReference><cac:InvoiceDocumentReference><cbc:ID>{}</cbc:ID>"
+            "</cac:InvoiceDocumentReference></cac:BillingReference>",
+        )
         + "<cac:AccountingSupplierParty>"
         f"{_ubl_party(invoice.seller, seller=True)}</cac:AccountingSupplierParty>"
         "<cac:AccountingCustomerParty>"
@@ -135,7 +149,7 @@ def render_ubl(invoice: CanonicalInvoice, profile: str) -> bytes:
         + _ubl_amount("PayableAmount", invoice.amount_due, cur)
         + "</cac:LegalMonetaryTotal>"
         f"{lines}"
-        "</ubl:Invoice>\n"
+        f"</ubl:{root}>\n"
     )
     return xml.encode("utf-8")
 
@@ -275,7 +289,12 @@ def render_cii(invoice: CanonicalInvoice, profile: str) -> bytes:
         f"<ram:GrandTotalAmount>{_amount(invoice.gross_total)}</ram:GrandTotalAmount>"
         f"<ram:DuePayableAmount>{_amount(invoice.amount_due)}</ram:DuePayableAmount>"
         "</ram:SpecifiedTradeSettlementHeaderMonetarySummation>"
-        "</ram:ApplicableHeaderTradeSettlement>"
+        + _opt(
+            invoice.preceding_ref,
+            "<ram:InvoiceReferencedDocument><ram:IssuerAssignedID>{}</ram:IssuerAssignedID>"
+            "</ram:InvoiceReferencedDocument>",
+        )
+        + "</ram:ApplicableHeaderTradeSettlement>"
         "</rsm:SupplyChainTradeTransaction>"
         "</rsm:CrossIndustryInvoice>\n"
     )

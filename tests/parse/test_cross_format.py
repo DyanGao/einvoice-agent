@@ -24,3 +24,14 @@ def test_placeholder_order_reference_is_the_only_difference_in_01_02a():
     # it only has a sales order number; the CII syntax needs no such filler.
     ubl, cii = modelled_fields(samples.ubl("01.02a")), modelled_fields(samples.cii("01.02a"))
     assert {k for k in ubl if ubl[k] != cii[k]} == {"po_ref"}
+
+
+@pytest.mark.parametrize("syntax", ["ubl", "cii"])
+def test_the_preceding_invoice_is_read_in_both_syntaxes(syntax):
+    # 01.18a is a corrected invoice (384) that names the invoice it corrects (BT-25).
+    invoice = parse_invoice(getattr(samples, syntax)("01.18a"))
+    assert (invoice.type_code, invoice.preceding_ref) == ("384", "PRG1502168")
+
+
+def test_an_invoice_without_a_preceding_invoice_names_none():
+    assert parse_invoice(samples.ubl("01.01a")).preceding_ref is None

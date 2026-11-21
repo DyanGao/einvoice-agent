@@ -182,7 +182,8 @@ def _found(value: object, path: str, text: _Text) -> Ground:
         sign = _CURRENCY_SIGNS.get(value)
         found = value.casefold() in text.folded or (sign is not None and sign in text.raw)
     elif isinstance(value, Decimal):
-        found = value in text.numbers
+        # A credit note's amounts are stored positive; the document may print them negative.
+        found = value in text.numbers or -value in text.numbers
     elif isinstance(value, date):
         found = _date_printed(value, text)
     else:
@@ -198,7 +199,8 @@ def _fields(draft: InvoiceDraft) -> dict[str, object]:
     fields: dict[str, object] = {}
     for name in (
         "number", "issue_date", "type_code", "currency", "due_date", "buyer_reference",
-        "po_ref", "line_net_total", "net_total", "vat_total", "gross_total", "amount_due",
+        "po_ref", "preceding_ref", "line_net_total", "net_total", "vat_total", "gross_total",
+        "amount_due",
     ):  # fmt: skip
         fields[name] = getattr(draft, name)
     fields["payment_ibans"] = draft.payment_ibans or None
