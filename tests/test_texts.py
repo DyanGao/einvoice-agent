@@ -166,3 +166,20 @@ def test_a_refused_review_action_says_its_code(session_factory, tmp_path):
     answer = client.post(f"/documents/{document_id}/reopen", headers=named, json={"note": "x"})
     assert answer.status_code == 409
     assert answer.json()["text"]["code"] == "review.not_rejected"
+
+
+def _ui_keys(block: str) -> set[str]:
+    return set(re.findall(r'^\s*"([\w.]+)":', block, re.M))
+
+
+def test_every_history_event_the_server_writes_has_a_text_in_both_languages():
+    """A history entry without one shows its code's English name (v1.0 Stage 4)."""
+    events: set[str] = set()
+    for path in Path("app").rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        events |= set(re.findall(r'_event\(\s*(?:document,\s*)?"([a-z_]+)"', source))
+        events |= set(re.findall(r'event="([a-z_]+)"', source))
+    english, german = MESSAGES.read_text(encoding="utf-8").split("export const de", 1)
+    assert {"received", "format_detected", "payments_matched"} <= events
+    assert {e for e in events if f"audit.{e}" not in _ui_keys(english)} == set()
+    assert {e for e in events if f"audit.{e}" not in _ui_keys(german)} == set()

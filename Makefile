@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif eval-belege eval-local keycloak keycloak-down mailbox test-mailbox eval-mailbox
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif eval-belege eval-local keycloak keycloak-down mailbox test-mailbox eval-mailbox german-texts german-texts-check
 
 # The README demo in Docker: sample_invoices/ through processing, checks,
 # decision and delivery into a fresh mock ERP, in a database of its own. Needs
@@ -229,9 +229,17 @@ ui-install:
 ui:
 	pnpm --dir ui dev
 
-# Type-checks and builds the production bundle.
-ui-build:
+# Type-checks and builds the production bundle; fails, too, when a German text
+# breaks the glossary or docs/german-texts.md is out of date.
+ui-build: german-texts-check
 	pnpm --dir ui build
+
+# The list of every German text for a native speaker to read (docs/german-texts.md).
+german-texts:
+	pnpm --dir ui texts
+
+german-texts-check:
+	pnpm --dir ui texts:check
 
 # Browser tests, in English and then in German (the German run also scans the
 # rendered pages for English). They start their own in-memory API

@@ -45,13 +45,23 @@ const ENGLISH_ONLY: string[] = (() => {
   return [...found];
 })();
 
-/** What on this page reads as English: texts of the English catalogue, and English words. */
+// A number with a decimal point, as English writes it ("7864.76", "0.5500"). Not
+// three digits after the point: "2.048" is how German groups thousands. Not part
+// of a date ("20.11.2026") or a German amount ("1.234,56").
+const POINT_DECIMAL = /(?<![\d.,])\d+\.(?:\d{1,2}|\d{4,})(?![\d.,])/g;
+
+/** What on this page reads as English: texts of the English catalogue, English
+ * words, and numbers with a decimal point (in the text and in the fields). */
 export async function englishOn(page: Page, allowed: (string | RegExp)[] = []): Promise<string[]> {
   let text = await page.locator("body").innerText();
   for (const data of allowed) text = text.replaceAll(data, " ");
   const phrases = ENGLISH_ONLY.filter((part) => text.includes(part));
   const words = [...new Set(text.match(ENGLISH_WORDS) ?? [])];
-  return [...phrases, ...words];
+  const values = await page
+    .locator("input, textarea")
+    .evaluateAll((fields) => fields.map((field) => (field as HTMLInputElement).value));
+  const numbers = [...new Set([text, ...values].flatMap((part) => part.match(POINT_DECIMAL) ?? []))];
+  return [...phrases, ...words, ...numbers.map((number) => `number ${number}`)];
 }
 
 /** No English sentence on this German page (data the page shows may be `allowed`). */

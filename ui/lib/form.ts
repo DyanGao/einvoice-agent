@@ -123,15 +123,24 @@ function rowsOf(fields: Fields | null, path: string): Record<string, unknown>[] 
   return Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
 }
 
-export function formFrom(fields: Fields | null): FormState {
+/** A value for its field: an amount in the reader's notation ("7864,76" in German). */
+function shownAs(i18n: Translator, value: unknown, kind: Kind): string {
+  return kind === "amount" ? i18n.decimal(text(value)) : text(value);
+}
+
+export function formFrom(fields: Fields | null, i18n: Translator): FormState {
   const scalars: Record<string, string> = {};
   for (const group of GROUPS) {
-    for (const field of group.fields) scalars[field.path] = text(valueAt(fields, field.path));
+    for (const field of group.fields) {
+      scalars[field.path] = shownAs(i18n, valueAt(fields, field.path), field.kind);
+    }
   }
   const tables: Record<string, Row[]> = {};
   for (const table of TABLES) {
     tables[table.path] = rowsOf(fields, table.path).map((row) =>
-      Object.fromEntries(table.columns.map((column) => [column.key, text(row[column.key])])),
+      Object.fromEntries(
+        table.columns.map((column) => [column.key, shownAs(i18n, row[column.key], column.kind)]),
+      ),
     );
   }
   const ibans = valueAt(fields, "payment_ibans");
@@ -143,8 +152,46 @@ export function parseInput(raw: string, kind: Kind): string | null {
   const value = raw.trim();
   if (value === "") return null;
   if (kind !== "amount") return value;
-  // German notation: a comma is the decimal sign and dots only group thousands.
-  return value.includes(",") ? value.replaceAll(".", "").replace(",", ".") : value;
+  // Either notation, whatever the UI's language: the last of comma and dot is
+  // the decimal sign and the other only groups thousands ("1.234,56", "1,234.56").
+  // A lone comma is a decimal sign ("12,5").
+  const comma = value.lastIndexOf(",");
+  const dot = value.lastIndexOf(".");
+  if (comma > dot) return value.replaceAll(".", "").replace(",", ".");
+  if (comma !== -1) return value.replaceAll(",", "");
+  return value;
+}
+
+/** The kind of the field at `path` ("net_total", "lines.0.quantity"); text if unknown. */
+export function kindAt(path: string): Kind {
+  for (const group of GROUPS) {
+    const field = group.fields.find((candidate) => candidate.path === path);
+    if (field) return field.kind;
+  }
+  const [head, , key] = path.split(".");
+  const column = TABLES.find((table) => table.path === head)?.columns.find((c) => c.key === key);
+  return column?.kind ?? "text";
+}
+
+/** The form with every amount written again in the reader's notation (after a language switch). */
+export function inNotation(form: FormState, i18n: Translator): FormState {
+  const again = (raw: string, kind: Kind) =>
+    kind === "amount" ? i18n.decimal(parseInput(raw, kind) ?? "") : raw;
+  const scalars = { ...form.scalars };
+  for (const group of GROUPS) {
+    for (const field of group.fields) {
+      scalars[field.path] = again(scalars[field.path] ?? "", field.kind);
+    }
+  }
+  const tables: Record<string, Row[]> = {};
+  for (const table of TABLES) {
+    tables[table.path] = (form.tables[table.path] ?? []).map((row) => {
+      const next = { ...row };
+      for (const column of table.columns) next[column.key] = again(row[column.key] ?? "", column.kind);
+      return next;
+    });
+  }
+  return { ...form, scalars, tables };
 }
 
 export function parseIbans(raw: string): string[] {

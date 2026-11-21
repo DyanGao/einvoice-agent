@@ -128,12 +128,18 @@ missing translation does not build. The language comes from the browser, can be 
 masthead and is remembered in the browser; someone signed in has their choice kept with their account
 too (`users.language`, `POST /auth/language`, in `/auth/me`), and it wins over the browser's once they
 sign in, in any browser. Amounts are formatted `de-DE` or `en-GB` from their decimal
-string, never through a float (`Intl.NumberFormat` takes the string exactly). Texts the server writes —
+string, never through a float (`Intl.NumberFormat` takes the string exactly). The fields of the review form show
+amounts the same way, without grouping ("7864,76"): `i18n.decimal` swaps the point for a comma in the
+string, and a language switch rewrites what is in the form, edits included. What a reviewer types is
+read in either notation (the last of comma and point is the decimal sign: "1.234,56", "1,234.56"). Texts the server writes —
 findings, decision reasons, match explanations, re-match triggers, delivery errors — are `Text`s
 (`app/texts.py`): a `str` that is the English sentence, as before, and also carries a code and
 parameters. They are stored next to the sentence (`findings.text`, `matches.explanation_texts`,
 `deliveries.error_text`, a `text` in each decision reason and `trigger_text` in the history) and the UI
-renders them in its language (`server.<code>` in the catalogues), falling back to the English sentence.
+renders them in its language (`server.<code>` in the catalogues), falling back to the English sentence. Rows
+stored before codes existed get them with `einvoice texts-backfill [--apply]` (`app/texts_backfill.py`):
+each English template is matched against the stored sentence, and a code is kept only when the `Text`
+made from it is exactly that sentence again; the history (`audit_events`) is not rewritten.
 Parameters named `…_amount`, `…_percent` and `fields` are formatted by the UI (amounts, shares, field
 labels). `tests/test_texts.py` fails if a code lacks a German or English text or if their parameters
 differ. The API's refusals work the same way: an `HTTPException` whose detail is a `Text` is answered
@@ -144,7 +150,11 @@ rejected with "reject all duplicates") keeps its code as `note_text` in the hist
 run once per language (`E2E_LANGUAGE=de`; `make ui-test` runs both), taking every text they look for
 from the same catalogues; the German run also scans each rendered page for English
 (`ui/e2e/language.ts`: phrases of the English catalogue German does not share, and English function
-words), and the English run checks that this scan finds English where there is some.
+words), and the English run checks that this scan finds English where there is some. The German terms follow
+a glossary of accounts-payable usage (Beleg, Freigabe, Lieferant, Bestellung, Wareneingang, USt-IdNr.,
+formal "Sie", …) in `ui/scripts/german-texts.mjs`; `make ui-build` (and so CI) fails on a word it rules
+out, and on a stale `docs/german-texts.md`, the list of every German text next to its English that a
+native speaker reads through (`make german-texts` writes it).
 
 **Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
 identity provider; someone from another tenant gets a role here too), change role, remove (their

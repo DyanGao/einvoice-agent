@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useReviewer } from "@/components/Reviewer";
 import {
@@ -24,6 +24,8 @@ import {
   changesFrom,
   formFrom,
   GROUPS,
+  inNotation,
+  kindAt,
   labelFor,
   LOW_CONFIDENCE,
   TABLES,
@@ -66,9 +68,9 @@ function marksFor(detail: Detail, path: string) {
   const derived = (detail.fields?.derived_fields as string[] | undefined) ?? [];
   // What was read before the reviewer changed it; null when unchanged.
   // `text` null: nothing was read there.
-  const was: { text: string | null } | null =
+  const was: { text: string | null; amount: boolean } | null =
     detail.original !== null && JSON.stringify(original) !== JSON.stringify(current)
-      ? { text: shown(original) }
+      ? { text: shown(original), amount: kindAt(path) === "amount" }
       : null;
   return {
     // What the checks say about this field, if anything.
@@ -81,10 +83,9 @@ function marksFor(detail: Detail, path: string) {
   };
 }
 
-function wasText(i18n: Translator, was: { text: string | null }): string {
-  return was.text === null
-    ? i18n.t("hint.nothingRead")
-    : i18n.t("hint.readAs", { value: was.text });
+function wasText(i18n: Translator, was: { text: string | null; amount: boolean }): string {
+  if (was.text === null) return i18n.t("hint.nothingRead");
+  return i18n.t("hint.readAs", { value: was.amount ? i18n.decimal(was.text) : was.text });
 }
 
 function Hints({ marks }: { marks: ReturnType<typeof marksFor> }) {
@@ -170,10 +171,16 @@ function auditText(i18n: Translator, event: AuditEvent): string {
   const { t } = i18n;
   const detail = event.detail ?? {};
   if (event.event === "field_corrected") {
+    const field = String(detail.field);
+    // An amount the way the reader writes it ("7864,76" in German).
+    const value = (raw: unknown) => {
+      const text = said(i18n, raw);
+      return kindAt(field) === "amount" && typeof raw === "string" ? i18n.decimal(text) : text;
+    };
     return t("audit.field_corrected", {
-      field: labelFor(i18n, String(detail.field)),
-      old: said(i18n, detail.old),
-      new: said(i18n, detail.new),
+      field: labelFor(i18n, field),
+      old: value(detail.old),
+      new: value(detail.new),
     });
   }
   if (event.event === "approved") return t("audit.approved");
@@ -206,10 +213,25 @@ export default function ReviewPage() {
   const [rejectNote, setRejectNote] = useState("");
   const [reopenNote, setReopenNote] = useState("");
 
+  // The form is filled in the language of the moment; `show` itself stays the
+  // same function, so a switch of language does not load the document again.
+  const i18nNow = useRef(i18n);
+  useEffect(() => {
+    i18nNow.current = i18n;
+  }, [i18n]);
   const show = useCallback((next: Detail) => {
     setDetail(next);
-    setForm(formFrom(next.fields));
+    setForm(formFrom(next.fields, i18nNow.current));
   }, []);
+
+  // A switch of language writes the amounts in the form the new way, edits included.
+  const { locale } = i18n;
+  const shownLocale = useRef(locale);
+  useEffect(() => {
+    if (shownLocale.current === locale) return;
+    shownLocale.current = locale;
+    setForm((current) => (current ? inNotation(current, i18nNow.current) : current));
+  }, [locale]);
 
   const load = useCallback(async () => {
     try {
