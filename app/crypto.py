@@ -27,14 +27,15 @@ import binascii
 import hashlib
 import os
 import threading
+import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Protocol
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from sqlalchemy import func, insert, select
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
@@ -118,6 +119,11 @@ class KeyStore(Protocol):
         was first), the stored one."""
         ...
 
+    def all(self) -> list[StoredKey]: ...
+    def update(self, key: StoredKey) -> None:
+        """Store the key's new wrapping (after a master key rotation)."""
+        ...
+
 
 class MemoryKeyStore:
     """Keys that live only as long as the process: tests, evals, the demo."""
@@ -145,6 +151,12 @@ class MemoryKeyStore:
             return same
         self._keys[key.id] = key
         return key
+
+    def all(self) -> list[StoredKey]:
+        return list(self._keys.values())
+
+    def update(self, key: StoredKey) -> None:
+        self._keys[key.id] = key
 
 
 class DatabaseKeyStore:
@@ -197,6 +209,24 @@ class DatabaseKeyStore:
             return stored
         return key
 
+    def all(self) -> list[StoredKey]:
+        from app.db.tables import TenantKeyRow
+
+        with self._engine.connect() as connection:
+            rows = connection.execute(select(TenantKeyRow.__table__)).all()
+        return [StoredKey(r.id, r.tenant_id, r.version, r.wrapped, r.master_id) for r in rows]
+
+    def update(self, key: StoredKey) -> None:
+        from app.db.tables import TenantKeyRow
+
+        table = TenantKeyRow.__table__
+        with self._engine.begin() as connection:
+            connection.execute(
+                update(table)
+                .where(table.c.id == key.id)
+                .values(wrapped=key.wrapped, master_id=key.master_id)
+            )
+
     def count(self) -> int:
         from app.db.tables import TenantKeyRow
 
@@ -206,50 +236,95 @@ class DatabaseKeyStore:
 
 class Keyring:
     """Seals and opens values with the tenants' data keys, unwrapped on first
-    use and kept in memory."""
+    use and kept in memory.
 
-    def __init__(self, master: MasterKey, store: KeyStore) -> None:
+    `previous` are master keys being rotated away from: data keys they wrapped
+    still open, and `einvoice key-rotate-master` wraps them anew under
+    `master`. A tenant's current data key is looked up again after
+    `CURRENT_FOR`, so a rotated key is taken up without a restart."""
+
+    CURRENT_FOR = 60.0  # seconds
+
+    def __init__(
+        self,
+        master: MasterKey,
+        store: KeyStore,
+        previous: tuple[MasterKey, ...] = (),
+        clock=time.monotonic,
+    ) -> None:
         self._master = master
+        self._masters = {key.id: key for key in (*previous, master)}
         self._store = store
+        self._clock = clock
         self._open: dict[str, AESGCM] = {}
-        self._current: dict[str, str] = {}
+        self._current: dict[str, tuple[str, float]] = {}
         self._lock = threading.Lock()
 
     @property
     def master_id(self) -> str:
         return self._master.id
 
-    def _unwrap(self, stored: StoredKey) -> AESGCM:
-        if stored.master_id != self._master.id:
+    @property
+    def store(self) -> KeyStore:
+        return self._store
+
+    def _master_of(self, stored: StoredKey) -> MasterKey:
+        master = self._masters.get(stored.master_id)
+        if master is None:
             raise CryptoError(
                 f"the data key of tenant {stored.tenant_id!r} was wrapped by another master key "
-                f"({stored.master_id}, this one is {self._master.id})"
+                f"({stored.master_id}, this one is {self._master.id}; a key being rotated away "
+                "from goes into MASTER_KEY_PREVIOUS)"
             )
-        cipher = AESGCM(self._master.unwrap(stored.wrapped, stored.tenant_id, stored.version))
+        return master
+
+    def _unwrap(self, stored: StoredKey) -> AESGCM:
+        data_key = self._master_of(stored).unwrap(stored.wrapped, stored.tenant_id, stored.version)
+        cipher = AESGCM(data_key)
         self._open[stored.id] = cipher
         return cipher
+
+    def _new_key(self, tenant_id: str, version: int) -> StoredKey:
+        return self._store.add(
+            StoredKey(
+                id=uuid.uuid4().hex,
+                tenant_id=tenant_id,
+                version=version,
+                wrapped=self._master.wrap(os.urandom(KEY_BYTES), tenant_id, version),
+                master_id=self._master.id,
+            )
+        )
 
     def key_for(self, tenant_id: str) -> str:
         """The id of the tenant's current data key, made on first need."""
         with self._lock:
-            key_id = self._current.get(tenant_id)
-            if key_id is not None:
-                return key_id
-            stored = self._store.current(tenant_id)
-            if stored is None:
-                data_key = os.urandom(KEY_BYTES)
-                stored = self._store.add(
-                    StoredKey(
-                        id=uuid.uuid4().hex,
-                        tenant_id=tenant_id,
-                        version=1,
-                        wrapped=self._master.wrap(data_key, tenant_id, 1),
-                        master_id=self._master.id,
-                    )
-                )
-            self._unwrap(stored)
-            self._current[tenant_id] = stored.id
+            cached = self._current.get(tenant_id)
+            if cached is not None and self._clock() - cached[1] < self.CURRENT_FOR:
+                return cached[0]
+            stored = self._store.current(tenant_id) or self._new_key(tenant_id, 1)
+            if stored.id not in self._open:
+                self._unwrap(stored)
+            self._current[tenant_id] = (stored.id, self._clock())
             return stored.id
+
+    def rotate(self, tenant_id: str) -> StoredKey:
+        """A new data key for the tenant, from now on its current one. The
+        older ones stay: what they sealed still opens."""
+        with self._lock:
+            stored = self._store.current(tenant_id)
+            new = self._new_key(tenant_id, 1 if stored is None else stored.version + 1)
+            self._unwrap(new)
+            self._current[tenant_id] = (new.id, self._clock())
+            return new
+
+    def rewrap(self, stored: StoredKey) -> StoredKey:
+        """The data key wrapped by the current master key."""
+        data_key = self._master_of(stored).unwrap(stored.wrapped, stored.tenant_id, stored.version)
+        return replace(
+            stored,
+            wrapped=self._master.wrap(data_key, stored.tenant_id, stored.version),
+            master_id=self._master.id,
+        )
 
     def _cipher(self, key_id: str) -> AESGCM:
         with self._lock:
@@ -270,12 +345,17 @@ class Keyring:
     def open(self, value: bytes, place: str) -> bytes:
         if not is_sealed(value):
             return value
-        key_id = value[len(MAGIC) : len(MAGIC) + _KEY_ID_BYTES].hex()
+        key_id = key_id_of(value)
         nonce = value[len(MAGIC) + _KEY_ID_BYTES : HEADER]
         try:
             return self._cipher(key_id).decrypt(nonce, value[HEADER:], place.encode())
         except InvalidTag as exc:
             raise SealError(f"a sealed value in {place} does not open: changed, or moved") from exc
+
+
+def key_id_of(value: bytes) -> str:
+    """The id of the data key a sealed value was sealed with."""
+    return value[len(MAGIC) : len(MAGIC) + _KEY_ID_BYTES].hex()
 
 
 def is_sealed(value: bytes | None) -> bool:
@@ -328,7 +408,12 @@ def configure_from_env(engine: Engine) -> Keyring | None:
             "`einvoice key-generate`, keep it outside the database and its backups, and put it "
             "into .env (or set ENCRYPTION=off for development only)."
         )
-    keyring = Keyring(MasterKey.parse(text), DatabaseKeyStore(engine))
+    previous = tuple(
+        MasterKey.parse(part)
+        for part in os.environ.get("MASTER_KEY_PREVIOUS", "").split(",")
+        if part.strip()
+    )
+    keyring = Keyring(MasterKey.parse(text), DatabaseKeyStore(engine), previous)
     configure(keyring)
     return keyring
 

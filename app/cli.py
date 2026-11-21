@@ -19,6 +19,11 @@ einvoice tenant-set SLUG KEY=VALUE...
                              change a company's settings (app/tenants.py); KEY= clears
 einvoice tenant-show SLUG    print a company's settings
 einvoice key-generate        print a new MASTER_KEY for .env (encryption at rest, app/crypto.py)
+einvoice key-rotate-master [--apply]
+                             wrap every data key by MASTER_KEY anew, after moving the old
+                             master key to MASTER_KEY_PREVIOUS (app/rotation.py)
+einvoice key-rotate-tenant SLUG [--apply]
+                             a new data key for a company, its data sealed again with it
 einvoice seal [--apply] [--open]
                              seal the originals and invoice data stored before encryption
                              (app/sealing.py);
@@ -39,7 +44,7 @@ from pathlib import Path
 import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import auth, crypto, db, tenants
+from app import auth, crypto, db, rotation, tenants
 from app.db.engine import database_engine
 from app.db.rls import tenant_transaction
 from app.ingest import requeue_received, scan_folder
@@ -77,6 +82,15 @@ def main(
     )
     backfill.add_argument("--apply", action="store_true", help="write them (without: only count)")
     commands.add_parser("key-generate", help="print a new MASTER_KEY for .env")
+    rotate_master = commands.add_parser(
+        "key-rotate-master", help="wrap every data key by the new master key"
+    )
+    rotate_master.add_argument("--apply", action="store_true", help="write (without: only count)")
+    rotate_tenant = commands.add_parser(
+        "key-rotate-tenant", help="a new data key for a company, its data sealed again"
+    )
+    rotate_tenant.add_argument("slug")
+    rotate_tenant.add_argument("--apply", action="store_true", help="write (without: only count)")
     seal = commands.add_parser("seal", help="seal the originals stored before encryption")
     seal.add_argument("--apply", action="store_true", help="write (without: only count)")
     seal.add_argument("--open", action="store_true", help="store them plain again instead")
@@ -112,6 +126,29 @@ def main(
     if args.command == "seal":
         session_factory = session_factory or _database(settings)
         return _seal(session_factory, apply=args.apply, open_all=args.open)
+    if args.command == "key-rotate-master":
+        if session_factory is None:
+            _database(settings)  # the keyring, from MASTER_KEY and MASTER_KEY_PREVIOUS
+        done = rotation.rotate_master(apply=args.apply)
+        verb = "wrapped anew" if args.apply else "to wrap anew"
+        print(f"data keys: {done.rewrapped} {verb}, {done.already} wrapped by MASTER_KEY already")
+        if not args.apply and done.rewrapped:
+            print("nothing written; run again with --apply to write")
+        return 0
+    if args.command == "key-rotate-tenant":
+        session_factory = session_factory or _database(settings)
+        try:
+            done = rotation.rotate_tenant(session_factory, args.slug, apply=args.apply)
+        except ValueError as exc:
+            print(exc, file=sys.stderr)
+            return 2
+        sealed = done.report.changed[args.slug]
+        if done.version is None:
+            print(f"{args.slug}: {sealed} values would be sealed again with a new data key")
+            print("nothing written; run again with --apply to write")
+        else:
+            print(f"{args.slug}: data key version {done.version}, {sealed} values sealed again")
+        return 0
     if args.command == "texts-backfill":
         session_factory = session_factory or _database(settings)
         return _texts_backfill(session_factory, apply=args.apply)
@@ -165,7 +202,11 @@ def _seal(session_factory: sessionmaker[Session], *, apply: bool, open_all: bool
     verb = ("opened" if open_all else "sealed") if apply else ("to open" if open_all else "to seal")
     state = "plain" if open_all else "sealed"
     for slug in report.changed:
-        print(f"{slug}: {report.changed[slug]} {verb}, {report.already[slug]} {state} already")
+        rekeyed = report.rekeyed.get(slug, 0)
+        older = f" ({rekeyed} of them under an older key)" if rekeyed else ""
+        print(
+            f"{slug}: {report.changed[slug]} {verb}{older}, {report.already[slug]} {state} already"
+        )
     for place, count in sorted(report.by_place.items()):
         if count:
             print(f"    {place}: {count}")

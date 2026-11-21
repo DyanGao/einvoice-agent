@@ -276,6 +276,16 @@ Built and tested:
   dump of a database with a processed, matched and booked invoice and the mail it came in shows none
   of its number, names, VAT ID, IBAN, line text, order, total, sender or subject (tested, with a
   control without encryption).
+- **Key rotation (increment 3).** A new master key re-wraps the data keys and seals nothing again:
+  the new key goes into `MASTER_KEY`, the old one into `MASTER_KEY_PREVIOUS` (both open the data keys
+  meanwhile), `einvoice key-rotate-master --apply` wraps every data key anew, then the old key leaves
+  `.env` — kept elsewhere as long as a backup made before may be restored. A tenant's new data key
+  (`einvoice key-rotate-tenant SLUG --apply`) is a new version; everything of the tenant is sealed
+  again with it, the services take it up within a minute (the current key is looked up again after
+  60 s), and `einvoice seal --apply` seals again whatever was written with the old one meanwhile
+  (it reseals every value not under its tenant's current key). Older versions are kept: deleting one
+  makes what it sealed unreadable. A backup restores with its master key, and with no other (tested
+  on a copied database file, also across a master rotation).
 - **Data in git**: synthetic only; real invoice data (`data/private/`, browser logs in `data/browser/`)
   is ignored.
 
@@ -313,8 +323,8 @@ Built and tested:
 Not built:
 - **Local setups run `AUTH=off`**, where the reviewer's name in the audit trail is typed into the UI and
   recorded as unverified.
-- **No key rotation yet** (v1.0 Stage 6, increment 3), no tamper check (4), no retention settings
-  (5). The ERP's ids, the mail's Message-ID and user accounts are not encrypted.
+- **No tamper check yet** (v1.0 Stage 6, increment 4), no retention settings (5); old data key
+  versions are never deleted. The ERP's ids, the mail's Message-ID and user accounts are not encrypted.
 - **PDFs and scans leave the machine** for the Anthropic API unless `EXTRACTOR=baseline` or `none`.
 
 ## 7. Repo layout
