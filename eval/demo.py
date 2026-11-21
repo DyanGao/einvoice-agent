@@ -24,7 +24,7 @@ from pathlib import Path
 import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import db
+from app import crypto, db
 from app.checks.service import Checker
 from app.connectors import ErpApiConnector
 from app.db.review import ReviewState, approve
@@ -163,6 +163,8 @@ def _migrate(url: str) -> None:
 
 
 def main() -> int:
+    # Its database lives as long as the process: so do its keys (app/crypto.py).
+    crypto.ephemeral()
     from fastapi.testclient import TestClient
     from sqlalchemy import create_engine
     from sqlalchemy.engine import make_url

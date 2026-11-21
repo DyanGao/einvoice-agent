@@ -44,7 +44,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app import db
+from app import crypto, db
 from app.checks.service import Checker
 from app.extract import BaselineExtractor
 from app.ingest import ingest
@@ -473,6 +473,8 @@ def score(session_factory, cases: list[Case]) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Its database lives as long as the process: so do its keys (app/crypto.py).
+    crypto.ephemeral()
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--gate", action="store_true", help="exit 1 unless everything is right")
     parser.add_argument("--imap", metavar="HOST:PORT", help="through a real IMAP server")

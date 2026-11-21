@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app import crypto
 from app.db import Base
 from app.validate import Severity, ValidationResult, ValidatorError, Violation
 
@@ -29,6 +30,15 @@ REJECT = ValidationResult(
     violations=(Violation(rule_id="BR-DE-15", severity=Severity.ERROR, message="BT-10 fehlt"),),
 )
 NO_SCENARIO = ValidationResult(valid=False, scenario=None)
+
+
+@pytest.fixture(autouse=True)
+def keyring():
+    """Every test stores documents sealed, with a key that lives as long as
+    the test (app/crypto.py)."""
+    keyring = crypto.ephemeral()
+    yield keyring
+    crypto.configure(keyring)  # a test that switched encryption off does not leak it
 
 
 @pytest.fixture

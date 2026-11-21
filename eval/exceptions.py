@@ -24,6 +24,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app import crypto
 from app.checks.finding import Finding, FindingType, Severity
 from app.checks.service import Checker
 from app.db import DEFAULT_TENANT_ID, Base, DocumentRow, DraftRow
@@ -258,6 +259,8 @@ def _print(result: dict) -> None:
 
 
 def main() -> int:
+    # Its database lives as long as the process: so do its keys (app/crypto.py).
+    crypto.ephemeral()
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--split", choices=("dev", "test", "all"), default="test")
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)

@@ -17,6 +17,7 @@ from redis import Redis
 from rq import Queue, SimpleWorker
 from sqlalchemy.orm import sessionmaker
 
+from app import crypto
 from app.db.engine import database_engine
 from app.extract.factory import build_extractor
 from app.ingest import requeue_stuck
@@ -61,7 +62,9 @@ def _context() -> tuple:
     client = httpx.Client(
         base_url=settings.validator_url, timeout=settings.validator_timeout_seconds
     )
-    session_factory = sessionmaker(database_engine(settings.database_url))
+    engine = database_engine(settings.database_url)
+    crypto.configure_from_env(engine)
+    session_factory = sessionmaker(engine)
     return (
         session_factory,
         KositValidator(client),
@@ -81,6 +84,8 @@ def main() -> None:
     process instead of forking, which also works on macOS."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     settings = Settings.from_env()
+    # Checked at start, not at the first job: no key, no worker.
+    crypto.configure_from_env(database_engine(settings.database_url))
     threading.Thread(
         target=_sweep_forever,
         args=(sessionmaker(database_engine(settings.database_url)), RqQueue(settings.redis_url)),

@@ -194,7 +194,7 @@ def test_without_a_tenant_the_role_sees_nothing(seeded):
         assert session.scalar(select(func.count()).select_from(db.DocumentRow)) == 0
 
 
-@pytest.mark.parametrize("table", ["users", "memberships", "api_tokens", "sessions"])
+@pytest.mark.parametrize("table", ["users", "memberships", "api_tokens", "sessions", "tenant_keys"])
 def test_the_tenant_role_cannot_read_accounts_or_secrets(seeded, table):
     with as_tenant(seeded, A) as session, pytest.raises(DBAPIError, match="permission denied"):
         session.execute(text(f"SELECT 1 FROM {table}"))  # noqa: S608

@@ -28,7 +28,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app import db
+from app import crypto, db
 from app.api.main import create_app
 from app.auth import Role, add_membership, create_user
 from app.auth.oidc import OidcClient
@@ -189,6 +189,8 @@ class UncertainExtractor:
 
 
 def main() -> None:
+    # Its database lives as long as the process: so do its keys (app/crypto.py).
+    crypto.ephemeral()
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8010)
     parser.add_argument("--sample", type=Path, required=True)

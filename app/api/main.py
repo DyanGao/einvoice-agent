@@ -943,12 +943,15 @@ def create_app(
 
 def create_app_from_env() -> FastAPI:
     """For `uvicorn --factory app.api.main:create_app_from_env`."""
+    from app import crypto
     from app.db.engine import database_engine
     from app.queue import RqQueue
     from app.tenants import TenantServices
 
     settings = Settings.from_env()
-    session_factory = sessionmaker(database_engine(settings.database_url))
+    engine = database_engine(settings.database_url)
+    crypto.configure_from_env(engine)  # refuses to start without MASTER_KEY
+    session_factory = sessionmaker(engine)
     return create_app(
         session_factory,
         RqQueue(settings.redis_url),

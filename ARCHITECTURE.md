@@ -64,8 +64,10 @@ Postgres tables (`app/db/tables.py`, migrations in `migrations/`):
 
 ```
 tenants(id, slug, name, created_at)               # the companies one installation serves
+tenant_keys(id, tenant_id, version, wrapped, master_id, created_at)
+                                                  # each tenant's data key, wrapped (Stage 6)
 documents(id, tenant_id, sha256, filename, format, status, error, content, review_state,
-          created_at)                             # sha256 unique per tenant
+          created_at)                             # sha256 unique per tenant; content sealed
 drafts(document_id, original, data, updated_at)   # what was read, and with the reviewer's corrections
 invoices(document_id, number, issue_date, seller_name, seller_vat_id, currency,
          gross_total, data)                       # the invoice of record: parsed, or approved
@@ -238,6 +240,7 @@ comments refer to them by these numbers. A decision that replaced another says s
 | D11 | No model-based matching agent in v1: the rule-based matcher decides what it can and leaves the rest open for a person | a tool-calling agent for the remainder (2, D6) | on the eval world the rules reach 100 % on the held-out split and 99.5 % on seeds never looked at, with no wrong link; what remains is undecidable for any reader. An agent would add cost and a place for injected text to act. Revisit with real data or a harder world |
 | D12 | An invoice that prints no currency is read as EUR (confirmed by the project owner, 2026-11-15). The value is marked as assumed and the invoice goes to a person | leave the currency empty and refuse; ask the model to infer it from the country | German invoices without a currency sign are EUR in practice; an assumption stays visible and reviewed instead of passing as a reading (`app/extract/complete.py`). Review kept after the confirmation (2026-11-15): on dev it held back two misread scans that confidence missed |
 | D13 | A credit note (381) is stored as XRechnung writes it: positive amounts, its type saying the money goes the other way; the sign is given only where it is booked or paid. A PDF that prints the amounts negative is turned positive in one place (`app/extract/credit.py`), and a document read as an invoice (or with no type) whose totals are all negative is taken for a credit note, its type marked as concluded. The invoice it corrects is kept as BT-25 (`preceding_ref`), added to D8's subset | negative amounts in the draft; a separate credit-note model | one form for checks, matcher and review page, the same as the structured standard; a sign decided in many places is a sign wrong in one. A negative discount line does not make a credit note: only negative totals do |
+| D14 | Encryption at rest is envelope encryption (O6): a data key per tenant (AES-256-GCM, `cryptography`), stored wrapped by a master key that lives only in the environment; a sealed value carries its key id and is bound to its column. Rows seal themselves with their own tenant's key when written, so no process-wide "current tenant" is needed (FastAPI may run a request's parts in different threads) | one installation key; keys derived from the master key; a context variable for the tenant; database-side encryption (pgcrypto) | a tenant's data stays apart from the others' even in a dump, and its key can be replaced or destroyed alone; re-wrapping the data keys is all a new master key needs; with pgcrypto the key would travel to the database in every query |
 
 ## 6. Security & privacy
 Built and tested:
@@ -252,6 +255,17 @@ Built and tested:
 - **Webhook**: HMAC-SHA256 over timestamp and body; HTTPS only except to localhost; no redirects.
 - **XML**: no entity expansion, DTD loading or network access.
 - **Secrets** only in `.env` (ignored by git and the Docker build).
+- **Originals encrypted at rest (v1.0 Stage 6, increment 1; D14).** Every document's original
+  (`documents.content`) is sealed with AES-256-GCM under its tenant's data key; the data keys
+  (`tenant_keys`) are stored wrapped by the master key, which is only in `.env` (`MASTER_KEY`, `make
+  master-key`). A sealed value names its key and is bound to its column, so it opens nowhere else and
+  a changed byte is detected; the keyring reads the keys on connections of its own, and the tenant role
+  cannot read `tenant_keys` at all. The API, worker and the other services refuse to start without the
+  master key (`ENCRYPTION=off` for development only); tests, evals, the demo and the UI test server use
+  a throwaway key in memory. Originals stored before are read as they are and sealed by `einvoice seal
+  --apply`; a downgrade of the migration refuses while anything is sealed. A dump of the database shows
+  no original (tested). The invoice data read from it (drafts, findings, …) is not sealed yet
+  (increment 2).
 - **Data in git**: synthetic only; real invoice data (`data/private/`, browser logs in `data/browser/`)
   is ignored.
 
@@ -289,8 +303,10 @@ Built and tested:
 Not built:
 - **Local setups run `AUTH=off`**, where the reviewer's name in the audit trail is typed into the UI and
   recorded as unverified.
-- **No encryption at rest and no retention settings.** Planned here originally; deferred because it
-  needs a key-management decision first.
+- **Encryption at rest covers the originals only so far**: the data read from them (drafts, invoices,
+  findings, matches, decisions, deliveries, audit details, mail headers, file names) is still stored
+  plain (v1.0 Stage 6, increment 2). No key rotation yet (increment 3), no retention settings
+  (increment 5).
 - **PDFs and scans leave the machine** for the Anthropic API unless `EXTRACTOR=baseline` or `none`.
 
 ## 7. Repo layout
@@ -313,4 +329,5 @@ migrations/, sample_invoices/, data/ (local only: private data, mock ERP, logs)
 - What second, independent confidence signal would catch a right value read into the wrong field
   (eval report, worst cases 1–2)? Agreement across repeated runs is the candidate (D5).
 - How do the numbers hold on real, anonymized invoices and a real ERP's data?
-- Which key management for encryption at rest?
+- ~~Which key management for encryption at rest?~~ Envelope encryption with a master key from `.env`
+  (O6 default, D14); a KMS or Vault can take the master key's place later.

@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from pydantic import ValidationError
 from sqlalchemy.orm import sessionmaker
 
+from app import crypto
 from app.connectors import Connector
 from app.db.engine import database_engine
 from app.db.instance_lock import AlreadyRunning, InstanceLock, LockLost
@@ -55,6 +56,7 @@ def main() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
     settings = Settings.from_env()
     engine = database_engine(settings.database_url)
+    crypto.configure_from_env(engine)  # refuses to start without MASTER_KEY
     session_factory = sessionmaker(engine)
     with session_factory() as session:
         env_in_use = session.get(TenantSettingsRow, DEFAULT_TENANT_ID) is None
