@@ -74,6 +74,8 @@ findings(document_id, position, type, severity, message, fields, detail)
 matches(document_id, supplier_id, po_number, po_basis, delivery_id,
         payments[{bank_transaction_id, amount}], payment_basis, explanation)   # allocations, D7
 decisions(document_id, route[auto|review], reasons, version, decided_at)
+credit_links(document_id, invoice_document_id, basis, explanation, explanation_text)
+                                                  # a credit note's invoice (Stage 5)
 deliveries(document_id, connector, idempotency_key, status, booking, attempts,
            next_attempt_at, external_ref, last_error, created_at, delivered_at)
 audit_events(seq, document_id, event, actor, actor_user_id, detail, created_at)
@@ -121,6 +123,17 @@ consent; a token is reused until two minutes before it expires. Client secrets a
 named `TENANT_…` variables like every secret, and appear in no log or error. Where the server offers
 SASL-IR the token goes with the AUTHENTICATE command. The mailbox eval (`make eval-mailbox`, 200
 synthetic mails, with crashes; also through GreenMail) gates this in CI.
+
+**Credit notes** (v1.0 Stage 5). A credit note (381) is stored with positive amounts (D13) and
+linked, when it is checked, to the invoice it corrects (`app/checks/credit.py`, stored in
+`credit_links`): the one it names in BT-25 — a named invoice that is not on file is not replaced by a
+guess — or, naming none, the one invoice of the same supplier and total, or else the one whose lines
+take in every credited line, issued no later; several: none chosen. Other credit notes, rejected
+invoices and other suppliers' invoices are never candidates. What earlier credit notes (received
+before, not rejected) took back is subtracted, and a credit for more than is left is a finding, as is
+a credit note without its invoice. A credit note is not matched to orders, deliveries or payments and
+is compared for duplicates with credit notes only. The review page shows the link both ways. Credit
+notes still go to review and are not booked (D9) until Stage 5, increment 3.
 
 **Languages** (v1.0 Stage 4). The review UI speaks German and English: every text it has of its
 own is in `ui/lib/messages.ts`, where the German catalogue is typed against the English keys, so a

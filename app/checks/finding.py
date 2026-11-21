@@ -14,6 +14,10 @@ class FindingType(StrEnum):
     VAT_RATE_IMPLAUSIBLE = "vat_rate_implausible"
     VAT_ID_INVALID = "vat_id_invalid"
     CREDIT_NOTE = "credit_note"
+    # A credit note whose invoice is not on file, or not one alone (Stage 5).
+    CREDIT_NOT_LINKED = "credit_not_linked"
+    # A credit note for more than its invoice has left to credit.
+    CREDIT_EXCEEDS_INVOICE = "credit_exceeds_invoice"
     UNUSUAL_DOCUMENT_TYPE = "unusual_document_type"
     DUPLICATE = "duplicate"
     NEAR_DUPLICATE = "near_duplicate"

@@ -36,6 +36,24 @@ ENGLISH: dict[str, str] = {
     "finding.vat_rate_category": "VAT category {category} cannot carry a rate of {rate} %",
     "finding.vat_rate_not_german": "{rate} % is not a German VAT rate",
     "finding.vat_id_invalid": "{party} VAT ID {vat_id}: {problem}",
+    "finding.credit_exceeds_invoice": (
+        "credit of {credit_amount} is more than the {open_amount} of invoice {number} not yet "
+        "credited ({credited_amount} credited before)"
+    ),
+    # The invoice a credit note corrects (app/checks/credit.py)
+    "credit.reference": "credit note for invoice {number}, which it names",
+    "credit.reference_not_found": (
+        "the credit note names invoice {number}, which is not on file for this supplier"
+    ),
+    "credit.by_total": (
+        "credit note for invoice {number}: it names none, found by supplier and the same total"
+    ),
+    "credit.by_lines": (
+        "credit note for invoice {number}: it names none, found by supplier and the lines it "
+        "credits"
+    ),
+    "credit.ambiguous": "several invoices of this supplier fit this credit note: {numbers}",
+    "credit.not_found": "no invoice of this supplier on file fits this credit note",
     "party.seller": "seller",
     "party.buyer": "buyer",
     "vat_id.german_shape": "a German VAT ID is DE followed by nine digits",

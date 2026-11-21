@@ -51,6 +51,7 @@ DOCUMENT_TABLES = (
     "matches",
     "decisions",
     "deliveries",
+    "credit_links",
 )
 
 _CURRENT = f"current_setting('{SETTING}', true)"

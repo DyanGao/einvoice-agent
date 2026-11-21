@@ -13,6 +13,7 @@ import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, UploadFile
@@ -178,6 +179,59 @@ def _me(session: Session, actor: Actor) -> dict:
     }
 
 
+def _gross(document: db.DocumentRow) -> Decimal | None:
+    total = (document.draft.data if document.draft else {}).get("gross_total")
+    try:
+        return None if total is None else Decimal(str(total))
+    except InvalidOperation:
+        return None
+
+
+def _credits_of(invoice: db.DocumentRow, *, besides: str | None = None) -> list[dict]:
+    """The credit notes linked to an invoice that were not rejected."""
+    credits = []
+    for link in invoice.credited_by:
+        credit = link.document
+        if credit.id == besides or credit.review_state == db.ReviewState.REJECTED.value:
+            continue
+        data = credit.draft.data if credit.draft else {}
+        gross = _gross(credit)
+        credits.append(
+            {
+                "document_id": credit.id,
+                "number": data.get("number"),
+                "gross_total": None if gross is None else str(gross),
+            }
+        )
+    return credits
+
+
+def _credit(document: db.DocumentRow) -> dict | None:
+    """For a credit note: the invoice it corrects and what is left of it."""
+    link = document.credit_link
+    if link is None:
+        return None
+    invoice = link.invoice
+    answer = {
+        "basis": link.basis,
+        "explanation": link.explanation,
+        "explanation_text": link.explanation_text,
+        "invoice": None,
+    }
+    if invoice is not None:
+        others = _credits_of(invoice, besides=document.id)
+        credited = sum((Decimal(c["gross_total"] or 0) for c in others), Decimal(0))
+        gross = _gross(invoice)
+        answer["invoice"] = {
+            "document_id": invoice.id,
+            "number": (invoice.draft.data if invoice.draft else {}).get("number"),
+            "gross_total": None if gross is None else str(gross),
+            "credited_by_others": str(credited),
+            "left": None if gross is None else str(gross - credited),
+        }
+    return answer
+
+
 def _detail(document: db.DocumentRow) -> dict:
     draft = document.draft
     validation = document.validation
@@ -214,6 +268,9 @@ def _detail(document: db.DocumentRow) -> dict:
             # The same lines as codes for the UI's language (None: English only).
             "explanation_texts": document.match.explanation_texts,
         },
+        # A credit note's invoice; an invoice's credit notes (v1.0 Stage 5).
+        "credit": _credit(document),
+        "credits": _credits_of(document),
         "deliveries": [
             {
                 "connector": delivery.connector,
