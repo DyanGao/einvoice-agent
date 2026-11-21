@@ -40,6 +40,9 @@ export type Translator = {
   tx: (key: string, fallback: string, params?: Params) => string;
   /** The `….one` or `….other` text for `count`. */
   tn: (key: string, count: number, params?: Params) => string;
+  /** A decimal string in this language's notation, for a field to edit: "1234.5" → "1234,5".
+   * The digits stay exactly as they are (no float, no grouping); anything else is returned unchanged. */
+  decimal: (value: string) => string;
   /** An amount from its decimal string, never through a float: "1234.5" → "1.234,50 €". */
   money: (amount: string | null, currency: string | null) => string;
   /** A timestamp from the API (UTC) in local time. */
@@ -67,6 +70,7 @@ export function translator(locale: Locale): Translator {
     locale,
     t,
     tx,
+    decimal: (value) => (locale === "de" && DECIMAL.test(value) ? value.replace(".", ",") : value),
     tn: (key, count, params) =>
       tx(`${key}.${count === 1 ? "one" : "other"}`, key, { count, ...params }),
     money: (amount, currency) => {
@@ -122,6 +126,8 @@ function serverParam(i18n: Translator, name: string, value: unknown): string {
   }
   if (name.endsWith("_amount") && value !== null) return i18n.money(String(value), null);
   if (name.endsWith("_percent") && value !== null) return i18n.percent(Number(value));
+  // A VAT rate in per cent ("7.5"), written the reader's way.
+  if (name === "rate" && value !== null) return i18n.decimal(String(value));
   return value === null || value === undefined ? "" : String(value);
 }
 

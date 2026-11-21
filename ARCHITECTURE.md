@@ -128,7 +128,10 @@ missing translation does not build. The language comes from the browser, can be 
 masthead and is remembered in the browser; someone signed in has their choice kept with their account
 too (`users.language`, `POST /auth/language`, in `/auth/me`), and it wins over the browser's once they
 sign in, in any browser. Amounts are formatted `de-DE` or `en-GB` from their decimal
-string, never through a float (`Intl.NumberFormat` takes the string exactly). Texts the server writes —
+string, never through a float (`Intl.NumberFormat` takes the string exactly). The fields of the review form show
+amounts the same way, without grouping ("7864,76"): `i18n.decimal` swaps the point for a comma in the
+string, and a language switch rewrites what is in the form, edits included. What a reviewer types is
+read in either notation (the last of comma and point is the decimal sign: "1.234,56", "1,234.56"). Texts the server writes —
 findings, decision reasons, match explanations, re-match triggers, delivery errors — are `Text`s
 (`app/texts.py`): a `str` that is the English sentence, as before, and also carries a code and
 parameters. They are stored next to the sentence (`findings.text`, `matches.explanation_texts`,

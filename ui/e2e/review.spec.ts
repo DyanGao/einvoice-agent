@@ -277,6 +277,37 @@ test("the scan for English finds it on an English page", async ({ page }) => {
   const found = await englishOn(page);
   expect(found).toContain(t("queue.title"));
   expect(found).toContain("the");
+  // And amounts with a decimal point, in the fields of a review page.
+  await page.getByRole("link", { name: NUMBER }).first().click();
+  await expect(page.getByLabel(t("field.gross_total"))).toHaveValue(/^\d+\.\d{2}$/);
+  expect((await englishOn(page)).some((item) => item.startsWith("number "))).toBe(true);
+});
+
+test("amounts in the fields are written the reader's way, also after a switch", async ({
+  page,
+}) => {
+  const there = translator(OTHER);
+  const notation = (locale: string) => (locale === "de" ? /^\d+,\d{2}$/ : /^\d+\.\d{2}$/);
+  await page.goto("/");
+  await page.getByRole("button", { name: new RegExp(t("queue.all")) }).click();
+  await page.getByRole("link", { name: NUMBER }).first().click();
+  const gross = page.getByLabel(t("field.gross_total"));
+  await expect(gross).toHaveValue(notation(LOCALE));
+  const value = await gross.inputValue();
+
+  // A thousands separator, in the other notation: the same amount, so no change.
+  const [whole, fraction] = value.split(/[.,]/) as [string, string];
+  const grouped = (separator: string, decimal: string) =>
+    `${whole.slice(0, -3)}${separator}${whole.slice(-3)}${decimal}${fraction}`;
+  await gross.fill(LOCALE === "de" ? grouped(",", ".") : grouped(".", ","));
+  await expect(page.getByRole("button", { name: t("doc.saveNone") })).toBeVisible();
+
+  await page.getByLabel(t("language.label")).selectOption(OTHER);
+  const grossThere = page.getByLabel(there.t("field.gross_total"));
+  await expect(grossThere).toHaveValue(notation(OTHER));
+  await expect(page.getByRole("button", { name: there.t("doc.saveNone") })).toBeVisible();
+  await page.getByLabel(there.t("language.label")).selectOption(LOCALE);
+  await expect(gross).toHaveValue(value);
 });
 
 test.describe("no English on a German page", () => {
