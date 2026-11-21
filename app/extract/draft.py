@@ -47,6 +47,7 @@ class InvoiceDraft(_Draft):
     due_date: date | None = None
     buyer_reference: str | None = None
     po_ref: str | None = None
+    preceding_ref: str | None = None
     seller: PartyDraft = PartyDraft()
     buyer: PartyDraft = PartyDraft()
     payment_ibans: tuple[str, ...] = ()

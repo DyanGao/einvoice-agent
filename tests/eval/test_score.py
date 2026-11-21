@@ -8,7 +8,8 @@ from eval.score import score, validation_correct, wrong_fields
 DOCUMENT = next(generate(1))
 GOLD = DOCUMENT.gold_record()
 FIELDS_PER_LINE = 6
-HEADER_FIELDS = 18  # 12 scalar header fields + 2x2 party fields + ibans + source_format
+# 13 scalar header fields (BT-25 since v1.0 Stage 5) + 2x2 party fields + ibans + source_format
+HEADER_FIELDS = 19
 FIELDS_PER_VAT_GROUP = 4
 
 

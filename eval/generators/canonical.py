@@ -75,6 +75,8 @@ class CanonicalInvoice:
     vat_total: Decimal
     gross_total: Decimal
     amount_due: Decimal
+    # BT-25: the invoice a credit note corrects.
+    preceding_ref: str | None = None
 
     def to_gold(self, source_format: DocumentFormat) -> Invoice:
         """What a correct reader must extract from any rendering of this invoice."""
@@ -86,6 +88,7 @@ class CanonicalInvoice:
             due_date=self.due_date,
             buyer_reference=self.buyer_reference,
             po_ref=self.po_ref,
+            preceding_ref=self.preceding_ref,
             seller=Party(name=self.seller.name, vat_id=self.seller.vat_id),
             buyer=Party(name=self.buyer.name, vat_id=self.buyer.vat_id),
             payment_ibans=self.ibans,
@@ -281,4 +284,19 @@ def build_invoice(seed: int, index: int) -> CanonicalInvoice:
         vat_total=vat_total,
         gross_total=net_total + vat_total,
         amount_due=net_total + vat_total,
+    )
+
+
+def credit_note_for(
+    invoice: CanonicalInvoice, number: str, days_later: int = 10
+) -> CanonicalInvoice:
+    """A credit note (381) taking back the whole invoice, which it names (BT-25).
+    Its amounts are positive, as XRechnung wants them: the type says it is a credit."""
+    return replace(
+        invoice,
+        number=number,
+        issue_date=invoice.issue_date + timedelta(days=days_later),
+        due_date=None,
+        type_code="381",
+        preceding_ref=invoice.number,
     )

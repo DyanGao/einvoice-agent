@@ -8,7 +8,7 @@ and run `make german-texts`.
 
 `{name}` is filled in when the text is shown: an amount, a date, a field's label, another text.
 
-483 texts.
+484 texts.
 
 ## Glossary
 
@@ -43,7 +43,7 @@ words in the third column.
 - Rejection reasons (4)
 - Findings and causes (32)
 - History (21)
-- Invoice fields (39)
+- Invoice fields (40)
 - Mail page (22)
 - Admin page (62)
 - Written by the server: check (6)
@@ -342,6 +342,7 @@ words in the third column.
 | `field.currency` | Currency | Währung |
 | `field.buyer_reference` | Buyer reference (Leitweg-ID) | Käuferreferenz (Leitweg-ID) |
 | `field.po_ref` | Purchase order | Bestellnummer |
+| `field.preceding_ref` | Preceding invoice | Vorausgegangene Rechnung |
 | `field.seller.name` | Seller name | Name des Lieferanten |
 | `field.seller.vat_id` | Seller VAT ID | USt-IdNr. des Lieferanten |
 | `field.buyer.name` | Buyer name | Name des Rechnungsempfängers |

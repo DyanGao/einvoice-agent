@@ -37,6 +37,7 @@ def parse_cii(root: etree._Element) -> Invoice:
         due_date=None if due_date is None else to_date(due_date, CII_DATE, "BT-9 due date"),
         buyer_reference=R.text(agreement, "ram:BuyerReference"),
         po_ref=R.text(agreement, "ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID"),
+        preceding_ref=R.text(settlement, "ram:InvoiceReferencedDocument/ram:IssuerAssignedID"),
         seller=_party(agreement, "ram:SellerTradeParty", "BT-27 seller name"),
         buyer=_party(agreement, "ram:BuyerTradeParty", "BT-44 buyer name"),
         payment_ibans=compact_ids(
