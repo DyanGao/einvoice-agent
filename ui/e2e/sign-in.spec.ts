@@ -215,7 +215,10 @@ test("no English on the German sign-in and admin pages", async ({ page }) => {
   await expect(page.getByRole("heading", { name: t("signin.title") })).toBeVisible();
   await expectNoEnglish(page, DATA);
   await page.goto("/?signin=unknown_user");
-  await expect(page.locator(".sign-in").getByRole("alert")).toBeVisible();
+  // In German first: the page is drawn in English until the browser's language is known.
+  await expect(page.locator(".sign-in").getByRole("alert")).toHaveText(
+    t("signin.outcome.unknown_user"),
+  );
   await expectNoEnglish(page, DATA);
   await signInWithPassword(page, ADMIN);
   await expect(page.getByText(EMPTY_QUEUE)).toBeVisible();

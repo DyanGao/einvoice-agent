@@ -286,6 +286,8 @@ test.describe("no English on a German page", () => {
 
   test("the queue, every document, the mail page", async ({ page }) => {
     await page.goto("/");
+    // The page is drawn in English first and switches once the browser's language is known.
+    await expect(page.getByRole("heading", { name: t("queue.title") })).toBeVisible();
     await expectNoEnglish(page, DATA);
     await page.getByRole("button", { name: new RegExp(t("queue.all")) }).click();
     await expect(page.getByRole("link", { name: NUMBER }).first()).toBeVisible();
