@@ -246,7 +246,12 @@ def _match_payments(
     if gross is None or gross <= 0:
         return (), Basis.NONE, [Text("match.no_total")]
     number = key(invoice.number)
+    credits = [peer for peer in peers if peer.credit]
+    peers = [peer for peer in peers if not peer.credit]
+    # A transfer that names a credit note besides this invoice still pays it.
     peer_numbers = {key(peer.number) for peer in peers} - {number, ""}
+    # Only money paid out pays an invoice; a refund comes the other way.
+    transactions = [transaction for transaction in transactions if transaction.amount > 0]
 
     # Transfers that pay this invoice alone: in the time window, and not
     # quoting some other invoice of the supplier unless they quote this one
@@ -284,6 +289,28 @@ def _match_payments(
                     Text("match.transfer_exact", transfer=transaction.id),
                 )
             )
+    # The invoice less one of the supplier's credit notes, paid in one
+    # transfer: the credit note was offset against it (v1.0 Stage 5).
+    for transaction, basis in candidates:
+        for credit in credits:
+            if credit.gross_total < gross and transaction.amount == gross - credit.gross_total:
+                explanations.append(
+                    (
+                        _STRENGTH[basis],
+                        2,
+                        (
+                            Payment(transaction.id, transaction.amount),
+                            Payment(transaction.id, credit.gross_total, credit.number),
+                        ),
+                        basis,
+                        Text(
+                            "match.transfer_offset",
+                            transfer=transaction.id,
+                            credit=credit.number,
+                            credit_amount=credit.gross_total,
+                        ),
+                    )
+                )
     # One transfer for several invoices: it has to quote this invoice, at
     # least with a slip, and its amount has to be this invoice's total plus
     # the totals of a few others of the supplier. The sum is what protects
@@ -330,6 +357,65 @@ def _match_payments(
             Basis.AMBIGUOUS,
             [Text("match.transfer_twin", number=twins[0])],
         )
+    best = max((strength, simplicity) for strength, simplicity, *_ in explanations)
+    top = [entry for entry in explanations if (entry[0], entry[1]) == best]
+    if len(top) > 1:
+        ids = sorted({payment.bank_transaction_id for entry in top for payment in entry[2]})
+        return (), Basis.AMBIGUOUS, [Text("match.transfers_ambiguous", transfers=ids)]
+    _, _, payments, basis, note = top[0]
+    grounds = Text(f"grounds.{basis.value}")
+    return payments, basis, [Text("match.payment_grounds", note=note, grounds=grounds)]
+
+
+def match_credit_payments(
+    credit: InvoiceDraft,
+    transactions: list[BankTransaction],
+    peers: Sequence[PeerInvoice],
+) -> tuple[tuple[Payment, ...], Basis, list[Text]]:
+    """How a credit note (381) was settled: the supplier refunded its total, or
+    it was offset in a transfer paying one of the supplier's invoices less the
+    credit. A transfer that names the credit note or the invoice it corrects
+    is matched on that reference; one that only has the amount, on content."""
+    total = credit.gross_total
+    if total is None or total <= 0:
+        return (), Basis.NONE, [Text("match.no_total")]
+    names = {key(credit.number), key(credit.preceding_ref)} - {""}
+    invoices = [peer for peer in peers if not peer.credit]
+    explanations: list[tuple[int, int, tuple[Payment, ...], Basis, Text]] = []
+    for transaction in transactions:
+        if credit.issue_date is not None and not (
+            credit.issue_date + PAYMENT_EARLIEST
+            <= transaction.booking_date
+            <= credit.issue_date + PAYMENT_LATEST
+        ):
+            continue
+        tokens = set(_reference_tokens(transaction.purpose))
+        if transaction.amount == -total:
+            basis = Basis.EXACT_REFERENCE if names & tokens else Basis.CONTENT
+            explanations.append(
+                (
+                    _STRENGTH[basis],
+                    3,
+                    (Payment(transaction.id, total),),
+                    basis,
+                    Text("match.refund", transfer=transaction.id),
+                )
+            )
+        for invoice in invoices:
+            if transaction.amount > 0 and transaction.amount == invoice.gross_total - total:
+                named = (names | {key(invoice.number)}) & tokens
+                basis = Basis.EXACT_REFERENCE if named else Basis.CONTENT
+                explanations.append(
+                    (
+                        _STRENGTH[basis],
+                        2,
+                        (Payment(transaction.id, total),),
+                        basis,
+                        Text("match.credit_offset", transfer=transaction.id, number=invoice.number),
+                    )
+                )
+    if not explanations:
+        return (), Basis.NONE, [Text("match.no_refund")]
     best = max((strength, simplicity) for strength, simplicity, *_ in explanations)
     top = [entry for entry in explanations if (entry[0], entry[1]) == best]
     if len(top) > 1:

@@ -16,6 +16,7 @@ import {
   type AuditEvent,
   type Credit,
   type Delivery,
+  type Match,
   type Detail,
   type RejectReason,
   type Said,
@@ -200,8 +201,32 @@ function auditText(i18n: Translator, event: AuditEvent): string {
   return t("audit.again", { event: text, trigger });
 }
 
-/** A credit note's invoice: which, found how, and what is left of it to credit. */
-function CreditRows({ credit, currency }: { credit: Credit; currency: string | null }) {
+/** The transfers that paid it; a part a credit note settled is named by that credit note. */
+function paymentsText(i18n: Translator, match: Match): string {
+  if (match.payments.length === 0) return i18n.t("doc.match.none");
+  return match.payments
+    .map((payment) =>
+      payment.credit_note
+        ? i18n.t("doc.match.offset", {
+            credit: payment.credit_note,
+            amount: i18n.money(payment.amount, null),
+          })
+        : `${payment.bank_transaction_id} (${i18n.money(payment.amount, null)})`,
+    )
+    .join(", ");
+}
+
+/** A credit note's invoice: which, found how, and what is left of it to credit;
+ * and how it was settled (refund or offset). */
+function CreditRows({
+  credit,
+  match,
+  currency,
+}: {
+  credit: Credit;
+  match: Match | null;
+  currency: string | null;
+}) {
   const i18n = useI18n();
   const { t } = i18n;
   const invoice = credit.invoice;
@@ -224,6 +249,15 @@ function CreditRows({ credit, currency }: { credit: Credit; currency: string | n
           <dd>{i18n.money(invoice.credited_by_others, currency)}</dd>
           <dt>{t("doc.credit.left")}</dt>
           <dd>{i18n.money(invoice.left, currency)}</dd>
+        </>
+      )}
+      {match && (
+        <>
+          <dt>{t("doc.match.payments")}</dt>
+          <dd>
+            {paymentsText(i18n, match)}{" "}
+            <span className="basis">{basisLabel(i18n, match.payment_basis)}</span>
+          </dd>
         </>
       )}
     </dl>
@@ -503,7 +537,7 @@ export default function ReviewPage() {
           <section className="group" aria-label={t("doc.match.region")}>
             <h2>{t("doc.match.title")}</h2>
             {detail.credit ? (
-              <CreditRows credit={detail.credit} currency={detail.currency} />
+              <CreditRows credit={detail.credit} match={detail.match} currency={detail.currency} />
             ) : detail.match ? (
               <dl className="match">
                 <dt>{t("doc.match.order")}</dt>
@@ -515,14 +549,7 @@ export default function ReviewPage() {
                 <dd>{detail.match.delivery_id ?? t("doc.match.none")}</dd>
                 <dt>{t("doc.match.payments")}</dt>
                 <dd>
-                  {detail.match.payments.length === 0
-                    ? t("doc.match.none")
-                    : detail.match.payments
-                        .map(
-                          (payment) =>
-                            `${payment.bank_transaction_id} (${i18n.money(payment.amount, null)})`,
-                        )
-                        .join(", ")}{" "}
+                  {paymentsText(i18n, detail.match)}{" "}
                   <span className="basis">{basisLabel(i18n, detail.match.payment_basis)}</span>
                 </dd>
                 {detail.credits.length > 0 && (

@@ -54,6 +54,13 @@ ENGLISH: dict[str, str] = {
     ),
     "credit.ambiguous": "several invoices of this supplier fit this credit note: {numbers}",
     "credit.not_found": "no invoice of this supplier on file fits this credit note",
+    # How a credit note was settled, and an invoice paid less one (app/matching/matcher.py)
+    "match.transfer_offset": (
+        "transfer {transfer} is the invoice total less credit note {credit} ({credit_amount})"
+    ),
+    "match.refund": "transfer {transfer} from the supplier refunds this credit note",
+    "match.credit_offset": "transfer {transfer} pays invoice {number} less this credit note",
+    "match.no_refund": "no refund of this credit note, and no payment it was offset against",
     "party.seller": "seller",
     "party.buyer": "buyer",
     "vat_id.german_shape": "a German VAT ID is DE followed by nine digits",

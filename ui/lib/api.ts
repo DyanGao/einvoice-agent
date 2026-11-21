@@ -85,7 +85,8 @@ export type Match = {
   po_number: string | null;
   po_basis: string;
   delivery_id: string | null;
-  payments: { bank_transaction_id: string; amount: string }[];
+  /** `credit_note`: this part was settled by that credit note, offset in the transfer. */
+  payments: { bank_transaction_id: string; amount: string; credit_note?: string }[];
   payment_basis: string;
   explanation: string[];
   /** The same lines as codes; null where a line has none. */

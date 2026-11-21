@@ -47,6 +47,7 @@ class Order:
 class BankTransaction:
     id: str
     booking_date: date
+    # Paid out to the counterparty; negative: received from it (a refund).
     amount: Decimal
     counterparty_name: str
     counterparty_iban: str
@@ -60,12 +61,18 @@ class PeerInvoice:
 
     number: str
     gross_total: Decimal
+    # A credit note (its total positive, D13): it can be offset against a
+    # payment, and never pays one itself.
+    credit: bool = False
 
 
 @dataclass(frozen=True)
 class Payment:
     bank_transaction_id: str
     amount: Decimal  # the part of that transaction that pays this invoice
+    # Set when this part was not paid but settled by a credit note offset in
+    # the transfer: its number (v1.0 Stage 5).
+    credit_note: str | None = None
 
 
 class Basis(StrEnum):
