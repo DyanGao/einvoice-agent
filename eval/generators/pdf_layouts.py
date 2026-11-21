@@ -146,6 +146,34 @@ HELD_OUT_LABELS = {
     },
 }
 
+# A credit note's own wording (v1.0 Stage 5): title, number and the invoice it
+# corrects (BT-25). The other labels are the invoice's. Index 3 is the
+# held-out wording, as above; none of it occurs in a dev layout.
+CREDIT_LABELS = {
+    "de": {
+        "title": ("Gutschrift", "GUTSCHRIFT", "Gutschrift", "Gutschriftsanzeige"),
+        "number": ("Gutschriftsnummer", "Gutschrift Nr.", "Beleg-Nr.", "Gutschrifts-ID"),
+        "preceding_ref": (
+            "zu Rechnung Nr.",
+            "Bezug: Rechnung",
+            "Ursprüngliche Rechnung",
+            "Korrektur zu Beleg",
+        ),
+        "no_due_date": ("Der Betrag wird Ihrem Konto gutgeschrieben.",) * 4,
+    },
+    "en": {
+        "title": ("Credit note", "CREDIT NOTE", "Credit Note", "Credit Memo"),
+        "number": ("Credit note number", "Credit note no.", "Document no.", "Memo ref."),
+        "preceding_ref": (
+            "Original invoice",
+            "Referenced invoice",
+            "Original invoice",
+            "Corrects invoice",
+        ),
+        "no_due_date": ("The amount will be credited to your account.",) * 4,
+    },
+}
+
 UNITS = {
     "de": {"C62": "Stk", "HUR": "Std", "MTR": "m", "KMT": "km", "KGM": "kg"},
     "en": {"C62": "pcs", "HUR": "hrs", "MTR": "m", "KMT": "km", "KGM": "kg"},
@@ -172,6 +200,12 @@ class Layout:
         if self.wording == HELD_OUT_WORDING:
             return HELD_OUT_LABELS[self.lang][key]
         return LABELS[self.lang][key][self.wording]
+
+    def credit_label(self, key: str) -> str:
+        """A credit note's wording where it has its own, else the invoice's."""
+        if key not in CREDIT_LABELS[self.lang]:
+            return self.label(key)
+        return CREDIT_LABELS[self.lang][key][self.wording]
 
     def unit(self, unit_code: str) -> str:
         return UNITS[self.lang][unit_code]

@@ -1,4 +1,4 @@
-.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif eval-belege eval-local keycloak keycloak-down mailbox test-mailbox eval-mailbox german-texts german-texts-check
+.PHONY: install lint format test check up migrate db-check test-pg test-integration eval-quick eval-structured eval-full eval-report eval-scans-llm eval-runs eval-runs-pdf eval-text eval-pdf-baseline eval-pdf-llm eval-pdf-llm-record ocr-data eval-scans-baseline api worker ui-install ui ui-build ui-test calibrate eval-calibration seed erp eval-matching eval-exceptions eval-credits decide-fit eval-decision eval-decision-pdf eval-probes eval-probes-record watch deliver demo stack demo-local stack-check demo-gif eval-belege eval-local keycloak keycloak-down mailbox test-mailbox eval-mailbox german-texts german-texts-check
 
 # The README demo in Docker: sample_invoices/ through processing, checks,
 # decision and delivery into a fresh mock ERP, in a database of its own. Needs
@@ -111,7 +111,7 @@ eval-text:
 # recordings, which replay only on the machine that made them (see
 # eval/generators/scans.py). Replays recorded model answers: no API key, no cost.
 eval-full: eval-structured eval-pdf-baseline eval-pdf-llm eval-scans-baseline eval-scans-llm \
-		eval-matching eval-exceptions eval-decision eval-runs eval-text eval-probes eval-report
+		eval-matching eval-exceptions eval-credits eval-decision eval-runs eval-text eval-probes eval-report
 
 # Collects what the evals left in eval/out into results.json and rewrites the
 # generated blocks of README.md and docs/eval-report.md.
@@ -270,6 +270,14 @@ eval-matching:
 eval-exceptions:
 	uv run python -m eval.exceptions --split dev
 	uv run python -m eval.exceptions --split test --gate 0.95
+
+# The credit-note set: 160 credit notes for world invoices (full and partial,
+# with and without a reference, refunded, offset or not yet settled), as UBL,
+# CII and text PDFs. Fails unless at least 95 % of the held-out credit notes,
+# read correctly, are linked to the invoice they correct, and none is booked as
+# an invoice or without review. No services, no model.
+eval-credits:
+	uv run python -m eval.credits --gate 0.95
 
 # The decision engine's confidence threshold (needs the predictions of
 # eval-pdf-llm and of the scan set, like calibrate). `decide-fit` rewrites

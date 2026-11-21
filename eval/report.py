@@ -205,6 +205,7 @@ def collect(out: Path, recordings: Path, model: str, effort: str | None) -> dict
             for system in ("baseline", "matcher")
         },
         "exceptions": exceptions,
+        "credits": _read(out / "credits" / "credits-test.json"),
         "exceptions_f1": None if exceptions is None else micro_f1(exceptions["by_kind"]),
         "decision": {
             system: _read(out / f"decision-{system}.json") for system in (BASELINE, LLM_RULES)
@@ -349,6 +350,18 @@ def readme_badges(results: dict) -> str:
     )
 
 
+def _credits_cell(credits: dict | None) -> str:
+    """The link when read correctly (what the checks do), and the bookings."""
+    if credits is None:
+        return NOT_RUN
+    link = credits["read_correctly"]["link"]
+    as_invoice = sum(run["booking"]["booked_as_invoice"] for run in credits.values())
+    return (
+        f"**{pct(link['accuracy'])}** ({link['cases']} credit notes, "
+        f"{link['wrong']} linked wrong; {as_invoice} booked as an invoice)"
+    )
+
+
 def readme_table(results: dict) -> str:
     structured = results["structured"]
     exceptions, f1 = results["exceptions"], results["exceptions_f1"]
@@ -384,6 +397,11 @@ def readme_table(results: dict) -> str:
             if f1 is None
             else f"**{f1:.2f}** (recall: changed IBAN {_recall(exceptions, 'iban')},"
             f" duplicate {_recall(exceptions, 'duplicate')})",
+        ),
+        (
+            "Credit notes linked to the invoice they correct",
+            "–",
+            _credits_cell(results.get("credits")),
         ),
         (
             "Booked without a person",
@@ -426,6 +444,52 @@ def readme_table(results: dict) -> str:
 def _table(header: list[str], rows: list[list[str]]) -> str:
     lines = ["| " + " | ".join(header) + " |", "|" + "---|" * len(header)]
     return "\n".join(lines + ["| " + " | ".join(row) + " |" for row in rows])
+
+
+def credit_details(credits: dict | None) -> list[str]:
+    """The credit-note section of docs/eval-report.md."""
+    parts = ["### Credit notes, held-out split"]
+    if credits is None:
+        parts.append(NOT_RUN)
+    else:
+        as_read, correct = credits["as_read"], credits["read_correctly"]
+        rows = [
+            [
+                name,
+                str(as_read["link_by_variant"][name]["cases"]),
+                pct(correct["link_by_variant"][name]["accuracy"]),
+                pct(as_read["link_by_variant"][name]["accuracy"]),
+                f"{as_read['link_by_variant'][name]['wrong']} / "
+                f"{correct['link_by_variant'][name]['wrong']}",
+            ]
+            for name in correct["link_by_variant"]
+        ]
+        parts.append(
+            _table(
+                [
+                    "variant",
+                    "cases",
+                    "linked right",
+                    "as read from the file",
+                    "linked wrong (as read / correctly)",
+                ],
+                rows,
+            )
+        )
+        reading = ", ".join(
+            f"{fmt} {pct(row['field_accuracy'])}" for fmt, row in as_read["reading"].items()
+        )
+        payments = correct["payments"]
+        parts.append(
+            f"Read from the files (XML parsed, PDFs by the rule-based reader and the "
+            f"completion rules; the PDFs here are in the held-out layouts): {reading}. "
+            f"Refunds and offsets found right when read correctly: {payments['right']} of "
+            f"{payments['cases']}, {payments['wrong']} wrong. Booked as an invoice: "
+            f"{as_read['booking']['booked_as_invoice']} (read as one: "
+            f"{as_read['booking']['read_as_invoice']}); booked without review: "
+            f"{as_read['booking']['booked_without_review']}."
+        )
+    return parts
 
 
 def details(results: dict) -> str:
@@ -543,6 +607,8 @@ def details(results: dict) -> str:
             f"Clean invoices: {clean['flagged']} of {clean['cases']} flagged, "
             f"{clean['booked_without_review']} booked without review."
         )
+
+    parts += credit_details(results.get("credits"))
 
     parts.append("### Decision: auto-rate vs. error, held-out split")
     decision = results["decision"][LLM_RULES]

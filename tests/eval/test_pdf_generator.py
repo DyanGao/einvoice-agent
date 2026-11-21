@@ -4,8 +4,10 @@ from app.models import DocumentFormat
 from eval.generators.pdf import generate
 from eval.generators.pdf_layouts import (
     ALL_LAYOUTS,
+    CREDIT_LABELS,
     HELD_OUT_LABELS,
     HELD_OUT_LAYOUTS,
+    HELD_OUT_WORDING,
     LABELS,
     LAYOUTS,
 )
@@ -40,6 +42,14 @@ def test_held_out_wording_shares_no_label_with_dev_wording():
     for lang, keys in HELD_OUT_LABELS.items():
         for key, label in keys.items():
             assert label not in LABELS[lang][key], (lang, key)
+
+
+def test_held_out_credit_wording_shares_no_label_with_dev_wording():
+    for lang, keys in CREDIT_LABELS.items():
+        for key, labels in keys.items():
+            if key == "no_due_date":
+                continue  # a sentence, not a label to find a value by
+            assert labels[HELD_OUT_WORDING] not in labels[:HELD_OUT_WORDING], (lang, key)
 
 
 def test_dev_layouts_never_use_held_out_wording_or_formats():

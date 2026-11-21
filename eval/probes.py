@@ -41,7 +41,7 @@ from app.matching import Match
 from app.models import DocumentFormat, Invoice
 from app.pipeline import DocumentStatus
 from app.settings import Settings
-from eval.exceptions import _document
+from eval.exceptions import stored_document
 from eval.generators.exceptions import ExceptionSet, build_exception_set
 from eval.generators.probes import Probe, build_probes
 from eval.generators.world import DEFAULT_SEED, build_world
@@ -134,7 +134,7 @@ def run(exceptions: ExceptionSet, probes: tuple[Probe, ...], extractor: Extracto
     checker = Checker(erp_for(exceptions.world))
     results = []
     with Session(engine) as session:
-        on_file = [_document(entry.id, entry.invoice) for entry in exceptions.on_file]
+        on_file = [stored_document(entry.id, entry.invoice) for entry in exceptions.on_file]
         session.add_all(on_file)
         session.flush()
         for document in on_file:

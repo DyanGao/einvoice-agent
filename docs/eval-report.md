@@ -19,6 +19,7 @@ state of 2026-11-14 (thresholds `2026-11-14.1`, model `claude-opus-5-5`).
 | Recall ≥ 95 % for changed IBAN and duplicates | 100 % / 100 % (10 cases each, held-out) | met; small, same-author set |
 | Auto-processing ≥ 70 % at ≤ 1 % error | 73.9 ± 1.0 % booked over 3 runs, 0 wrong (before the printed-but-not-read rule: 75.0 %, with 1 wrong in runs 2 and 3, worst case 1) | **≤ 1 % not shown**: the worst run's 95 % upper bound is 6.6 % |
 | 0 successful injection probes | 0 of 20 | met; bounds the rate only to ≤ 14 % |
+| Credit notes: linked to the right invoice ≥ 95 %, none booked as an invoice (v1.0 Stage 5) | 100 % of 48 held-out credit notes when read correctly, 0 linked wrong; 0 booked as an invoice | met on synthetic data; through the model not yet measured |
 | Calibration (ECE) | 0.0013 on held-out | trivial: one wrong field in 7,849 on dev |
 | Cost and latency per document | 0.034 USD per PDF or scan; 5–6 s | cost reproducible; latency measured once, not by the replay |
 | 3 runs, mean ± std | done: runs 2 and 3 recorded 2026-11-15 (17.11 USD) | met |
@@ -31,7 +32,9 @@ The four regression gates of EVAL_PLAN §7 run in CI on every push: structured f
 changed-IBAN or duplicate recall below 95 % fails (`make eval-exceptions`); an auto-rate more than
 5 points below the fitted one warns (`make eval-decision-pdf`). Matching below 95 % also fails, and so
 does any held-out PDF booked without a person although misread, in any of the three replayed runs
-(`make eval-decision-pdf`, `make eval-runs-pdf`; added after worst case 1).
+(`make eval-decision-pdf`, `make eval-runs-pdf`; added after worst case 1). Since v1.0 Stage 5 a
+credit-note link right below 95 %, or any credit note booked as an invoice or without review, fails
+too (`make eval-credits`).
 
 ## Method
 
@@ -46,6 +49,7 @@ calibration and every rule change were made on dev; the reported numbers are the
 | Matching world | 50 suppliers, 425 invoices (124 held-out), orders, deliveries, bank transfers with partials, combined payments and typos | `eval/generators/world.py` | the world's links |
 | Exceptions | 240 cases: 120 with one planted problem (6 kinds × 20), 120 clean | `eval/generators/exceptions.py` | the planted problem |
 | Injection probes | 20 PDFs with instructions in a note or hidden text, each with a control without them | `eval/generators/probes.py` | the control's outcome |
+| Credit notes | 160 (112 dev / 48 held-out) credit notes for world invoices: full or partial, naming the invoice, naming it in another writing, naming one not on file, or naming none; refunded, offset against another invoice, or not yet settled; UBL, CII, text PDFs (half printed negative) | `eval/generators/credits.py` | the credited invoice and the transfers made |
 
 **Systems.** The rule-based baseline (templates and regular expressions over the text layer, OCR for
 scans; exact-key matching), the model alone (`llm`: system 2, "LLM extraction only"), and the
@@ -151,6 +155,20 @@ Runs 2 and 3 are fresh calls to the same model with the same prompt; each run's 
 
 Clean invoices: 0 of 60 flagged, 46 booked without review.
 
+### Credit notes, held-out split
+
+| variant | cases | linked right | as read from the file | linked wrong (as read / correctly) |
+|---|---|---|---|---|
+| full_reference | 10 | 100.0 % | 60.0 % | 0 / 0 |
+| partial_reference | 12 | 100.0 % | 66.7 % | 0 / 0 |
+| reference_reformatted | 4 | 100.0 % | 100.0 % | 0 / 0 |
+| full_no_reference | 5 | 100.0 % | 60.0 % | 0 / 0 |
+| partial_no_reference | 11 | 100.0 % | 54.5 % | 0 / 0 |
+| unknown_reference | 3 | 100.0 % | 100.0 % | 0 / 0 |
+| invoice_not_on_file | 3 | 100.0 % | 100.0 % | 0 / 0 |
+
+Read from the files (XML parsed, PDFs by the rule-based reader and the completion rules; the PDFs here are in the held-out layouts): ubl 100.0 %, cii 100.0 %, pdf 50.4 %, pdf_negative 67.2 %. Refunds and offsets found right when read correctly: 48 of 48, 0 wrong. Booked as an invoice: 0 (read as one: 3); booked without review: 0.
+
 ### Decision: auto-rate vs. error, held-out split
 
 Sets: pdf, scans. Thresholds 2026-11-14.1, fitted on the dev split.
@@ -220,6 +238,9 @@ Opus run on this set was not paid for.
 | §19 UStG small business, no VAT | 128 | 96.9 % | 2 of 5 |
 | §13b UStG reverse charge, no VAT | 83 | 98.8 % | 2 of 3 |
 | Credit notes | 113 | 96.5 % | 2 of 4 |
+
+On the 4 credit notes the type and every amount were read right (their minus signs made positive by
+the completion rules); the misses are the IBAN and the seller VAT ID, as on the invoices.
 
 What was misread, and what would have stopped it:
 
@@ -398,8 +419,16 @@ first. A wrong booking ranks above a needless review.
   owner, [D12](../ARCHITECTURE.md#5-design-decisions-adr-log)) and sent to review. On the held-out split
   that rule sends 15 of 60 invoices to a person, almost every review there; it also held back two
   misread scans on dev (worst case 3).
-- **Regular world.** One delivery per invoice, amounts exact to the cent, no discounts, fees, foreign
-  currency or credit notes in matching.
+- **Regular world.** One delivery per invoice, amounts exact to the cent, no discounts, fees or foreign
+  currency in matching. Credit notes come in a set of their own (one per credited invoice, refunds
+  and offsets exact to the cent).
+- **Credit notes read by the model: not measured.** The application reads a PDF with the model, whose
+  prompt does not ask for BT-25 yet; changing it needs new recordings of every set (paid). The
+  credit-note eval reads its PDFs with the rule-based reader instead: as good as on invoices on the
+  dev layouts (99.6–100 %), as weak on the held-out ones (50–67 %, invoices 46 %). It took 3 held-out
+  "Credit Memo" PDFs for invoices (no "credit note" on them, "invoice" in "Corrects invoice"); none was
+  bookable, as other fields were missing, but this is luck, not a check. The gate therefore measures the
+  link on credit notes read correctly, and the bookings on both.
 - **Exceptions are invoice data, not files.** The exception and matching evals start after reading, so
   reading errors and planted problems never meet in one document.
 - **Probes are fixed and non-adaptive**, text PDFs only: no scans, metadata, embedded XML, or text that

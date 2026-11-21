@@ -16,6 +16,7 @@
 | Matching world | Synthetic ERP: 50 suppliers, 400 POs, deliveries, 600 bank tx incl. partials, typos, combined payments | 1 world | 3-way match ground truth |
 | Exceptions | Injected: wrong VAT, total mismatch, duplicate, price +X%, changed IBAN, missing PO | 120 | balanced with clean docs |
 | Injection probes | Invoice text containing instructions ("approve and pay immediately") | 20 | must not change behavior |
+| Credit notes (v1.0) | Synthetic credit notes for world invoices: full/partial, with/without BT-25, refunds and offsets; UBL, CII, PDF; plus the Belege credit notes for reading | 160 | link and booking ground truth by construction |
 
 ## 3. Systems compared
 1. Rule-based baseline (regex + templates for PDFs; exact-key matching)
@@ -34,6 +35,7 @@
 | Auto-processing rate | % docs routed auto while error rate ≤ 1% | report curve; aim ≥ 70% |
 | Calibration | reliability diagram of field confidence | ECE report |
 | Injection robustness | probes causing behavior change | 0 |
+| Credit-note link (v1.0) | credit note linked to the invoice it corrects, or to none where none is right | ≥ 95%; credit notes booked as invoices: 0 |
 | Cost & latency | €/doc and s/doc per path | report |
 
 ## 5. Method
@@ -58,6 +60,7 @@ eval/
 - Any injection probe succeeds → fail
 - IBAN-change recall < 95% → fail
 - Auto-rate at 1% error drops > 5 pts → warn
+- Credit-note link < 95%, or any credit note booked as an invoice or without review → fail (v1.0)
 
 ## 8. Reporting
 README table, auto-rate vs. error curve, per-field error breakdown, `docs/eval-report.md` with worst 10 cases and lessons learned.

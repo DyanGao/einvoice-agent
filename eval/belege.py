@@ -132,7 +132,11 @@ def summarize(results: list[dict]) -> dict:
     for result in results:
         compared, misses = result["compared"], len(result["wrong"])
         overall.update(fields=compared, wrong=misses, documents=1, exact=int(misses == 0))
-        for key in (f"variant:{result['variant']}", f"vat_scheme:{result['vat_scheme']}"):
+        keys = [f"variant:{result['variant']}", f"vat_scheme:{result['vat_scheme']}"]
+        # Invoices and credit notes apart (v1.0 Stage 5); results from before lack it.
+        if "document_type" in result:
+            keys.append(f"document_type:{result['document_type']}")
+        for key in keys:
             by[key].update(fields=compared, wrong=misses, documents=1, exact=int(misses == 0))
         wrong_by_field.update(field_group(name) for name in result["wrong"])
 
@@ -172,6 +176,7 @@ def evaluate(dataset: Path, extractor, rules: bool) -> list[dict]:
                 "variant": entry["variant"],
                 "layout": entry["layout"],
                 "vat_scheme": entry["vat_scheme"],
+                "document_type": label["document_type"],
                 "compared": compared,
                 "wrong": misses,
                 "error": error,

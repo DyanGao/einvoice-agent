@@ -30,3 +30,18 @@ def test_a_generated_credit_note_is_valid_xrechnung(render, index, validator):
     outcome = process_structured(render(credit, XRECHNUNG), validator)
     assert outcome.status is DocumentStatus.VALID, outcome.validation.errors
     assert outcome.invoice.preceding_ref == credit.preceding_ref
+
+
+def test_every_xml_credit_note_of_the_eval_set_is_valid_xrechnung(validator):
+    """Partial credits too, and those naming an invoice in another writing."""
+    from eval.generators.credits import CII, UBL, build_credit_set
+    from eval.generators.world import build_world
+
+    cases = [c for c in build_credit_set(build_world()).cases if c.format in (UBL, CII)]
+    assert len(cases) == 80
+    invalid = {}
+    for case in cases:
+        outcome = process_structured(case.content, validator)
+        if outcome.status is not DocumentStatus.VALID:
+            invalid[case.id] = [error.rule_id for error in outcome.validation.errors]
+    assert invalid == {}

@@ -16,7 +16,7 @@ jobs:
   check:
     # Pinned: ubuntu-latest moves to Ubuntu 26 from 2026-10-19 on GitHub's schedule.
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -111,6 +111,11 @@ jobs:
       # at least 95 % of the held-out exception cases.
       - name: Exception eval
         run: make eval-exceptions
+
+      # Regression gate: at least 95 % of the held-out credit notes linked to
+      # the invoice they correct; none booked as an invoice or without review.
+      - name: Credit-note eval
+        run: make eval-credits
 
       - name: Mailbox eval
         run: make eval-mailbox
