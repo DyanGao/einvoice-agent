@@ -41,7 +41,15 @@ from app.decide import Decision, DecisionSettings, Route, decide
 from app.erp.client import ErpUnavailable
 from app.extract.draft import InvoiceDraft
 from app.extract.ollama import is_local
-from app.matching import Basis, Match, MatchingData, PeerInvoice, match_candidates
+from app.matching import (
+    Basis,
+    Match,
+    MatchingData,
+    PeerInvoice,
+    match_candidates,
+    match_credit_payments,
+)
+from app.models.invoice import CREDIT_NOTE
 from app.pipeline import DocumentStatus
 from app.settings import Settings
 from app.texts import Text, said
@@ -189,6 +197,18 @@ def _store_credit_link(document: DocumentRow, link: CreditLink | None) -> None:
             setattr(document.credit_link, name, getattr(row, name))
 
 
+def _peers(draft: InvoiceDraft, known: tuple[KnownInvoice, ...]) -> list[PeerInvoice]:
+    """The supplier's other documents on file, for telling whose a transfer
+    is; its credit notes marked, and rejected documents left out (they are
+    neither paid nor offset)."""
+    return [
+        PeerInvoice(invoice.number, invoice.gross_total, credit=invoice.type_code == CREDIT_NOTE)
+        for invoice in known
+        if invoice.number and invoice.gross_total is not None and not invoice.rejected
+        if _same_seller(draft, invoice)
+    ]
+
+
 def _same_seller(draft: InvoiceDraft, known: KnownInvoice) -> bool:
     if draft.seller.vat_id and known.seller_vat_id:
         return draft.seller.vat_id == known.seller_vat_id
@@ -220,14 +240,20 @@ def _store_match(session: Session, document: DocumentRow, match: Match | None) -
         po_number=match.po_number,
         po_basis=match.po_basis.value,
         delivery_id=match.delivery_id,
-        payments=[
-            {"bank_transaction_id": p.bank_transaction_id, "amount": str(p.amount)}
-            for p in match.payments
-        ],
+        payments=_payments_json(match),
         payment_basis=match.payment_basis.value,
         explanation=list(match.explanation),
         explanation_texts=[said(line) for line in match.explanation],
     )
+
+
+def _payments_json(match: Match) -> list[dict]:
+    """A part settled by a credit note says which (v1.0 Stage 5)."""
+    return [
+        {"bank_transaction_id": p.bank_transaction_id, "amount": str(p.amount)}
+        | ({} if p.credit_note is None else {"credit_note": p.credit_note})
+        for p in match.payments
+    ]
 
 
 def _store_decision(document: DocumentRow, decision: Decision) -> None:
@@ -297,18 +323,21 @@ class Checker:
                 match = Match(explanation=(Text("match.no_supplier"),))
                 orders = []
             elif credit is not None:
-                # A credit note answers to its invoice: no order, delivery or
-                # payment of its own (refunds and offsets: Stage 5, increment 4).
-                match = Match(supplier_id=supplier.id, explanation=(credit.explanation,))
+                # A credit note answers to its invoice: no order or delivery of
+                # its own. It is settled by a refund or an offset.
+                payments, basis, notes = match_credit_payments(
+                    draft, self.erp.transactions_to(supplier.ibans), _peers(draft, known)
+                )
+                match = Match(
+                    supplier_id=supplier.id,
+                    payments=payments,
+                    payment_basis=basis,
+                    explanation=(credit.explanation, *notes),
+                )
                 orders = []
             else:
                 orders = self.erp.orders_of(supplier.id)
-                peers = [
-                    PeerInvoice(invoice.number, invoice.gross_total)
-                    for invoice in known
-                    if invoice.number and invoice.gross_total is not None
-                    if _same_seller(draft, invoice)
-                ]
+                peers = _peers(draft, known)
                 match = match_candidates(
                     draft, supplier, orders, self.erp.transactions_to(supplier.ibans), peers
                 )
@@ -441,10 +470,7 @@ class Checker:
         after = [p.bank_transaction_id for p in match.payments]
         if (before, stored.payment_basis) == (after, match.payment_basis.value):
             return False
-        stored.payments = [
-            {"bank_transaction_id": p.bank_transaction_id, "amount": str(p.amount)}
-            for p in match.payments
-        ]
+        stored.payments = _payments_json(match)
         stored.payment_basis = match.payment_basis.value
         if (match.po_number, match.delivery_id) == (stored.po_number, stored.delivery_id):
             stored.explanation = list(match.explanation)

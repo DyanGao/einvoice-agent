@@ -8,7 +8,7 @@ and run `make german-texts`.
 
 `{name}` is filled in when the text is shown: an amount, a date, a field's label, another text.
 
-499 texts.
+504 texts.
 
 ## Glossary
 
@@ -39,7 +39,7 @@ words in the third column.
 - Sign-in (19)
 - Queue (incoming invoices) (40)
 - Document states (19)
-- Review page (79)
+- Review page (80)
 - Rejection reasons (4)
 - Findings and causes (34)
 - History (21)
@@ -50,7 +50,7 @@ words in the third column.
 - Written by the server: delivery (19)
 - Written by the server: finding (21)
 - Written by the server: grounds (3)
-- Written by the server: match (19)
+- Written by the server: match (23)
 - Written by the server: order_note (3)
 - Written by the server: party (2)
 - Written by the server: reason (11)
@@ -239,6 +239,7 @@ words in the third column.
 | `doc.credit.credited` | Credited before | Bereits gutgeschrieben |
 | `doc.credit.left` | Left to credit | Noch gutzuschreiben |
 | `doc.credits` | Credit notes | Gutschriften |
+| `doc.match.offset` | {credit} offset ({amount}) | {credit} verrechnet ({amount}) |
 | `hint.sure` | {percent} sure | {percent} sicher |
 | `hint.derived` | Filled in by a rule, not read from the document | Durch eine Regel ergänzt, nicht aus dem Beleg ausgelesen |
 | `hint.needed` | Needed for approval | Für die Freigabe nötig |
@@ -566,6 +567,10 @@ words in the third column.
 | `server.match.transfer_twin` | a transfer of the invoice total exists without an invoice number, but invoice {number} of this supplier has the same total | eine Überweisung über den Rechnungsbetrag ohne Rechnungsnummer existiert, aber Rechnung {number} dieses Lieferanten hat denselben Betrag |
 | `server.match.transfers_ambiguous` | several transfers fit equally well: {transfers} | mehrere Überweisungen passen gleich gut: {transfers} |
 | `server.match.transfers_two` | transfers {first} and {second} add up to the invoice total | Überweisungen {first} und {second} ergeben zusammen den Rechnungsbetrag |
+| `server.match.credit_offset` | transfer {transfer} pays invoice {number} less this credit note | Überweisung {transfer} bezahlt Rechnung {number} abzüglich dieser Gutschrift |
+| `server.match.no_refund` | no refund of this credit note, and no payment it was offset against | keine Erstattung dieser Gutschrift und keine Zahlung, mit der sie verrechnet wurde |
+| `server.match.refund` | transfer {transfer} from the supplier refunds this credit note | Überweisung {transfer} vom Lieferanten erstattet diese Gutschrift |
+| `server.match.transfer_offset` | transfer {transfer} is the invoice total less credit note {credit} ({credit_amount}) | Überweisung {transfer} ist der Rechnungsbetrag abzüglich Gutschrift {credit} ({credit_amount}) |
 
 ## Written by the server: order_note
 

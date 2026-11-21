@@ -140,7 +140,14 @@ amount by the credit notes booked against it; the CSV adds "Belegart", "Soll/Hab
 note S) and "Bezugsrechnung" (a month's file begun in the old twelve-column form keeps it, and refuses
 a credit note); the webhook sends a credit note as `credit_note.booking`, so that a receiver knowing
 only invoices cannot book it as one; the ERP's screens get "Belegart" and "Bezugsrechnung". Exactly
-once as for invoices.
+once as for invoices. Payments (Stage 5, increment 4): a transfer's amount is positive when paid out
+and negative when received; only money paid out pays an invoice. A credit note is settled by a refund
+of its total from the supplier, or by an offset — a transfer paying one of the supplier's invoices less
+the credit; an invoice paid that way is settled by two parts, the transfer and the credit note
+(`credit_note` on the payment), so it counts as paid. On a reference when the transfer names the
+credit note or the invoice, on the amount alone otherwise; several equal candidates leave the choice
+to a person. A credit note among the supplier's other documents never makes an invoice's payment
+ambiguous, and rejected documents are not counted.
 
 **Languages** (v1.0 Stage 4). The review UI speaks German and English: every text it has of its
 own is in `ui/lib/messages.ts`, where the German catalogue is typed against the English keys, so a

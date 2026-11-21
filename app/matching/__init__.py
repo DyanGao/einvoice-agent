@@ -2,6 +2,7 @@ from app.matching.matcher import (
     MatchingData,
     match_by_exact_keys,
     match_candidates,
+    match_credit_payments,
     match_invoice,
 )
 from app.matching.model import (
@@ -29,5 +30,6 @@ __all__ = [
     "PeerInvoice",
     "match_by_exact_keys",
     "match_candidates",
+    "match_credit_payments",
     "match_invoice",
 ]

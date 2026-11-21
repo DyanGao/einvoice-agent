@@ -557,6 +557,11 @@ export const en = {
   "doc.credit.credited": "Credited before",
   "doc.credit.left": "Left to credit",
   "doc.credits": "Credit notes",
+  "server.match.credit_offset": "transfer {transfer} pays invoice {number} less this credit note",
+  "server.match.no_refund": "no refund of this credit note, and no payment it was offset against",
+  "server.match.refund": "transfer {transfer} from the supplier refunds this credit note",
+  "server.match.transfer_offset": "transfer {transfer} is the invoice total less credit note {credit} ({credit_amount})",
+  "doc.match.offset": "{credit} offset ({amount})",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -1099,4 +1104,9 @@ export const de: Record<MessageKey, string> = {
   "doc.credit.credited": "Bereits gutgeschrieben",
   "doc.credit.left": "Noch gutzuschreiben",
   "doc.credits": "Gutschriften",
+  "server.match.credit_offset": "Überweisung {transfer} bezahlt Rechnung {number} abzüglich dieser Gutschrift",
+  "server.match.no_refund": "keine Erstattung dieser Gutschrift und keine Zahlung, mit der sie verrechnet wurde",
+  "server.match.refund": "Überweisung {transfer} vom Lieferanten erstattet diese Gutschrift",
+  "server.match.transfer_offset": "Überweisung {transfer} ist der Rechnungsbetrag abzüglich Gutschrift {credit} ({credit_amount})",
+  "doc.match.offset": "{credit} verrechnet ({amount})",
 };
