@@ -2,7 +2,8 @@
 
 // The UI's language (v1.0 Stage 4): German or English, chosen in the
 // masthead, remembered in this browser, at first taken from the browser's own
-// language. Texts come from lib/messages.ts; amounts, dates and percentages
+// language. Someone signed in has it kept with their account too
+// (components/Reviewer.tsx), and that choice wins in any browser. Texts come from lib/messages.ts; amounts, dates and percentages
 // are formatted the German or the British way.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -171,16 +172,17 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
 export const useI18n = () => useContext(LocaleContext);
 
-/** The masthead's language switch. */
-export function LanguageSwitch() {
+/** The masthead's language switch. `choose` replaces a plain change, to keep the choice elsewhere too. */
+export function LanguageSwitch({ choose }: { choose?: (locale: Locale) => void }) {
   const { locale, setLocale, t } = useI18n();
+  const change = choose ?? setLocale;
   return (
     <label className="language">
       <span className="visually-hidden">{t("language.label")}</span>
       <select
         aria-label={t("language.label")}
         value={locale}
-        onChange={(event) => setLocale(event.target.value as Locale)}
+        onChange={(event) => change(event.target.value as Locale)}
       >
         {LOCALES.map((option) => (
           <option key={option.value} value={option.value}>

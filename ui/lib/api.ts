@@ -271,6 +271,8 @@ export type Me = {
   name: string;
   email: string | null;
   role: Role;
+  /** The UI's language they chose; null: the browser's language decides. */
+  language: "de" | "en" | null;
   /** The tenant (company) this session works in. */
   tenant: Tenant;
   /** Every tenant the person is in, with their role there. */
@@ -313,6 +315,15 @@ export function switchTenant(tenantId: string): Promise<Me> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tenant_id: tenantId }),
+  });
+}
+
+/** The UI's language for the signed-in person, kept for their next sign-in. */
+export function saveLanguage(language: "de" | "en"): Promise<Me> {
+  return request("/auth/language", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ language }),
   });
 }
 

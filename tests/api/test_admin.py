@@ -215,3 +215,30 @@ def test_with_sign_in_off_members_are_managed_with_the_cli(session_factory, tmp_
     response = TestClient(app).get("/admin/members")
     assert response.status_code == 409
     assert "CLI" in response.json()["detail"]
+
+
+def test_the_language_one_chooses_is_kept_for_the_next_sign_in(session_factory, eva):
+    assert eva.get("/auth/me").json()["language"] is None
+    chosen = eva.post("/auth/language", headers=UI, json={"language": "de"})
+    assert chosen.status_code == 200, chosen.text
+    assert chosen.json()["language"] == "de"
+    # Another browser: a new session for the same person.
+    eva.cookies.clear()
+    sign_in(eva)
+    assert eva.get("/auth/me").json()["language"] == "de"
+
+
+def test_only_a_language_of_the_ui_is_taken(eva):
+    response = eva.post("/auth/language", headers=UI, json={"language": "fr"})
+    assert response.status_code == 422
+    assert eva.get("/auth/me").json()["language"] is None
+
+
+def test_choosing_a_language_needs_the_ui_header(eva):
+    assert eva.post("/auth/language", json={"language": "de"}).status_code == 403
+
+
+def test_a_token_has_no_language_to_choose(session_factory, client):
+    headers = bearer(session_factory, "bot@example.com", Role.REVIEWER)
+    response = client.post("/auth/language", headers=headers, json={"language": "de"})
+    assert response.status_code == 409

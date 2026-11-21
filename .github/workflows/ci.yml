@@ -136,7 +136,7 @@ jobs:
           make ui-install
           make ui-build
 
-      - name: Review UI in a browser
+      - name: Review UI in a browser, in English and in German
         run: |
           pnpm --dir ui exec playwright install --with-deps chromium
           make ui-test

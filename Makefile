@@ -233,8 +233,9 @@ ui:
 ui-build:
 	pnpm --dir ui build
 
-# Browser tests. They start their own in-memory API (tests/ui_server.py) and
-# need a browser once: pnpm --dir ui exec playwright install chromium
+# Browser tests, in English and then in German (the German run also scans the
+# rendered pages for English). They start their own in-memory API
+# (tests/ui_server.py) and need a browser once: pnpm --dir ui exec playwright install chromium
 ui-test:
 	pnpm --dir ui test:e2e
 
