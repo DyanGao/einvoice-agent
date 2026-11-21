@@ -277,8 +277,7 @@ eval-exceptions:
 # read correctly, are linked to the invoice they correct, and none is booked as
 # an invoice or without review. No services, no model.
 eval-credits:
-	uv run python -m eval.credits --split dev
-	uv run python -m eval.credits --split test --gate 0.95
+	uv run python -m eval.credits --gate 0.95
 
 # The decision engine's confidence threshold (needs the predictions of
 # eval-pdf-llm and of the scan set, like calibrate). `decide-fit` rewrites

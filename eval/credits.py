@@ -1,6 +1,9 @@
 """Measure credit notes end to end on the credit-note set (v1.0 Stage 5).
 
-    python -m eval.credits [--split test] [--gate 0.95]
+    python -m eval.credits [--gate 0.95] [--split test]
+
+Prints and writes both splits (eval/out/credits/credits-<split>.json);
+--gate applies to --split, the held-out one by default.
 
 Builds the matching world and the credit-note set from it
 (eval/generators/credits.py), puts the world's invoices "on file" into an
@@ -170,12 +173,18 @@ def _payments(document: DocumentRow) -> frozenset[ExpectedPayment]:
 
 
 def run(credit_set: CreditSet, read: Reader) -> list[Outcome]:
+    return run_readers(credit_set, {"run": read})["run"]
+
+
+def run_readers(credit_set: CreditSet, readers: dict[str, Reader]) -> dict[str, list[Outcome]]:
+    """Every credit note through each reader, against one database of the
+    invoices on file: checking those is most of the time."""
     engine = create_engine(
         "sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False}
     )
     Base.metadata.create_all(engine)
     checker = Checker(erp_for(credit_set.world))
-    outcomes = []
+    outcomes: dict[str, list[Outcome]] = {name: [] for name in readers}
     with Session(engine) as session:
         on_file = {
             entry.id: stored_document(entry.id, entry.invoice) for entry in credit_set.on_file
@@ -186,54 +195,55 @@ def run(credit_set: CreditSet, read: Reader) -> list[Outcome]:
             checker.check(session, document)
         session.commit()
         document_of = {document.id: key for key, document in on_file.items()}
-        for case in credit_set.cases:
-            gold = case.credit.to_gold(_SOURCE_FORMAT[case.format])
-            draft = read(case)
-            wrong, compared = wrong_fields(gold, draft)
-            if draft is None:
-                outcomes.append(
-                    Outcome(case, None, tuple(wrong), compared, None, frozenset(), frozenset(),
-                            None, None, "review")
-                )  # fmt: skip
-                continue
-            document = _read_document(case, draft)
-            session.add(document)
-            session.flush()
-            checker.check(session, document)
-            link = document.credit_link
-            linked_to = (
-                None
-                if link is None or link.invoice_document_id is None
-                else document_of[link.invoice_document_id]
-            )
-            try:
-                booking = booking_for(document)
-                booked_type, booked_invoice = booking.document_type, booking.preceding_invoice
-            except (NotBookable, ValueError):
-                booked_type = booked_invoice = None
-            offset = frozenset()
-            if case.offset_invoice_id is not None:
-                # The invoice paid less the credit, looked at again now that
-                # the credit note is on file.
-                partner = on_file[case.offset_invoice_id]
-                checker.check(session, partner)
-                offset = _payments(partner)
-            outcomes.append(
-                Outcome(
-                    case,
-                    draft,
-                    tuple(wrong),
-                    compared,
-                    linked_to,
-                    _payments(document),
-                    offset,
-                    booked_type,
-                    booked_invoice,
-                    document.decision.route,
+        for name, read in readers.items():
+            for case in credit_set.cases:
+                gold = case.credit.to_gold(_SOURCE_FORMAT[case.format])
+                draft = read(case)
+                wrong, compared = wrong_fields(gold, draft)
+                if draft is None:
+                    outcomes[name].append(
+                        Outcome(case, None, tuple(wrong), compared, None, frozenset(), frozenset(),
+                                None, None, "review")
+                    )  # fmt: skip
+                    continue
+                document = _read_document(case, draft)
+                session.add(document)
+                session.flush()
+                checker.check(session, document)
+                link = document.credit_link
+                linked_to = (
+                    None
+                    if link is None or link.invoice_document_id is None
+                    else document_of[link.invoice_document_id]
                 )
-            )
-            # Each credit note meets the same invoices on file, never another one.
-            session.rollback()
+                try:
+                    booking = booking_for(document)
+                    booked_type, booked_invoice = booking.document_type, booking.preceding_invoice
+                except (NotBookable, ValueError):
+                    booked_type = booked_invoice = None
+                offset = frozenset()
+                if case.offset_invoice_id is not None:
+                    # The invoice paid less the credit, looked at again now that
+                    # the credit note is on file.
+                    partner = on_file[case.offset_invoice_id]
+                    checker.check(session, partner)
+                    offset = _payments(partner)
+                outcomes[name].append(
+                    Outcome(
+                        case,
+                        draft,
+                        tuple(wrong),
+                        compared,
+                        linked_to,
+                        _payments(document),
+                        offset,
+                        booked_type,
+                        booked_invoice,
+                        document.decision.route,
+                    )
+                )
+                # Each credit note meets the same invoices on file, never another one.
+                session.rollback()
     engine.dispose()
     return outcomes
 
@@ -384,7 +394,9 @@ def _print(result: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--split", choices=("dev", "test", "all"), default="test")
+    parser.add_argument(
+        "--split", choices=("dev", "test", "all"), default="test", help="the split gated"
+    )
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--out", type=Path, default=Path("eval/out/credits"))
     parser.add_argument("--gate", type=float, help="fail unless the link is right this often")
@@ -393,18 +405,27 @@ def main() -> int:
     credit_set = build_credit_set(world, args.seed)
     write_set(credit_set, args.out)
     numbers = {entry.id: entry.invoice.number for entry in world.invoices}
-    result = {}
-    for name, reader in ((AS_READ, file_reader()), (READ_CORRECTLY, read_correctly)):
-        outcomes = [o for o in run(credit_set, reader) if args.split in ("all", o.case.split)]
-        result[name] = score(outcomes, numbers)
-        if name == READ_CORRECTLY:
-            result[name]["reading"] = {}  # nothing was read
-    (args.out / f"credits-{args.split}.json").write_text(
-        json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8"
-    )
-    for name, title in ((AS_READ, "as read from the files"), (READ_CORRECTLY, "read correctly")):
-        print(f"== credit-note set, {args.split} split, seed {args.seed}: {title}")
-        _print(result[name])
+    # One run for both splits: each is scored, printed and written apart.
+    runs = run_readers(credit_set, {AS_READ: file_reader(), READ_CORRECTLY: read_correctly})
+    results = {}
+    for split in ("dev", "test", "all"):
+        result = {}
+        for name, outcomes in runs.items():
+            result[name] = score([o for o in outcomes if split in ("all", o.case.split)], numbers)
+        result[READ_CORRECTLY]["reading"] = {}  # nothing was read
+        results[split] = result
+        (args.out / f"credits-{split}.json").write_text(
+            json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8"
+        )
+        if split == "all":
+            continue
+        for name, title in (
+            (AS_READ, "as read from the files"),
+            (READ_CORRECTLY, "read correctly"),
+        ):
+            print(f"== credit-note set, {split} split, seed {args.seed}: {title}")
+            _print(result[name])
+    result = results[args.split]
     if args.gate is None:
         return 0
     failed = []

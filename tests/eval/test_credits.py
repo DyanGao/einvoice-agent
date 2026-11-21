@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import pytest
 
-from eval.credits import Outcome, file_reader, read_correctly, run, score
+from eval.credits import Outcome, file_reader, read_correctly, run, run_readers, score
 from eval.generators.credits import (
     CII,
     INVOICE_NOT_ON_FILE,
@@ -34,13 +34,24 @@ def numbers(world):
 
 
 @pytest.fixture(scope="module")
-def correctly(credit_set):
-    return run(credit_set, read_correctly)
+def runs(credit_set):
+    return run_readers(credit_set, {"correctly": read_correctly, "as_read": file_reader()})
 
 
 @pytest.fixture(scope="module")
-def as_read(credit_set):
-    return run(credit_set, file_reader())
+def correctly(runs):
+    return runs["correctly"]
+
+
+@pytest.fixture(scope="module")
+def as_read(runs):
+    return runs["as_read"]
+
+
+def test_one_reader_runs_alone_as_in_a_run_of_several(credit_set, correctly):
+    few = replace(credit_set, cases=credit_set.cases[:3])
+    alone = run(few, read_correctly)
+    assert [o.linked_to for o in alone] == [o.linked_to for o in correctly[:3]]
 
 
 def test_read_correctly_every_credit_note_is_linked_right(correctly, numbers):
