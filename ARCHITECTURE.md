@@ -132,8 +132,15 @@ take in every credited line, issued no later; several: none chosen. Other credit
 invoices and other suppliers' invoices are never candidates. What earlier credit notes (received
 before, not rejected) took back is subtracted, and a credit for more than is left is a finding, as is
 a credit note without its invoice. A credit note is not matched to orders, deliveries or payments and
-is compared for duplicates with credit notes only. The review page shows the link both ways. Credit
-notes still go to review and are not booked (D9) until Stage 5, increment 3.
+is compared for duplicates with credit notes only. The review page shows the link both ways. A credit
+note still goes to a person; once approved it is booked (D9 superseded for 381): the booking carries
+`document_type` 381 and `preceding_invoice` (the linked invoice's number, else BT-25), amounts
+positive, and each channel gives the sign — the ERP API stores both and lowers the invoice's open
+amount by the credit notes booked against it; the CSV adds "Belegart", "Soll/Haben" (invoice H, credit
+note S) and "Bezugsrechnung" (a month's file begun in the old twelve-column form keeps it, and refuses
+a credit note); the webhook sends a credit note as `credit_note.booking`, so that a receiver knowing
+only invoices cannot book it as one; the ERP's screens get "Belegart" and "Bezugsrechnung". Exactly
+once as for invoices.
 
 **Languages** (v1.0 Stage 4). The review UI speaks German and English: every text it has of its
 own is in `ui/lib/messages.ts`, where the German catalogue is typed against the English keys, so a
@@ -216,7 +223,7 @@ comments refer to them by these numbers. A decision that replaced another says s
 | D6 | Matching is deterministic candidate search and scoring first; an agent only for what remains _(remainder superseded by D11)_ | agent for every invoice | most invoices quote an order; the rule-based matcher is also the eval's baseline to beat |
 | D7 | A match is a set of allocations (invoice → order, delivery, payment, each with an amount), not one row with one order, delivery and transfer | the 1:1:1:1 `Match` drafted in §4 | partial deliveries, instalments and one transfer paying several invoices cannot be expressed otherwise. Answers open question §8.2 |
 | D8 | v1 models a field subset of EN 16931: number, dates, type, currency, buyer reference, order reference, seller and buyer name and VAT ID, IBAN, totals, VAT breakdown, line id, quantity, unit price, net, VAT rate, description | all of EN 16931 | exactly what booking, the checks and the matcher use; everything else stays in the original document. Answers open question §8.1 |
-| D9 | Credit notes (381) and other document types are parsed but always go to review, and are never delivered to a connector _(for 381, to be superseded by Stage 5 of v1.0: D13 fixes the sign; booking follows)_ | book them with a negative sign | sign handling in matching and booking is a project of its own; a credit note booked as an invoice is worse than asking |
+| D9 | Credit notes (381) and other document types are parsed but always go to review, and are never delivered to a connector _(superseded for 381 by D13 in v1.0 Stage 5: a credit note is booked, with its sign, once a person approved it; every other type is still booked by hand)_ | book them with a negative sign | sign handling in matching and booking is a project of its own; a credit note booked as an invoice is worse than asking |
 | D10 | Parsers are tested against the official XRechnung test suite and ZUGFeRD sample files, not only the project's own generator | generator only | "ground truth by construction" is circular when generator and parser share one author's reading of the standard |
 | D11 | No model-based matching agent in v1: the rule-based matcher decides what it can and leaves the rest open for a person | a tool-calling agent for the remainder (2, D6) | on the eval world the rules reach 100 % on the held-out split and 99.5 % on seeds never looked at, with no wrong link; what remains is undecidable for any reader. An agent would add cost and a place for injected text to act. Revisit with real data or a harder world |
 | D12 | An invoice that prints no currency is read as EUR (confirmed by the project owner, 2026-11-15). The value is marked as assumed and the invoice goes to a person | leave the currency empty and refuse; ask the model to infer it from the country | German invoices without a currency sign are EUR in practice; an assumption stays visible and reviewed instead of passing as a reading (`app/extract/complete.py`). Review kept after the confirmation (2026-11-15): on dev it held back two misread scans that confidence missed |

@@ -39,11 +39,33 @@ SECOND = Booking(
 )
 
 
+# A credit note taking back part of FIRST: positive amounts, "S" on the
+# supplier's account, and the invoice it corrects (v1.0 Stage 5).
+CREDIT = Booking(
+    supplier_id="S001",
+    number="GS-2026-00003",
+    issue_date="2026-03-20",
+    due_date=None,
+    currency="EUR",
+    net_total="100.00",
+    vat_total="19.00",
+    gross_total="119.00",
+    amount_due="119.00",
+    po_number=None,
+    iban=None,
+    reference="doc-3",
+    document_type="381",
+    preceding_invoice="RE-2026-00042",
+)
+
+
 def test_export_matches_the_golden_file_byte_for_byte(tmp_path):
-    """Decimal comma, DD.MM.YYYY, Windows-1252, semicolons, CRLF, one header."""
+    """Decimal comma, DD.MM.YYYY, Windows-1252, semicolons, CRLF, one header;
+    an invoice is "H", a credit note "S" with its invoice."""
     export = CsvExportConnector(tmp_path)
     export.deliver(FIRST, "k1")
     export.deliver(SECOND, "k2")
+    export.deliver(CREDIT, "k3")
     assert (tmp_path / GOLDEN.name).read_bytes() == GOLDEN.read_bytes()
 
 
@@ -59,7 +81,7 @@ def test_delivering_the_same_booking_again_writes_no_second_row(tmp_path):
     """A retry after a crash between writing and recording."""
     export = CsvExportConnector(tmp_path)
     first = export.deliver(FIRST, "k1")
-    assert (export.deliver(FIRST, "k1"), len(GOLDEN.read_bytes().splitlines())) == (first, 3)
+    assert (export.deliver(FIRST, "k1"), len(GOLDEN.read_bytes().splitlines())) == (first, 4)
     assert len((tmp_path / GOLDEN.name).read_bytes().splitlines()) == 2
 
 
@@ -103,3 +125,30 @@ def test_folder_that_cannot_be_written_is_retried(tmp_path):
     with pytest.raises(DeliveryFailed) as failed:
         CsvExportConnector(blocker).deliver(FIRST, "k1")
     assert failed.value.retryable is True
+
+
+def test_a_credit_note_delivered_again_writes_no_second_row(tmp_path):
+    export = CsvExportConnector(tmp_path)
+    export.deliver(FIRST, "k1")
+    first = export.deliver(CREDIT, "k3")
+    assert export.deliver(CREDIT, "k3") == first
+    assert len((tmp_path / GOLDEN.name).read_bytes().splitlines()) == 3
+
+
+def test_a_file_begun_in_the_old_format_keeps_it_and_refuses_a_credit_note(tmp_path):
+    from app.connectors.csv_export import OLD_HEADER
+
+    old_row = "01.03.2026;RE-0;S009;1,00;;1,00;1,00;EUR;;;;doc-0"
+    (tmp_path / GOLDEN.name).write_bytes(
+        (";".join(OLD_HEADER) + "\r\n" + old_row + "\r\n").encode("cp1252")
+    )
+    export = CsvExportConnector(tmp_path)
+    export.deliver(FIRST, "k1")
+    rows = (tmp_path / GOLDEN.name).read_bytes().decode("cp1252").splitlines()
+    # The invoice in the file's own twelve columns, as before.
+    assert rows[2].split(";")[-1] == "doc-1"
+    assert len(rows[2].split(";")) == len(OLD_HEADER)
+    with pytest.raises(DeliveryFailed) as refused:
+        export.deliver(CREDIT, "k3")
+    assert not refused.value.retryable
+    assert refused.value.args[0].code == "delivery.csv_old_format"

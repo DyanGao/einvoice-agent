@@ -2,6 +2,7 @@
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict
@@ -29,6 +30,10 @@ class Booking(BaseModel):
     iban: str | None = None
     # The sender's own reference for the invoice.
     reference: str
+    # 380 invoice, 381 credit note: the amounts are positive either way.
+    document_type: Literal["380", "381"] = "380"
+    # A credit note's invoice, by its number.
+    preceding_invoice: str | None = None
 
 
 def _cents_or_none(amount: Decimal | None) -> int | None:
@@ -49,10 +54,31 @@ def _booking_columns(booking: Booking) -> dict:
         "po_number": booking.po_number,
         "iban": booking.iban,
         "reference": booking.reference,
+        "document_type": booking.document_type,
+        "preceding_invoice": booking.preceding_invoice,
     }
 
 
-def booked_json(row: db.BookedInvoiceRow) -> dict:
+def credited_cents(active: Session, row: db.BookedInvoiceRow) -> int:
+    """What the supplier's booked credit notes naming this invoice take back."""
+    if row.document_type != "381":
+        credited = active.scalars(
+            select(db.BookedInvoiceRow.gross_cents).where(
+                db.BookedInvoiceRow.supplier_id == row.supplier_id,
+                db.BookedInvoiceRow.document_type == "381",
+                db.BookedInvoiceRow.preceding_invoice == row.number,
+            )
+        )
+        return sum(credited)
+    return 0
+
+
+def booked_json(row: db.BookedInvoiceRow, active: Session | None = None) -> dict:
+    """A booking; with a session, an invoice also says what of it is still
+    open after the credit notes booked against it."""
+    open_amount = None
+    if active is not None and row.document_type != "381":
+        open_amount = db.euros(row.amount_due_cents - credited_cents(active, row))
     return {
         "id": row.id,
         "supplier_id": row.supplier_id,
@@ -69,6 +95,9 @@ def booked_json(row: db.BookedInvoiceRow) -> dict:
         "reference": row.reference,
         "channel": row.channel,
         "booked_at": row.booked_at,
+        "document_type": row.document_type,
+        "preceding_invoice": row.preceding_invoice,
+        "open_amount": open_amount,
     }
 
 
@@ -85,7 +114,7 @@ def book(active: Session, booking: Booking, key: str, channel: str) -> tuple[dic
     if existing is not None:
         if any(getattr(existing, name) != value for name, value in columns.items()):
             raise HTTPException(409, f"key {key} was already used for a different booking")
-        return booked_json(existing), False
+        return booked_json(existing, active), False
     if active.get(db.SupplierRow, booking.supplier_id) is None:
         raise HTTPException(422, f"no supplier {booking.supplier_id}")
     row = db.BookedInvoiceRow(
@@ -96,4 +125,4 @@ def book(active: Session, booking: Booking, key: str, channel: str) -> tuple[dic
     )
     active.add(row)
     active.commit()
-    return booked_json(row), True
+    return booked_json(row, active), True

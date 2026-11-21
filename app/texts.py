@@ -183,8 +183,11 @@ ENGLISH: dict[str, str] = {
     # Why a delivery did not happen (app/connectors, app/delivery.py)
     "delivery.supplier_unknown": "the supplier is not known in the ERP",
     "delivery.not_an_invoice": (
-        "document type {type_code} is not an ordinary invoice; credit notes and other types are "
-        "booked by hand"
+        "document type {type_code} is neither an invoice nor a credit note; it is booked by hand"
+    ),
+    "delivery.csv_old_format": (
+        "{file} was begun without the columns a credit note needs, so credit note {number} "
+        "cannot be written there; move the file aside to begin a new one"
     ),
     "delivery.erp_unreachable": "ERP not reachable: {detail}",
     "delivery.erp_failed": "ERP failed with {status}: {detail}",

@@ -242,18 +242,20 @@ def create_app(engine: Engine, ui_quirk: str | None = None) -> FastAPI:
         if reference is not None:
             query = query.where(db.BookedInvoiceRow.reference == reference)
         rows = active.scalars(query.order_by(db.BookedInvoiceRow.id).limit(limit).offset(offset))
-        return {"booked_invoices": [booked_json(row) for row in rows]}
+        return {"booked_invoices": [booked_json(row, active) for row in rows]}
 
     @app.get("/booked-invoices/{booking_id}")
     def booked_invoice(booking_id: int, active: Db) -> dict:
         row = active.get(db.BookedInvoiceRow, booking_id)
         if row is None:
             raise HTTPException(404, "booking not found")
-        return booked_json(row)
+        return booked_json(row, active)
 
     return app
 
 
 def create_app_from_env() -> FastAPI:
     """For `uvicorn --factory mock_erp.main:create_app_from_env`."""
-    return create_app(db.engine_for(db.database_url()))
+    engine = db.engine_for(db.database_url())
+    db.upgrade(engine)
+    return create_app(engine)

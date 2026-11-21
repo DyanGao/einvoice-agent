@@ -1,7 +1,10 @@
 """Posts each decided invoice to a receiver the installation names, signed.
 
 The request is `{"type": "invoice.booking", "id": <key>, "booking": {...}}`
-with these headers:
+— `"credit_note.booking"` for a credit note, so that a receiver that knows
+only invoices cannot book one as an invoice; its booking says
+`"document_type": "381"`, its amounts are positive and its invoice is in
+`preceding_invoice` (v1.0 Stage 5) — with these headers:
 
 - `Idempotency-Key`: the same on every attempt, so the receiver can drop a
   repeat (a retry after an answer was lost);
@@ -96,7 +99,11 @@ class WebhookConnector:
 
     def deliver(self, booking: Booking, key: str) -> str:
         body = json.dumps(
-            {"type": "invoice.booking", "id": key, "booking": booking.as_json()},
+            {
+                "type": "credit_note.booking" if booking.is_credit_note else "invoice.booking",
+                "id": key,
+                "booking": booking.as_json(),
+            },
             sort_keys=True,
             ensure_ascii=False,
         ).encode()

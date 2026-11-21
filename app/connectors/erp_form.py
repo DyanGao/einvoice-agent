@@ -50,6 +50,9 @@ LABELS = (
     ("po_number", "Bestellnummer"),
     ("iban", "IBAN"),
     ("reference", "Ihre Referenz"),
+    # 380 Rechnung, 381 Gutschrift; the invoice a credit note corrects.
+    ("document_type", "Belegart"),
+    ("preceding_invoice", "Bezugsrechnung"),
 )
 _DATES = {"issue_date", "due_date"}
 _AMOUNTS = {"net_total", "vat_total", "gross_total", "amount_due"}

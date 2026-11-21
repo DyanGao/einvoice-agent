@@ -82,3 +82,49 @@ def test_bookings_are_listed_by_supplier(client):
 def test_booking_records_the_channel_it_came_through(client):
     created = book(client).json()
     assert created["channel"] == "api"
+
+
+CREDIT = {
+    **BOOKING,
+    "number": "GS-2026-00001",
+    "net_total": "40.00",
+    "vat_total": "7.60",
+    "gross_total": "47.60",
+    "amount_due": "47.60",
+    "reference": "doc-2",
+    "document_type": "381",
+    "preceding_invoice": "RE-2026-00042",
+}
+
+
+def test_a_credit_note_lowers_what_is_open_of_its_invoice(client):
+    invoice = book(client).json()
+    assert (invoice["document_type"], invoice["open_amount"]) == ("380", "119.00")
+    credit = book(client, CREDIT, "key-2").json()
+    assert (credit["document_type"], credit["preceding_invoice"], credit["open_amount"]) == (
+        "381",
+        "RE-2026-00042",
+        None,
+    )
+    assert client.get(f"/booked-invoices/{invoice['id']}").json()["open_amount"] == "71.40"
+
+
+def test_another_document_type_is_refused(client):
+    assert book(client, {**CREDIT, "document_type": "384"}).status_code == 422
+
+
+def test_a_database_seeded_before_credit_notes_gets_their_columns(tmp_path):
+    from sqlalchemy import inspect, text
+
+    from mock_erp import db
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'erp.sqlite3'}")
+    seed.load(build_world(), engine)
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE booked_invoices DROP COLUMN document_type"))
+        connection.execute(text("ALTER TABLE booked_invoices DROP COLUMN preceding_invoice"))
+    db.upgrade(engine)
+    db.upgrade(engine)  # nothing to do the second time
+    columns = {c["name"] for c in inspect(engine).get_columns("booked_invoices")}
+    assert {"document_type", "preceding_invoice"} <= columns
+    assert book(TestClient(create_app(engine))).json()["document_type"] == "380"

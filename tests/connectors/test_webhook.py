@@ -179,3 +179,21 @@ def test_receiver_without_an_id_in_its_answer_is_still_a_delivery():
         client=httpx.Client(transport=httpx.MockTransport(accepted)),
     )
     assert webhook.deliver(replace(BOOKING, reference="doc-2"), "k") == "HTTP 202"
+
+
+def test_a_credit_note_is_an_event_of_its_own():
+    """A receiver that knows only invoices must not book a credit note as one."""
+    receiver = Receiver()
+    credit = replace(BOOKING, document_type="381", preceding_invoice="RE-1", number="GS-1")
+    connector(receiver).deliver(credit, "k")
+    ((_, body),) = receiver.received
+    sent = json.loads(body)
+    assert (
+        sent["type"],
+        sent["booking"]["document_type"],
+        sent["booking"]["preceding_invoice"],
+    ) == (
+        "credit_note.booking",
+        "381",
+        "RE-1",
+    )

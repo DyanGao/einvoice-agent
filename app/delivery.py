@@ -28,6 +28,7 @@ from app.db.review import ReviewState
 from app.db.rls import tenant_transaction
 from app.db.tables import DEFAULT_TENANT_ID, AuditEventRow, DeliveryRow, DocumentRow
 from app.extract.draft import InvoiceDraft
+from app.models.invoice import CREDIT_NOTE, INVOICE
 from app.texts import Text, said
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,11 @@ FIRST_RETRY = timedelta(seconds=30)
 LONGEST_WAIT = timedelta(hours=1)
 
 PENDING, DELIVERED, FAILED = "pending", "delivered", "failed"
+
+
+# An invoice, and a credit note (v1.0 Stage 5, increment 3). Every other type
+# is booked by hand.
+BOOKABLE_TYPES = frozenset({INVOICE, CREDIT_NOTE})
 
 
 class NotBookable(ValueError):
@@ -62,9 +68,8 @@ def booking_for(document: DocumentRow) -> Booking:
     if document.match is None or document.match.supplier_id is None:
         raise NotBookable(Text("delivery.supplier_unknown"))
     invoice = InvoiceDraft.model_validate(document.draft.data).to_invoice()
-    if invoice.type_code != "380":
-        # A booking has no sign and no document type: a credit note would be
-        # booked as an invoice. Until that exists (deferred), it is booked by hand.
+    if invoice.type_code not in BOOKABLE_TYPES:
+        # A corrected or self-billed invoice and the rest: booked by hand.
         raise NotBookable(Text("delivery.not_an_invoice", type_code=invoice.type_code))
 
     def text(amount) -> str | None:
@@ -83,7 +88,20 @@ def booking_for(document: DocumentRow) -> Booking:
         po_number=document.match.po_number,
         iban=invoice.payment_ibans[0] if invoice.payment_ibans else None,
         reference=document.id,
+        document_type=invoice.type_code,
+        preceding_invoice=_credited_invoice(document, invoice) if invoice.is_credit_note else None,
     )
+
+
+def _credited_invoice(document: DocumentRow, invoice) -> str | None:
+    """The number of the invoice a credit note corrects: the one it was linked
+    to (and approved with), else the one it names."""
+    link = document.credit_link
+    if link is not None and link.invoice is not None and link.invoice.draft is not None:
+        number = link.invoice.draft.data.get("number")
+        if number:
+            return number
+    return invoice.preceding_ref
 
 
 def _channel(connector: Connector) -> str | None:

@@ -41,6 +41,9 @@ FIELDS = (
     ("po_number", "Bestellnummer"),
     ("iban", "IBAN"),
     ("reference", "Ihre Referenz"),
+    # 380 Rechnung, 381 Gutschrift; the invoice a credit note corrects.
+    ("document_type", "Belegart"),
+    ("preceding_invoice", "Bezugsrechnung"),
 )
 DATES = {"issue_date", "due_date"}
 AMOUNTS = {"net_total", "vat_total", "gross_total", "amount_due"}
@@ -165,6 +168,8 @@ def add_ui(app: FastAPI, engine: Engine, quirk: str | None = None) -> None:
                     parsed[name] = text
             if quirk == "truncating" and parsed["number"]:
                 parsed["number"] = parsed["number"][:8]  # an old field length
+            # An empty "Belegart" is an invoice, as before the field existed.
+            parsed["document_type"] = parsed.get("document_type") or "380"
             booking = Booking(**parsed)
         except (ValueError, ValidationError) as exc:
             return _page("Neue Buchung", form(submitted, f"Eingabe ungültig: {exc}"), status=422)

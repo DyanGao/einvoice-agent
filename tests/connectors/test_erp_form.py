@@ -251,3 +251,23 @@ def test_default_allowlist_is_the_erp_screens_host_and_port(monkeypatch, tmp_pat
     (connector,) = build_connectors(Settings.from_env())
     assert connector.permits("http://127.0.0.1:8100/ui")
     assert not connector.permits("http://127.0.0.1:8000/documents")
+
+
+def test_a_credit_note_is_booked_through_the_form_as_through_the_api(world, tmp_path):
+    credit = replace(
+        BOOKING,
+        number="GS-2026-00003",
+        reference="doc-3",
+        document_type="381",
+        preceding_invoice="RE-2026-00042",
+        po_number=None,
+    )
+    with erp(world) as (url, engine):
+        form_connector(url, tmp_path).deliver(credit, "k")
+    api_engine = erp_engine(world)
+    ErpApiConnector(TestClient(create_erp(api_engine))).deliver(credit, "k")
+    (by_form,), (by_api,) = stored(engine), stored(api_engine)
+    assert (by_form["document_type"], by_form["preceding_invoice"]) == ("381", "RE-2026-00042")
+    assert {k: v for k, v in by_form.items() if k not in NOT_COMPARED} == {
+        k: v for k, v in by_api.items() if k not in NOT_COMPARED
+    }
