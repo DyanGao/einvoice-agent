@@ -8,7 +8,7 @@ and run `make german-texts`.
 
 `{name}` is filled in when the text is shown: an amount, a date, a field's label, another text.
 
-481 texts.
+483 texts.
 
 ## Glossary
 
@@ -42,7 +42,7 @@ words in the third column.
 - Review page (74)
 - Rejection reasons (4)
 - Findings and causes (32)
-- History (19)
+- History (21)
 - Invoice fields (39)
 - Mail page (22)
 - Admin page (62)
@@ -312,6 +312,8 @@ words in the third column.
 | `audit.reopened` | Reopened for review: {note} | Zur Prüfung wieder geöffnet: {note} |
 | `audit.received` | Received | Eingegangen |
 | `audit.received_again` | Received again | Erneut eingegangen |
+| `audit.format_detected` | Format detected | Format erkannt |
+| `audit.payments_matched` | Payments matched | Zahlungen abgeglichen |
 | `audit.queued_again` | Queued again | Erneut eingereiht |
 | `audit.status_set` | Status set | Status gesetzt |
 | `audit.validated` | Validated | Validiert |

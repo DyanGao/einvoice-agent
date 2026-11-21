@@ -3,6 +3,9 @@
 einvoice process FILE...     detect, validate, parse and store structured invoices now
 einvoice watch DIR           queue every new file that appears in a folder
 einvoice requeue             queue documents that were stored but never processed
+einvoice texts-backfill [--apply]
+                             codes for texts stored before they had any (app/texts_backfill.py),
+                             so the UI shows them in German; counts only without --apply
 einvoice user-add EMAIL --name NAME --role ROLE [--password]
                              add a user; --password asks for one (the built-in admin),
                              without it they sign in through the identity provider;
@@ -38,6 +41,7 @@ from app.ingest import requeue_received, scan_folder
 from app.pipeline import DocumentStatus, Outcome, Validator, process_structured
 from app.queue import JobQueue, RqQueue
 from app.settings import Settings
+from app.texts_backfill import backfill
 from app.validate import KositValidator
 
 
@@ -61,6 +65,11 @@ def main(
     watch.add_argument("--interval", type=float, default=5.0, help="seconds between scans")
     watch.add_argument("--once", action="store_true", help="scan once and exit")
     commands.add_parser("requeue", help="queue stored documents that were never processed")
+    backfill = commands.add_parser(
+        "texts-backfill",
+        help="find the codes of texts stored before they had any, so the UI shows them in German",
+    )
+    backfill.add_argument("--apply", action="store_true", help="write them (without: only count)")
     user_add = commands.add_parser("user-add", help="add a user")
     user_add.add_argument("email")
     user_add.add_argument("--name", required=True)
@@ -86,6 +95,9 @@ def main(
     args = parser.parse_args(argv)
 
     settings = Settings.from_env()
+    if args.command == "texts-backfill":
+        session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
+        return _texts_backfill(session_factory, apply=args.apply)
     if args.command in ("tenant-add", "tenant-set", "tenant-show"):
         session_factory = session_factory or sessionmaker(database_engine(settings.database_url))
         return _tenants(args, session_factory, settings)
@@ -122,6 +134,21 @@ def main(
         all_valid = all_valid and report["status"] == DocumentStatus.VALID.value
         print(json.dumps(report, ensure_ascii=False))
     return 0 if all_valid else 1
+
+
+def _texts_backfill(session_factory: sessionmaker[Session], *, apply: bool) -> int:
+    report = backfill(session_factory, apply=apply)
+    places = sorted(set(report.coded) | set(report.english))
+    verb = "filled in" if apply else "would fill in"
+    for place in places:
+        print(f"{place}: {verb} {report.coded[place]}, left in English {report.english[place]}")
+        for sentence in report.examples.get(place, []):
+            print(f"    left: {sentence}")
+    if not places:
+        print("nothing to fill in: every stored text has its code")
+    elif not apply:
+        print("nothing written; run again with --apply to write")
+    return 0
 
 
 def _tenant_option(command: argparse.ArgumentParser) -> None:

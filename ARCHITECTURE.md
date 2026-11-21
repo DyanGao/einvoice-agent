@@ -136,7 +136,10 @@ findings, decision reasons, match explanations, re-match triggers, delivery erro
 (`app/texts.py`): a `str` that is the English sentence, as before, and also carries a code and
 parameters. They are stored next to the sentence (`findings.text`, `matches.explanation_texts`,
 `deliveries.error_text`, a `text` in each decision reason and `trigger_text` in the history) and the UI
-renders them in its language (`server.<code>` in the catalogues), falling back to the English sentence.
+renders them in its language (`server.<code>` in the catalogues), falling back to the English sentence. Rows
+stored before codes existed get them with `einvoice texts-backfill [--apply]` (`app/texts_backfill.py`):
+each English template is matched against the stored sentence, and a code is kept only when the `Text`
+made from it is exactly that sentence again; the history (`audit_events`) is not rewritten.
 Parameters named `…_amount`, `…_percent` and `fields` are formatted by the UI (amounts, shares, field
 labels). `tests/test_texts.py` fails if a code lacks a German or English text or if their parameters
 differ. The API's refusals work the same way: an `HTTPException` whose detail is a `Text` is answered
