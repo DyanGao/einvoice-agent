@@ -291,3 +291,32 @@ def test_badges_say_not_run_when_there_are_no_results(tmp_path):
 
     badges = readme_badges(collect(tmp_path, tmp_path / "recordings", MODEL, None))
     assert "not%20run" in badges
+
+
+def _credits(link_right: int, cases: int, as_invoice: int) -> dict:
+    def run(booked_as_invoice: int) -> dict:
+        link = {"cases": cases, "right": link_right, "wrong": 0, "accuracy": link_right / cases}
+        return {
+            "link": link,
+            "link_by_variant": {"full_reference": link},
+            "reading": {"ubl": {"field_accuracy": 1.0}},
+            "payments": {"cases": cases, "right": cases, "wrong": 0},
+            "booking": {
+                "booked_as_invoice": booked_as_invoice,
+                "read_as_invoice": booked_as_invoice,
+                "booked_without_review": 0,
+            },
+        }
+
+    return {"as_read": run(as_invoice), "read_correctly": run(0)}
+
+
+def test_credit_notes_row_shows_the_link_read_correctly_and_bookings_as_invoices(tmp_path):
+    (tmp_path / "credits").mkdir()
+    (tmp_path / "credits" / "credits-test.json").write_text(
+        json.dumps(_credits(link_right=47, cases=50, as_invoice=1))
+    )
+    results = collect(tmp_path, tmp_path / "recordings", MODEL, None)
+    (row,) = [line for line in readme_table(results).splitlines() if "Credit notes" in line]
+    assert "**94.0 %** (50 credit notes, 0 linked wrong; 1 booked as an invoice)" in row
+    assert "### Credit notes, held-out split" in details(results)

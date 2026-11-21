@@ -9,6 +9,7 @@ import io
 import json
 from collections.abc import Iterator
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
@@ -34,10 +35,15 @@ def split_of(layout: Layout) -> str:
 
 
 class _Page:
-    def __init__(self, layout: Layout) -> None:
+    def __init__(self, layout: Layout, *, negative: bool = False) -> None:
         self.buffer = io.BytesIO()
         self.canvas = Canvas(self.buffer, pagesize=A4, invariant=1)
         self.layout = layout
+        # A credit note printed with its amounts negative, as many are.
+        self.negative = negative
+
+    def amount(self, value: Decimal) -> Decimal:
+        return -value if self.negative else value
 
     def text(self, x: float, y: float, value: str, *, size: int = 10, bold: bool = False) -> None:
         self.canvas.setFont(BOLD[self.layout.font] if bold else self.layout.font, size)
@@ -108,11 +114,19 @@ def _buyer_block(page: _Page, buyer: Company) -> None:
         page.text(LEFT, y, _labelled(page.layout, "buyer_vat_id", buyer.vat_id))
 
 
+def _is_credit(invoice: CanonicalInvoice) -> bool:
+    return invoice.type_code == "381"
+
+
+def _label(layout: Layout, invoice: CanonicalInvoice, key: str) -> str:
+    return layout.credit_label(key) if _is_credit(invoice) else layout.label(key)
+
+
 def _meta_rows(layout: Layout, invoice: CanonicalInvoice) -> list[tuple[str, str]]:
-    rows = [
-        (layout.label("number"), invoice.number),
-        (layout.label("issue_date"), layout.date(invoice.issue_date)),
-    ]
+    rows = [(_label(layout, invoice, "number"), invoice.number)]
+    if invoice.preceding_ref:
+        rows.append((layout.credit_label("preceding_ref"), invoice.preceding_ref))
+    rows.append((layout.label("issue_date"), layout.date(invoice.issue_date)))
     if invoice.due_date:
         rows.append((layout.label("due_date"), layout.date(invoice.due_date)))
     if invoice.po_ref:
@@ -126,7 +140,7 @@ def _meta_block(page: _Page, invoice: CanonicalInvoice) -> None:
     layout = page.layout
     rows = _meta_rows(layout, invoice)
     title_y = PAGE_HEIGHT - 260
-    page.text(LEFT, title_y, layout.label("title"), size=16, bold=True)
+    page.text(LEFT, title_y, _label(layout, invoice, "title"), size=16, bold=True)
     separator = layout.label_separator
     if layout.meta_position == "right_box":
         y = PAGE_HEIGHT - 170
@@ -154,8 +168,13 @@ def _meta_block(page: _Page, invoice: CanonicalInvoice) -> None:
         for start in range(0, len(rows), 3):
             x = LEFT
             for label, value in rows[start : start + 3]:
-                page.text(x, y, f"{label}{separator} {value}", size=9)
-                x += 165
+                text = f"{label}{separator} {value}"
+                page.text(x, y, text, size=9)
+                # A credit note's next pair after this one, never over it (its
+                # labels are longer). An invoice keeps its places, overlaps and
+                # all: the recorded model answers are for those exact files.
+                width = page.canvas.stringWidth(text, page.layout.font, 9)
+                x = max(x + 165, x + width + 18) if _is_credit(invoice) else x + 165
             y -= 13
 
 
@@ -185,7 +204,7 @@ def _table(page: _Page, invoice: CanonicalInvoice) -> float:
             "qty": f"{layout.quantity(item.quantity)} {layout.unit(item.unit_code)}",
             "unit_price": layout.number(item.unit_price),
             "vat": f"{item.vat_rate} %",
-            "net": layout.number(item.net),
+            "net": layout.number(page.amount(item.net)),
         }
         for column in layout.columns:
             cell(column, y, values[column])
@@ -207,14 +226,16 @@ def _totals(page: _Page, invoice: CanonicalInvoice, y: float) -> float:
     y -= 12
     for label, amount, bold in rows:
         page.text_right(RIGHT - 110, y, label, bold=bold)
-        page.text_right(RIGHT - 4, y, layout.money(amount, invoice.currency), bold=bold)
+        page.text_right(
+            RIGHT - 4, y, layout.money(page.amount(amount), invoice.currency), bold=bold
+        )
         y -= 15
     return y
 
 
 def _payment(page: _Page, invoice: CanonicalInvoice, y: float) -> None:
     layout = page.layout
-    lines = [] if invoice.due_date else [layout.label("no_due_date")]
+    lines = [] if invoice.due_date else [_label(layout, invoice, "no_due_date")]
     lines += [_labelled(layout, "iban", layout.iban(iban)) for iban in invoice.ibans]
     footer = []
     if layout.bank_position == "footer":
@@ -268,8 +289,15 @@ def _notes(page: _Page, notes: tuple[Note, ...]) -> None:
     page.canvas.setFillColorRGB(0, 0, 0)
 
 
-def render_pdf(invoice: CanonicalInvoice, layout: Layout, notes: tuple[Note, ...] = ()) -> bytes:
-    page = _Page(layout)
+def render_pdf(
+    invoice: CanonicalInvoice,
+    layout: Layout,
+    notes: tuple[Note, ...] = (),
+    *,
+    negative: bool = False,
+) -> bytes:
+    """`negative` prints a credit note's line and total amounts with a minus."""
+    page = _Page(layout, negative=negative)
     _seller_block(page, invoice.seller)
     _buyer_block(page, invoice.buyer)
     _meta_block(page, invoice)

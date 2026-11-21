@@ -147,7 +147,10 @@ the credit; an invoice paid that way is settled by two parts, the transfer and t
 (`credit_note` on the payment), so it counts as paid. On a reference when the transfer names the
 credit note or the invoice, on the amount alone otherwise; several equal candidates leave the choice
 to a person. A credit note among the supplier's other documents never makes an invoice's payment
-ambiguous, and rejected documents are not counted.
+ambiguous, and rejected documents are not counted. Measured by `make eval-credits` (Stage 5,
+increment 5; a CI gate): 160 synthetic credit notes for the matching world's invoices, read from UBL,
+CII and PDF files and then as read correctly, through the checker and `booking_for`; the link must be
+right for 95 % of the held-out ones, and none may be booked as an invoice or without review.
 
 **Languages** (v1.0 Stage 4). The review UI speaks German and English: every text it has of its
 own is in `ui/lib/messages.ts`, where the German catalogue is typed against the English keys, so a

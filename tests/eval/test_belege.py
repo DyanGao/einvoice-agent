@@ -121,3 +121,19 @@ def test_summary_counts_fields_documents_and_groups():
     assert summary["overall"]["document_exact_match"] == 0.5
     assert summary["by"]["variant:photo"]["field_accuracy"] == 0.8
     assert summary["wrong_by_field"] == {"vat_total": 1, "lines": 1}
+
+
+def test_summary_keeps_credit_notes_apart_from_invoices():
+    def result(document_type: str, wrong: list[str]) -> dict:
+        return {
+            "variant": "scan",
+            "vat_scheme": "regelbesteuert",
+            "document_type": document_type,
+            "compared": 10,
+            "wrong": wrong,
+            "error": None,
+        }
+
+    summary = summarize([result("Rechnung", []), result("Gutschrift", ["gross_total"])])
+    assert summary["by"]["document_type:Rechnung"]["field_accuracy"] == 1.0
+    assert summary["by"]["document_type:Gutschrift"]["field_accuracy"] == 0.9

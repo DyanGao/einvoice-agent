@@ -146,3 +146,18 @@ def test_the_rule_based_reader_still_reads_an_invoice_number():
         .replace("zu Rechnung Nr.: RE-2026-01234\n", "")
     )
     assert (draft.type_code, draft.number, draft.preceding_ref) == ("380", "RE-2026-0042", None)
+
+
+def test_the_own_number_is_read_where_the_invoice_named_is_on_the_same_line():
+    # An inline layout (eval/generators/credits.py): both in one row of fields.
+    text = TEXT_CREDIT.replace(
+        "Gutschrift Nr.: GS-2026-0042\nDatum: 12.03.2026\nzu Rechnung Nr.: RE-2026-01234",
+        "Gutschrift Nr. GS-2026-0042     Bezug: Rechnung RE-2026-01234     Datum 12.03.2026",
+    )
+    draft = extract_from_text(text)
+    assert (draft.number, draft.preceding_ref) == ("GS-2026-0042", "RE-2026-01234")
+
+
+def test_a_number_labelled_document_no_is_read():
+    text = TEXT_CREDIT.replace("Gutschrift Nr.: GS-2026-0042", "Document no.: GS-2026-0042")
+    assert extract_from_text(text).number == "GS-2026-0042"

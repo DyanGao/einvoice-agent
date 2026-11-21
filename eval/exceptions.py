@@ -87,7 +87,7 @@ class Outcome:
         return bool(self.review_types() & DETECTED_BY.get(self.case.kind, frozenset()))
 
 
-def _document(key: str, invoice: CanonicalInvoice) -> DocumentRow:
+def stored_document(key: str, invoice: CanonicalInvoice) -> DocumentRow:
     """A stored document as the pipeline leaves a valid e-invoice."""
     draft = InvoiceDraft.model_validate(
         invoice.to_gold(DocumentFormat.UNKNOWN).model_dump()
@@ -113,14 +113,14 @@ def run(exceptions: ExceptionSet) -> list[Outcome]:
     outcomes = []
     with Session(engine) as session:
         # The invoices on file went through the same processing when they arrived.
-        on_file = [_document(entry.id, entry.invoice) for entry in exceptions.on_file]
+        on_file = [stored_document(entry.id, entry.invoice) for entry in exceptions.on_file]
         session.add_all(on_file)
         session.flush()
         for document in on_file:
             checker.check(session, document)
         session.commit()
         for case in exceptions.cases:
-            document = _document(case.id, case.invoice)
+            document = stored_document(case.id, case.invoice)
             session.add(document)
             session.flush()
             findings = tuple(checker.check(session, document))

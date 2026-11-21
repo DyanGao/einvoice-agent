@@ -65,6 +65,7 @@ _LABELS = {
         "Rechnungs-Nr.",
         "Rechnung Nr.",
         "Beleg-Nr.",
+        "Document no.",
         "Invoice number",
         "Invoice no.",
         "Invoice #",
@@ -259,10 +260,22 @@ def _buyer_name(lines: list[str], seller_vat_line: int | None) -> str | None:
     return None
 
 
+def _without_preceding(line: str, preceding_ref: str) -> str:
+    """The line without "zu Rechnung Nr. <preceding_ref>": the credit note's own
+    number may stand on the same line."""
+    for label in _LABELS["preceding_ref"]:
+        pattern = rf"(?<![\w-]){re.escape(label)}(?![\w-])\s*:?\s*{re.escape(preceding_ref)}"
+        line = re.sub(pattern, "   ", line, flags=re.IGNORECASE)
+    return line
+
+
 def _number(lines: list[str], preceding_ref: str | None) -> str | None:
     """The document's own number; not the invoice a credit note names."""
-    own = [line for line in lines if preceding_ref is None or preceding_ref not in line]
-    return _first_cell(_after_label(own, _LABELS["number"]))
+    if preceding_ref is not None:
+        lines = [_without_preceding(line, preceding_ref) for line in lines]
+        # Named again elsewhere ("Betreff: Rechnung Nr. …"): not this document's.
+        lines = [line for line in lines if preceding_ref not in line]
+    return _first_cell(_after_label(lines, _LABELS["number"]))
 
 
 def extract_from_text(text: str) -> InvoiceDraft:
