@@ -144,7 +144,11 @@ rejected with "reject all duplicates") keeps its code as `note_text` in the hist
 run once per language (`E2E_LANGUAGE=de`; `make ui-test` runs both), taking every text they look for
 from the same catalogues; the German run also scans each rendered page for English
 (`ui/e2e/language.ts`: phrases of the English catalogue German does not share, and English function
-words), and the English run checks that this scan finds English where there is some.
+words), and the English run checks that this scan finds English where there is some. The German terms follow
+a glossary of accounts-payable usage (Beleg, Freigabe, Lieferant, Bestellung, Wareneingang, USt-IdNr.,
+formal "Sie", …) in `ui/scripts/german-texts.mjs`; `make ui-build` (and so CI) fails on a word it rules
+out, and on a stale `docs/german-texts.md`, the list of every German text next to its English that a
+native speaker reads through (`make german-texts` writes it).
 
 **Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
 identity provider; someone from another tenant gets a role here too), change role, remove (their
