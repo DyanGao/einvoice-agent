@@ -158,8 +158,9 @@ def _credited_before(session: Session, document: DocumentRow, invoice_document_i
     """What the other credit notes linked to the invoice took back: those
     received before this one and not rejected. A total that cannot be read
     counts as nothing (it is flagged on its own document)."""
-    totals = session.execute(
-        select(DraftRow.data["gross_total"])
+    # The drafts are sealed: their totals are read here, not in SQL.
+    drafts = session.execute(
+        select(DraftRow.data)
         .join(CreditLinkRow, CreditLinkRow.document_id == DraftRow.document_id)
         .join(DocumentRow, DocumentRow.id == DraftRow.document_id)
         .where(
@@ -171,7 +172,7 @@ def _credited_before(session: Session, document: DocumentRow, invoice_document_i
         )
     ).scalars()
     credited = Decimal(0)
-    for total in totals:
+    for total in (data.get("gross_total") for data in drafts):
         try:
             credited += Decimal(str(total)) if total is not None else Decimal(0)
         except InvalidOperation:

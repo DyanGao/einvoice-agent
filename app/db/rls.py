@@ -32,6 +32,8 @@ from contextlib import contextmanager
 from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.db.sealed import TENANT_INFO
+
 TENANT_ROLE = "einvoice_tenant"
 SETTING = "app.tenant_id"
 
@@ -97,7 +99,9 @@ def act_for(session: Session, tenant_id: str) -> None:
     """From here to the end of the transaction, the session acts for the
     tenant, and Postgres shows and accepts only that tenant's rows. Nothing
     on SQLite, which has no row-level security (the application filter is
-    all there is there)."""
+    all there is there). On both, what the session writes is sealed with the
+    tenant's key (app/db/sealed.py)."""
+    session.info[TENANT_INFO] = tenant_id
     if session.get_bind().dialect.name != "postgresql":
         return
     session.execute(text(f"SET LOCAL ROLE {TENANT_ROLE}"))

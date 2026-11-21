@@ -183,7 +183,8 @@ def test_approving_a_corrected_structured_invoice_replaces_its_parsed_values(ses
     document_id = processed(session_factory, XML, validator=StubValidator(REJECT))
     correct(session_factory, document_id, {"gross_total": "1.00"})
     approve(session_factory, document_id)
-    assert load(session_factory, document_id, lambda d: d.invoice.gross_total) == Decimal("1.00")
+    gross = load(session_factory, document_id, lambda d: d.invoice.data["gross_total"])
+    assert Decimal(gross) == Decimal("1.00")
 
 
 def test_document_nothing_could_be_read_from_can_be_filled_in_by_hand(session_factory):

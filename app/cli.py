@@ -20,7 +20,8 @@ einvoice tenant-set SLUG KEY=VALUE...
 einvoice tenant-show SLUG    print a company's settings
 einvoice key-generate        print a new MASTER_KEY for .env (encryption at rest, app/crypto.py)
 einvoice seal [--apply] [--open]
-                             seal the originals stored before encryption (app/sealing.py);
+                             seal the originals and invoice data stored before encryption
+                             (app/sealing.py);
                              --open stores them plain again; counts only without --apply
 
 process, watch, user-add and token-create act for one tenant: --tenant SLUG,
@@ -165,6 +166,9 @@ def _seal(session_factory: sessionmaker[Session], *, apply: bool, open_all: bool
     state = "plain" if open_all else "sealed"
     for slug in report.changed:
         print(f"{slug}: {report.changed[slug]} {verb}, {report.already[slug]} {state} already")
+    for place, count in sorted(report.by_place.items()):
+        if count:
+            print(f"    {place}: {count}")
     if not apply and any(report.changed.values()):
         print("nothing written; run again with --apply to write")
     return 0

@@ -2,7 +2,6 @@
 
 import uuid
 from datetime import UTC, date, datetime
-from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
@@ -12,7 +11,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     LargeBinary,
-    Numeric,
     PrimaryKeyConstraint,
     String,
     UniqueConstraint,
@@ -23,6 +21,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from app import crypto
 from app.db import rls
+from app.db.sealed import Sealed
 from app.models import Invoice
 
 Json = JSON().with_variant(JSONB(), "postgresql")
@@ -96,10 +95,10 @@ class DocumentRow(Base):
     tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
     # The same file sent to two companies is two documents.
     sha256: Mapped[str] = mapped_column(String(64))
-    filename: Mapped[str | None] = mapped_column(String(255))
+    filename: Mapped[str | None] = mapped_column(Sealed("documents.filename", "text"))
     format: Mapped[str] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20), index=True)
-    error: Mapped[str | None]
+    error: Mapped[str | None] = mapped_column(Sealed("documents.error", "text"))
     # The original file, sealed with the tenant's data key (app/crypto.py,
     # v1.0 Stage 6); `content` below is the file itself.
     sealed_content: Mapped[bytes] = mapped_column("content", LargeBinary)
@@ -167,20 +166,14 @@ def _seal_content(mapper, connection, target: DocumentRow) -> None:
 
 
 class InvoiceRow(Base):
-    """The normalized invoice. `data` holds the full model; the other columns
-    are copies of the fields that later steps search by."""
+    """The normalized invoice: the full model, sealed. (Until v1.0 Stage 6 it
+    had plain copies of number, seller and totals; nothing searched by them.)"""
 
     __tablename__ = "invoices"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True)
-    number: Mapped[str] = mapped_column(String(255), index=True)
-    issue_date: Mapped[date]
-    seller_name: Mapped[str] = mapped_column(String(255))
-    seller_vat_id: Mapped[str | None] = mapped_column(String(32), index=True)
-    currency: Mapped[str] = mapped_column(String(3))
-    gross_total: Mapped[Decimal] = mapped_column(Numeric(18, 4))
-    data: Mapped[dict[str, Any]] = mapped_column(Json)
+    data: Mapped[dict[str, Any]] = mapped_column(Sealed("invoices.data"))
 
     document: Mapped[DocumentRow] = relationship(back_populates="invoice")
 
@@ -193,8 +186,8 @@ class DraftRow(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True)
-    original: Mapped[dict[str, Any]] = mapped_column(Json)
-    data: Mapped[dict[str, Any]] = mapped_column(Json)
+    original: Mapped[dict[str, Any]] = mapped_column(Sealed("drafts.original"))
+    data: Mapped[dict[str, Any]] = mapped_column(Sealed("drafts.data"))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, onupdate=_now
     )
@@ -209,7 +202,9 @@ class ValidationRow(Base):
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True)
     valid: Mapped[bool]
     scenario: Mapped[str | None] = mapped_column(String(255))
-    violations: Mapped[list[dict[str, Any]]] = mapped_column(Json)
+    violations: Mapped[list[dict[str, Any]]] = mapped_column(
+        Sealed("validation_results.violations")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     document: Mapped[DocumentRow] = relationship(back_populates="validation")
@@ -227,7 +222,7 @@ class AuditEventRow(Base):
     # The signed-in user behind `actor`; None for the system, and for events from
     # before sign-in existed, whose actor is a name typed into the UI (unverified).
     actor_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
-    detail: Mapped[dict[str, Any]] = mapped_column(Json)
+    detail: Mapped[dict[str, Any]] = mapped_column(Sealed("audit_events.detail"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     document: Mapped[DocumentRow] = relationship(back_populates="audit_events")
@@ -244,12 +239,12 @@ class FindingRow(Base):
     position: Mapped[int]
     # The message's code and parameters (app/texts.py), for the UI's language;
     # None for findings from before v1.0 Stage 4, which show `message`.
-    text: Mapped[dict[str, Any] | None] = mapped_column(Json)
+    text: Mapped[dict[str, Any] | None] = mapped_column(Sealed("findings.text"))
     type: Mapped[str] = mapped_column(String(40), index=True)
     severity: Mapped[str] = mapped_column(String(10))
-    message: Mapped[str]
+    message: Mapped[str] = mapped_column(Sealed("findings.message", "text"))
     fields: Mapped[list[str]] = mapped_column(Json)
-    detail: Mapped[dict[str, Any]] = mapped_column(Json)
+    detail: Mapped[dict[str, Any]] = mapped_column(Sealed("findings.detail"))
 
     document: Mapped[DocumentRow] = relationship(back_populates="findings")
 
@@ -266,8 +261,10 @@ class CreditLinkRow(Base):
     # None: not found, or several fit.
     invoice_document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id"), index=True)
     basis: Mapped[str] = mapped_column(String(20))
-    explanation: Mapped[str]
-    explanation_text: Mapped[dict[str, Any] | None] = mapped_column(Json)
+    explanation: Mapped[str] = mapped_column(Sealed("credit_links.explanation", "text"))
+    explanation_text: Mapped[dict[str, Any] | None] = mapped_column(
+        Sealed("credit_links.explanation_text")
+    )
 
     document: Mapped[DocumentRow] = relationship(
         back_populates="credit_link", foreign_keys=[document_id]
@@ -286,17 +283,19 @@ class MatchRow(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True)
     supplier_id: Mapped[str | None] = mapped_column(String(50))
-    po_number: Mapped[str | None] = mapped_column(String(50))
+    po_number: Mapped[str | None] = mapped_column(Sealed("matches.po_number", "text"))
     po_basis: Mapped[str] = mapped_column(String(20))
     delivery_id: Mapped[str | None] = mapped_column(String(50))
     # [{"bank_transaction_id": ..., "amount": "12.34"}]: how much of which
     # transfer pays this invoice.
-    payments: Mapped[list[dict[str, str]]] = mapped_column(Json)
+    payments: Mapped[list[dict[str, str]]] = mapped_column(Sealed("matches.payments"))
     payment_basis: Mapped[str] = mapped_column(String(20))
-    explanation: Mapped[list[str]] = mapped_column(Json)
+    explanation: Mapped[list[str]] = mapped_column(Sealed("matches.explanation"))
     # Each explanation's code and parameters, in the same order; None where a
     # line has none (rows from before v1.0 Stage 4).
-    explanation_texts: Mapped[list[dict[str, Any] | None] | None] = mapped_column(Json)
+    explanation_texts: Mapped[list[dict[str, Any] | None] | None] = mapped_column(
+        Sealed("matches.explanation_texts")
+    )
 
     document: Mapped[DocumentRow] = relationship(back_populates="match")
 
@@ -311,7 +310,7 @@ class DecisionRow(Base):
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True)
     route: Mapped[str] = mapped_column(String(10))  # auto | review
     # [{"cause": ..., "message": ..., "fields": [...], "findings": [...]}]
-    reasons: Mapped[list[dict[str, Any]]] = mapped_column(Json)
+    reasons: Mapped[list[dict[str, Any]]] = mapped_column(Sealed("decisions.reasons"))
     # Version of the thresholds the decision was made with.
     version: Mapped[str] = mapped_column(String(50))
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -333,13 +332,13 @@ class DeliveryRow(Base):
     idempotency_key: Mapped[str] = mapped_column(String(100), unique=True)
     # pending (to be tried, or retried at next_attempt_at) | delivered | failed
     status: Mapped[str] = mapped_column(String(10), index=True)
-    booking: Mapped[dict[str, Any]] = mapped_column(Json)
+    booking: Mapped[dict[str, Any]] = mapped_column(Sealed("deliveries.booking"))
     attempts: Mapped[int] = mapped_column(default=0)
     next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     # The downstream system's reference for the booking.
     external_ref: Mapped[str | None] = mapped_column(String(100))
-    last_error: Mapped[str | None]
-    error_text: Mapped[dict[str, Any] | None] = mapped_column(Json)
+    last_error: Mapped[str | None] = mapped_column(Sealed("deliveries.last_error", "text"))
+    error_text: Mapped[dict[str, Any] | None] = mapped_column(Sealed("deliveries.error_text"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -414,11 +413,11 @@ class MailRow(Base):
     uidvalidity: Mapped[int] = mapped_column(BigInteger)
     uid: Mapped[int] = mapped_column(BigInteger)
     message_id: Mapped[str] = mapped_column(String(300))
-    sender: Mapped[str] = mapped_column(String(300))
-    subject: Mapped[str] = mapped_column(String(300))
-    sent: Mapped[str] = mapped_column(String(300))  # the Date header, as sent
+    sender: Mapped[str] = mapped_column(Sealed("mails.sender", "text"))
+    subject: Mapped[str] = mapped_column(Sealed("mails.subject", "text"))
+    sent: Mapped[str] = mapped_column(Sealed("mails.sent", "text"))  # the Date header, as sent
     # [{"filename", "content_type", "bytes", "outcome", "reason", "document_id"}]
-    parts: Mapped[list[dict[str, Any]]] = mapped_column(Json)
+    parts: Mapped[list[dict[str, Any]]] = mapped_column(Sealed("mails.parts"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, index=True)
 
     __table_args__ = (UniqueConstraint("tenant_id", "mailbox", "uidvalidity", "uid"),)
@@ -484,15 +483,7 @@ class SessionRow(Base):
 
 
 def invoice_columns(invoice: Invoice) -> dict:
-    return {
-        "number": invoice.number,
-        "issue_date": invoice.issue_date,
-        "seller_name": invoice.seller.name,
-        "seller_vat_id": invoice.seller.vat_id,
-        "currency": invoice.currency,
-        "gross_total": invoice.gross_total,
-        "data": invoice.model_dump(mode="json"),
-    }
+    return {"data": invoice.model_dump(mode="json")}
 
 
 # Databases made from these tables on Postgres get row-level security too;

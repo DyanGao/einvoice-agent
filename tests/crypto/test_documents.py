@@ -91,7 +91,8 @@ def test_seal_counts_then_seals_what_is_plain(session_factory):
     stored(session_factory, PDF)
 
     report = seal_documents(session_factory, apply=False)
-    assert (report.changed["default"], report.already["default"]) == (1, 1)
+    assert report.changed["default"] == 1
+    assert +report.by_place == {"documents.content": 1}  # the places with something to do
     assert not crypto.is_sealed(raw_content(session_factory, document_id))
 
     seal_documents(session_factory, apply=True)
@@ -110,9 +111,11 @@ def test_open_stores_every_original_plain_again(session_factory):
 def test_seal_on_the_command_line(session_factory, capsys):
     _plain_document(session_factory)
     assert cli(["seal"], session_factory=session_factory) == 0
-    assert "default: 1 to seal, 0 sealed already" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "default: 1 to seal, " in out
+    assert "    documents.content: 1" in out
     assert cli(["seal", "--apply"], session_factory=session_factory) == 0
-    assert "default: 1 sealed, 0 sealed already" in capsys.readouterr().out
+    assert "default: 1 sealed, " in capsys.readouterr().out
 
 
 def test_key_generate_prints_a_master_key(capsys):
