@@ -13,7 +13,7 @@ import secrets
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -77,6 +77,10 @@ _PAGES_WITH_SCRIPTS = ("/docs", "/redoc")
 
 class TenantChoice(BaseModel):
     tenant_id: str
+
+
+class LanguageChoice(BaseModel):
+    language: Literal["de", "en"]
 
 
 class NewMember(BaseModel):
@@ -161,11 +165,14 @@ def _me(session: Session, actor: Actor) -> dict:
     switch to. `session` must still be able to read the sign-in tables."""
     tenants = auth.tenants_of(session, actor.user_id) if actor.user_id else []
     current = session.get(db.TenantRow, actor.tenant_id)
+    user = session.get(db.UserRow, actor.user_id) if actor.user_id else None
     return {
         "auth": "on",
         "name": actor.name,
         "email": actor.email,
         "role": actor.role.value,
+        # The UI's language they chose; None: the browser's language decides.
+        "language": user.language if user else None,
         "tenant": _tenant(current),
         "tenants": [{**_tenant(tenant), "role": role.value} for tenant, role in tenants],
     }
@@ -604,6 +611,17 @@ def create_app(
         if actor is None:
             # Like a document of another tenant: not there, rather than forbidden.
             raise HTTPException(404, Text("api.no_such_tenant"))
+        return _me(active, actor)
+
+    @app.post("/auth/language")
+    def choose_language(
+        body: LanguageChoice,
+        active: Db,
+        actor: Annotated[Actor, Depends(browser_session)],
+    ) -> dict:
+        """The review UI's language for the signed-in person, kept for their
+        next sign-in, in any browser."""
+        auth.set_language(active, actor.user_id, body.language)
         return _me(active, actor)
 
     @contextmanager

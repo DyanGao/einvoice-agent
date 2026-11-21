@@ -154,11 +154,16 @@ function deliveryText(i18n: Translator, delivery: Delivery): string {
     : t("delivery.waiting", { target });
 }
 
+/** A rejection's note: the person's own words, or the server's in this language. */
+function rejectionNote(i18n: Translator, detail: Record<string, unknown>): string {
+  return i18n.server(detail.note_text as Said | null | undefined, String(detail.note));
+}
+
 /** The reason a document was rejected, with the note, as a short phrase. */
 function rejectionReason(i18n: Translator, event: AuditEvent): string {
   const detail = event.detail ?? {};
   const reason = rejectReasonLabel(i18n, String(detail.reason));
-  return detail.note ? `${reason} (${String(detail.note)})` : reason;
+  return detail.note ? `${reason} (${rejectionNote(i18n, detail)})` : reason;
 }
 
 function auditText(i18n: Translator, event: AuditEvent): string {
@@ -175,7 +180,7 @@ function auditText(i18n: Translator, event: AuditEvent): string {
   if (event.event === "rejected") {
     const reason = rejectReasonLabel(i18n, String(detail.reason));
     return detail.note
-      ? t("audit.rejectedNote", { reason, note: String(detail.note) })
+      ? t("audit.rejectedNote", { reason, note: rejectionNote(i18n, detail) })
       : t("audit.rejected", { reason });
   }
   if (event.event === "reopened") return t("audit.reopened", { note: String(detail.note) });

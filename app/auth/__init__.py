@@ -357,6 +357,16 @@ def remove_member(
     session.flush()
 
 
+LANGUAGES = ("de", "en")
+
+
+def set_language(session: Session, user_id: str, language: str) -> None:
+    """The review UI's language for this person, from now on in every browser."""
+    if language not in LANGUAGES:
+        raise ValueError(f"not a language of the UI: {language!r}")
+    session.get(UserRow, user_id).language = language
+
+
 def switch_tenant(session: Session, session_id: str, tenant_id: str, now: datetime) -> Actor | None:
     """Work in another tenant the user is in, in this browser session.
     None if the session is gone or the user is not in that tenant."""

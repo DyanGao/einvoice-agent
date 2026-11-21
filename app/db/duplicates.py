@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.db.review import RejectReason, ReviewState, reject
 from app.db.tables import DocumentRow
+from app.texts import Text
 
 DUPLICATE = "duplicate"
 
@@ -129,7 +130,11 @@ def reject_copies(
             document,
             actor,
             RejectReason.DUPLICATE.value,
-            f"copy of invoice {number or '(no number)'}, document {original.id}",
+            (
+                Text("review.copy_of", number=number, document=original.id)
+                if number
+                else Text("review.copy_of_unnumbered", document=original.id)
+            ),
             actor_user_id=actor_user_id,
         )
         result.rejected.append(document_id)

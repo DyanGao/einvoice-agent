@@ -125,7 +125,9 @@ synthetic mails, with crashes; also through GreenMail) gates this in CI.
 **Languages** (v1.0 Stage 4). The review UI speaks German and English: every text it has of its
 own is in `ui/lib/messages.ts`, where the German catalogue is typed against the English keys, so a
 missing translation does not build. The language comes from the browser, can be switched in the
-masthead and is remembered in the browser. Amounts are formatted `de-DE` or `en-GB` from their decimal
+masthead and is remembered in the browser; someone signed in has their choice kept with their account
+too (`users.language`, `POST /auth/language`, in `/auth/me`), and it wins over the browser's once they
+sign in, in any browser. Amounts are formatted `de-DE` or `en-GB` from their decimal
 string, never through a float (`Intl.NumberFormat` takes the string exactly). Texts the server writes —
 findings, decision reasons, match explanations, re-match triggers, delivery errors — are `Text`s
 (`app/texts.py`): a `str` that is the English sentence, as before, and also carries a code and
@@ -137,7 +139,12 @@ labels). `tests/test_texts.py` fails if a code lacks a German or English text or
 differ. The API's refusals work the same way: an `HTTPException` whose detail is a `Text` is answered
 with `detail` (the English sentence, as every client got before) and `text` (its code); review actions
 and member changes raise Texts too, and the UI shows any refusal through `i18n.error()` in its
-language, as it does its own "API not reachable".
+language, as it does its own "API not reachable". A note the server writes on a rejection (a copy
+rejected with "reject all duplicates") keeps its code as `note_text` in the history. The browser suites
+run once per language (`E2E_LANGUAGE=de`; `make ui-test` runs both), taking every text they look for
+from the same catalogues; the German run also scans each rendered page for English
+(`ui/e2e/language.ts`: phrases of the English catalogue German does not share, and English function
+words), and the English run checks that this scan finds English where there is some.
 
 **Admin page** (`/admin`, the tenant's admins). Members: add (someone new signs in through the
 identity provider; someone from another tenant gets a role here too), change role, remove (their

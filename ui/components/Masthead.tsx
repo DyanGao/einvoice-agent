@@ -4,11 +4,12 @@ import Link from "next/link";
 
 import { LanguageSwitch, useI18n } from "@/lib/i18n";
 
-import { ReviewerField } from "./Reviewer";
+import { ReviewerField, useReviewer } from "./Reviewer";
 
 /** Title, pages, language, and who is reviewing. */
 export function Masthead() {
   const { t } = useI18n();
+  const { chooseLanguage } = useReviewer();
   return (
     <header className="masthead">
       <Link href="/" className="masthead-title">
@@ -18,7 +19,7 @@ export function Masthead() {
         <Link href="/">{t("nav.invoices")}</Link>
         <Link href="/mail">{t("nav.mail")}</Link>
       </nav>
-      <LanguageSwitch />
+      <LanguageSwitch choose={chooseLanguage} />
       <ReviewerField />
     </header>
   );

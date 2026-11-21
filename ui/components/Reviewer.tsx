@@ -4,8 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 import Link from "next/link";
 
-import { getMe, SIGNED_OUT_EVENT, signOut, switchTenant, type Me } from "@/lib/api";
-import { useI18n, type Translator } from "@/lib/i18n";
+import { getMe, saveLanguage, SIGNED_OUT_EVENT, signOut, switchTenant, type Me } from "@/lib/api";
+import { useI18n, type Locale, type Translator } from "@/lib/i18n";
 
 import { SignIn } from "./SignIn";
 
@@ -31,6 +31,8 @@ type Reviewer = {
   problem: string | null;
   signedIn: (me: Me) => void;
   signOut: () => void;
+  /** Switch the UI's language; kept with the account when signed in. */
+  chooseLanguage: (locale: Locale) => void;
 };
 
 const ReviewerContext = createContext<Reviewer>({
@@ -40,6 +42,7 @@ const ReviewerContext = createContext<Reviewer>({
   problem: null,
   signedIn: () => {},
   signOut: () => {},
+  chooseLanguage: () => {},
 });
 
 /** Why this name cannot be recorded, or null if it can. */
@@ -90,6 +93,28 @@ export function ReviewerProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(SIGNED_OUT_EVENT, expired);
   }, []);
 
+  // Signed in: the language they chose last, in whichever browser, wins.
+  const { setLocale } = i18n;
+  const accountLanguage = session.kind === "signed-in" ? session.me.language : null;
+  useEffect(() => {
+    if (accountLanguage) setLocale(accountLanguage);
+  }, [accountLanguage, setLocale]);
+
+  const signedInNow = session.kind === "signed-in";
+  const chooseLanguage = useCallback(
+    (locale: Locale) => {
+      setLocale(locale);
+      if (!signedInNow) return;
+      saveLanguage(locale)
+        .then((me) => setSession({ kind: "signed-in", me }))
+        .catch(() => {
+          // Not kept with the account (the API is gone, the session ended):
+          // still this browser's language.
+        });
+    },
+    [setLocale, signedInNow],
+  );
+
   const setName = (next: string) => {
     setNameState(next);
     try {
@@ -117,6 +142,7 @@ export function ReviewerProvider({ children }: { children: ReactNode }) {
         problem: problemFor(i18n, session, name),
         signedIn,
         signOut: leave,
+        chooseLanguage,
       }}
     >
       {children}

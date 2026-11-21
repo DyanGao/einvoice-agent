@@ -192,17 +192,17 @@ def reject(
         raise ReviewError(
             Text("review.unknown_reason", reason=repr(reason), allowed=allowed)
         ) from None
+    # A note the server wrote (a Text) keeps its code, for the UI's language.
+    note_text = note.said() if isinstance(note, Text) else None
     note = (note or "").strip() or None
     if why is RejectReason.OTHER and note is None:
         raise ReviewError(Text("review.note_needed"))
+    detail = {"reason": why.value, "note": note}
+    if note_text is not None:
+        detail["note_text"] = note_text
     document.review_state = ReviewState.REJECTED.value
     document.audit_events.append(
-        AuditEventRow(
-            event="rejected",
-            actor=actor,
-            actor_user_id=actor_user_id,
-            detail={"reason": why.value, "note": note},
-        )
+        AuditEventRow(event="rejected", actor=actor, actor_user_id=actor_user_id, detail=detail)
     )
     session.flush()
 

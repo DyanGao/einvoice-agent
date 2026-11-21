@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start -H localhost -p 3000",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test && playwright test -c playwright.signin.config.ts"
+    "test:e2e": "pnpm test:e2e:en && pnpm test:e2e:de",
+    "test:e2e:en": "playwright test && playwright test -c playwright.signin.config.ts",
+    "test:e2e:de": "E2E_LANGUAGE=de playwright test && E2E_LANGUAGE=de playwright test -c playwright.signin.config.ts"
   },
   "dependencies": {
     "next": "16.4.6",

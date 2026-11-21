@@ -299,6 +299,9 @@ class UserRow(Base):
     # from then on the user is found by it, not by the email.
     oidc_issuer: Mapped[str | None] = mapped_column(String(255))
     oidc_subject: Mapped[str | None] = mapped_column(String(255))
+    # The review UI's language this person chose ("de" or "en"); None until
+    # they choose, and the browser's language decides.
+    language: Mapped[str | None] = mapped_column(String(5))
 
     __table_args__ = (UniqueConstraint("oidc_issuer", "oidc_subject"),)
 

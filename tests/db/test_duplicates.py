@@ -108,4 +108,8 @@ def test_bulk_reject_rejects_the_copies_with_a_note_naming_the_original(
         event = session.get(db.DocumentRow, copy).audit_events[-1]
     assert (event.event, event.actor, event.detail["reason"]) == ("rejected", "anna", "duplicate")
     assert original in event.detail["note"]
+    # The note the server wrote keeps its code, so the UI can show it in German.
+    assert event.detail["note_text"]["code"] == "review.copy_of"
+    assert event.detail["note_text"]["params"]["document"] == original
+    assert event.detail["note_text"]["text"] == event.detail["note"]
     assert state(session_factory, original) != "rejected"

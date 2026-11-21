@@ -237,6 +237,9 @@ ENGLISH: dict[str, str] = {
     "review.note_needed": "a rejection for another reason needs a note saying which",
     "review.not_rejected": "document is not rejected",
     "review.reopen_note": "reopening needs a note saying why",
+    # The note of a copy rejected with "reject all duplicates".
+    "review.copy_of": "copy of invoice {number}, document {document}",
+    "review.copy_of_unnumbered": "copy of invoice (no number), document {document}",
     # Changes to a tenant's members that are refused (app/auth)
     "members.not_member": "not a member of this tenant",
     "members.own_admin": "you cannot take away your own admin role",
