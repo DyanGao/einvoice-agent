@@ -287,16 +287,47 @@ def build_invoice(seed: int, index: int) -> CanonicalInvoice:
     )
 
 
+def _totals_of(items: tuple[Item, ...]) -> dict:
+    """Tax groups and totals for these items, as build_invoice makes them."""
+    groups = []
+    for rate in sorted({item.vat_rate for item in items}, reverse=True):
+        taxable = sum((item.net for item in items if item.vat_rate == rate), Decimal(0))
+        groups.append(
+            TaxGroup(rate=rate, taxable_amount=taxable, tax_amount=money(taxable * rate / 100))
+        )
+    net = sum((item.net for item in items), Decimal(0))
+    vat = sum((group.tax_amount for group in groups), Decimal(0))
+    return {
+        "items": items,
+        "tax_groups": tuple(groups),
+        "line_net_total": net,
+        "net_total": net,
+        "vat_total": vat,
+        "gross_total": net + vat,
+        "amount_due": net + vat,
+    }
+
+
 def credit_note_for(
-    invoice: CanonicalInvoice, number: str, days_later: int = 10
+    invoice: CanonicalInvoice,
+    number: str,
+    days_later: int = 10,
+    *,
+    items: tuple[Item, ...] | None = None,
+    names_invoice: bool = True,
 ) -> CanonicalInvoice:
-    """A credit note (381) taking back the whole invoice, which it names (BT-25).
-    Its amounts are positive, as XRechnung wants them: the type says it is a credit."""
+    """A credit note (381) for the invoice: all of it, or only `items` (some of
+    its lines, perhaps fewer of them). It names the invoice (BT-25) unless
+    `names_invoice` is False. Its amounts are positive, as XRechnung wants
+    them: the type says it is a credit."""
+    changes = {} if items is None else _totals_of(items)
     return replace(
         invoice,
         number=number,
         issue_date=invoice.issue_date + timedelta(days=days_later),
         due_date=None,
+        po_ref=None,
         type_code="381",
-        preceding_ref=invoice.number,
+        preceding_ref=invoice.number if names_invoice else None,
+        **changes,
     )

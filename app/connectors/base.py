@@ -30,6 +30,17 @@ class Booking:
     iban: str | None
     # The application's own reference for the invoice: its document id.
     reference: str
+    # 380 invoice, 381 credit note. A credit note's amounts are positive like
+    # an invoice's; this says the money goes the other way (ARCHITECTURE.md,
+    # D13), and each connector gives it its sign. Defaults keep bookings stored
+    # before credit notes were booked readable.
+    document_type: str = "380"
+    # A credit note's invoice: its number, as the supplier wrote it.
+    preceding_invoice: str | None = None
+
+    @property
+    def is_credit_note(self) -> bool:
+        return self.document_type == "381"
 
     def as_json(self) -> dict:
         return asdict(self)

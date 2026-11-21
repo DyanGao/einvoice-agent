@@ -146,7 +146,9 @@ def vat_ids(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
 
 
 def document_type(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
-    """Anything but an ordinary invoice is looked at by a person (decision D9)."""
+    """Anything but an ordinary invoice is looked at by a person (decision D9).
+    A credit note is booked, with its sign, once a person approved it (D13);
+    every other type is booked by hand."""
     if draft.type_code in (None, "380"):
         return []
     credit_note = draft.type_code == "381"

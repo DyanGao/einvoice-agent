@@ -8,7 +8,7 @@ and run `make german-texts`.
 
 `{name}` is filled in when the text is shown: an amount, a date, a field's label, another text.
 
-498 texts.
+499 texts.
 
 ## Glossary
 
@@ -47,7 +47,7 @@ words in the third column.
 - Mail page (22)
 - Admin page (62)
 - Written by the server: check (6)
-- Written by the server: delivery (18)
+- Written by the server: delivery (19)
 - Written by the server: finding (21)
 - Written by the server: grounds (3)
 - Written by the server: match (19)
@@ -501,7 +501,8 @@ words in the third column.
 | `server.delivery.form_several` | the ERP holds {count} bookings for reference {reference}: {ids} | das ERP enthält {count} Buchungen zur Referenz {reference}: {ids} |
 | `server.delivery.form_status` | ERP answered {status} for {url} | das ERP antwortete {status} für {url} |
 | `server.delivery.form_unusable` | ERP screens not usable: {detail} | ERP-Oberfläche nicht nutzbar: {detail} |
-| `server.delivery.not_an_invoice` | document type {type_code} is not an ordinary invoice; credit notes and other types are booked by hand | Rechnungsart {type_code} ist keine gewöhnliche Rechnung; Gutschriften und andere Arten werden von Hand gebucht |
+| `server.delivery.not_an_invoice` | document type {type_code} is neither an invoice nor a credit note; it is booked by hand | Belegart {type_code} ist weder eine Rechnung noch eine Gutschrift; sie wird von Hand gebucht |
+| `server.delivery.csv_old_format` | {file} was begun without the columns a credit note needs, so credit note {number} cannot be written there; move the file aside to begin a new one | {file} wurde ohne die Spalten begonnen, die eine Gutschrift braucht; Gutschrift {number} kann dort nicht geschrieben werden. Verschieben Sie die Datei, damit eine neue beginnt |
 | `server.delivery.supplier_unknown` | the supplier is not known in the ERP | der Lieferant ist im ERP nicht bekannt |
 | `server.delivery.webhook_failed` | webhook receiver failed with {status} | Webhook-Empfänger-Fehler {status} |
 | `server.delivery.webhook_redirect` | webhook receiver answered {status} (redirect to {location}); redirects are not followed | Webhook-Empfänger antwortete {status} (Weiterleitung nach {location}); Weiterleitungen werden nicht gefolgt |

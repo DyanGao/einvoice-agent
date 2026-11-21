@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 import httpx
 import pytest
@@ -17,7 +18,7 @@ from app.db.review import approve
 from app.delivery import deliver_due
 from app.erp import HttpErpClient
 from app.ingest import ingest
-from eval.generators.canonical import XRECHNUNG
+from eval.generators.canonical import XRECHNUNG, credit_note_for
 from eval.generators.world import PAID_ONCE, PO_EXACT, PO_MISSING, build_world
 from eval.generators.xrechnung import render_ubl
 from mock_erp import seed
@@ -274,29 +275,83 @@ def test_invoice_goes_to_every_connector_once(
         deliver_due(session_factory, [connector, export], NOW)
     (listed,) = tmp_path.iterdir()
     rows = listed.read_text(encoding="cp1252").splitlines()
-    assert (len(bookings(erp_http)), len(rows), rows[1].endswith(document_id)) == (1, 2, True)
+    reference = rows[1].split(";")[11]
+    assert (len(bookings(erp_http)), len(rows), reference) == (1, 2, document_id)
     assert [d[:2] for d in deliveries(session_factory, document_id)] == [
         ("csv_export", "delivered"),
         ("erp", "delivered"),
     ]
 
 
-def test_approved_credit_note_is_not_booked_as_an_invoice(
+def _credit(session_factory, entry, checker, number="GS-1", items=None) -> str:
+    """The credit note for the entry's invoice, sent, checked and approved."""
+    credit = credit_note_for(entry.invoice, number, items=items)
+    queue = inline_queue(session_factory, checker=checker)
+    xml = render_ubl(credit, XRECHNUNG)
+    document_id = ingest(session_factory, queue, xml, f"{number}.xml").document_id
+    with session_factory.begin() as session:
+        approve(session, session.get(db.DocumentRow, document_id), "anna")
+    return document_id
+
+
+def test_approved_credit_note_is_booked_as_a_credit_against_its_invoice(
+    session_factory, world, checker, connector, erp_http
+):
+    entry = next(
+        e
+        for e in world.invoices
+        if e.po_ref_kind == PO_EXACT and e.payment_kind == PAID_ONCE and len(e.invoice.items) > 1
+    )
+    process(session_factory, entry, checker)  # decided auto, booked as an invoice
+    first = entry.invoice.items[0]  # one line of several: a partial credit
+    credit_id = _credit(session_factory, entry, checker, items=(first,))
+    deliver_due(session_factory, [connector], NOW)
+    invoice, credit = bookings(erp_http)
+    assert (credit["document_type"], credit["preceding_invoice"], credit["reference"]) == (
+        "381",
+        entry.invoice.number,
+        credit_id,
+    )
+    # Positive, as on the invoice: the type says it is a credit.
+    assert Decimal(credit["gross_total"]) > 0
+    # The partial credit lowers what is still open of the invoice in the ERP.
+    assert Decimal(invoice["open_amount"]) == Decimal(invoice["amount_due"]) - Decimal(
+        credit["gross_total"]
+    )
+    assert credit["open_amount"] is None
+
+
+def test_crash_between_booking_a_credit_note_and_recording_it_books_it_once(
     session_factory, world, checker, connector, erp_http
 ):
     entry = entry_of(world, PO_EXACT)
-    credit_note = replace(entry, invoice=replace(entry.invoice, type_code="381"))
-    document_id = process(session_factory, credit_note, checker)
+    process(session_factory, entry, checker)
+    deliver_due(session_factory, [connector], NOW)
+    credit_id = _credit(session_factory, entry, checker)
+    with pytest.raises(RuntimeError):
+        deliver_due(session_factory, [CrashAfterSending(connector)], NOW)
+    deliver_due(session_factory, [connector], NOW + timedelta(hours=1))
+    credits = [b for b in bookings(erp_http) if b["document_type"] == "381"]
+    assert [b["reference"] for b in credits] == [credit_id]
+    assert deliveries(session_factory, credit_id)[0][1] == "delivered"
+
+
+def test_a_corrected_invoice_is_still_booked_by_hand(
+    session_factory, world, checker, connector, erp_http
+):
+    entry = entry_of(world, PO_EXACT)
+    corrected = replace(entry, invoice=replace(entry.invoice, type_code="384"))
+    document_id = process(session_factory, corrected, checker)
     with session_factory.begin() as session:
         approve(session, session.get(db.DocumentRow, document_id), "anna")
     deliver_due(session_factory, [connector], NOW)
     with session_factory() as session:
         (delivery,) = session.get(db.DocumentRow, document_id).deliveries
-        assert (bookings(erp_http), delivery.status, "credit notes" in delivery.last_error) == (
-            [],
+        assert (delivery.status, delivery.error_text["code"]) == (
             "failed",
-            True,
+            "delivery.not_an_invoice",
         )
+    assert bookings(erp_http) == []
 
 
 def test_webhook_answering_503_is_retried_after_the_backoff_then_delivered(

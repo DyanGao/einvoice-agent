@@ -149,3 +149,32 @@ class BookedInvoiceRow(Base):
     # api | form: which way the booking came in.
     channel: Mapped[str] = mapped_column(String(10))
     booked_at: Mapped[str] = mapped_column(String(32))
+    # 380 invoice, 381 credit note (amounts positive either way), and the
+    # invoice a credit note corrects (its number).
+    document_type: Mapped[str] = mapped_column(String(3), default="380")
+    preceding_invoice: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+
+# Columns added after a database may have been seeded, with what old rows get.
+ADDED_COLUMNS = {
+    "booked_invoices": (
+        ("document_type", "VARCHAR(3) NOT NULL DEFAULT '380'"),
+        ("preceding_invoice", "VARCHAR(50)"),
+    ),
+}
+
+
+def upgrade(engine: Engine) -> None:
+    """Add the columns a database seeded before them lacks (the ERP has no
+    migrations; a new seed has them already)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    with engine.begin() as connection:
+        for table, columns in ADDED_COLUMNS.items():
+            if not inspector.has_table(table):
+                continue
+            present = {column["name"] for column in inspector.get_columns(table)}
+            for name, ddl in columns:
+                if name not in present:
+                    connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
