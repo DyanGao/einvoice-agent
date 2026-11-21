@@ -100,6 +100,22 @@ export type AuditEvent = {
   created_at: string;
 };
 
+export type CreditNote = { document_id: string; number: string | null; gross_total: string | null };
+
+export type Credit = {
+  basis: string;
+  explanation: string;
+  explanation_text: Said | null;
+  invoice: {
+    document_id: string;
+    number: string | null;
+    gross_total: string | null;
+    /** What the other credit notes linked to it took back. */
+    credited_by_others: string;
+    left: string | null;
+  } | null;
+};
+
 export type Detail = Summary & {
   error: string | null;
   content_type: string | null;
@@ -108,6 +124,10 @@ export type Detail = Summary & {
   missing: string[];
   validation: { valid: boolean; scenario: string | null; violations: Violation[] } | null;
   match: Match | null;
+  /** For a credit note: the invoice it corrects, or why none was found. */
+  credit: Credit | null;
+  /** For an invoice: the credit notes linked to it (rejected ones left out). */
+  credits: CreditNote[];
   decision: Decision | null;
   deliveries: Delivery[];
   findings: Finding[];

@@ -19,15 +19,18 @@ from app.checks.context import (
     CheckContext,
     CheckSettings,
     KnownInvoice,
+    KnownLine,
     MasterData,
     PoLine,
     PurchaseOrder,
 )
+from app.checks.credit import CreditLink, link_credit
 from app.checks.finding import Finding
 from app.checks.rules import run_checks
 from app.db.review import ReviewState
 from app.db.tables import (
     AuditEventRow,
+    CreditLinkRow,
     DecisionRow,
     DocumentRow,
     DraftRow,
@@ -67,7 +70,7 @@ def _known_invoices(
     earlier ones for duplicate detection. Reads all drafts; fine for thousands
     of documents, not for millions."""
     query = (
-        select(DraftRow.document_id, DraftRow.data)
+        select(DraftRow.document_id, DraftRow.data, DocumentRow.review_state)
         .join(DocumentRow, DocumentRow.id == DraftRow.document_id)
         .where(DocumentRow.tenant_id == document.tenant_id, DraftRow.document_id != document.id)
     )
@@ -83,7 +86,7 @@ def _billed_before(
     if match.delivery_id is None:
         return ()
     rows = session.execute(
-        select(DraftRow.document_id, DraftRow.data)
+        select(DraftRow.document_id, DraftRow.data, DocumentRow.review_state)
         .join(MatchRow, MatchRow.document_id == DraftRow.document_id)
         .join(DocumentRow, DocumentRow.id == DraftRow.document_id)
         .where(
@@ -97,9 +100,27 @@ def _billed_before(
     return _as_known(rows)
 
 
+def _known_lines(data: dict) -> tuple[KnownLine, ...]:
+    lines = []
+    for line in data.get("lines") or []:
+        try:
+            if line.get("description") and line.get("unit_price") is not None:
+                quantity = Decimal(line["quantity"]) if line.get("quantity") is not None else None
+                lines.append(
+                    KnownLine(
+                        description=line["description"],
+                        quantity=quantity if quantity is not None else Decimal(0),
+                        unit_price=Decimal(line["unit_price"]),
+                    )
+                )
+        except (InvalidOperation, TypeError):
+            continue
+    return tuple(lines)
+
+
 def _as_known(rows) -> tuple[KnownInvoice, ...]:
     known = []
-    for document_id, data in rows:
+    for document_id, data, review_state in rows:
         seller = data.get("seller") or {}
         try:
             gross = None if data.get("gross_total") is None else Decimal(data["gross_total"])
@@ -117,9 +138,55 @@ def _as_known(rows) -> tuple[KnownInvoice, ...]:
                 number=data.get("number"),
                 issue_date=issued,
                 gross_total=gross,
+                type_code=data.get("type_code"),
+                rejected=review_state == ReviewState.REJECTED.value,
+                lines=_known_lines(data),
             )
         )
     return tuple(known)
+
+
+def _credited_before(session: Session, document: DocumentRow, invoice_document_id: str) -> Decimal:
+    """What the other credit notes linked to the invoice took back: those
+    received before this one and not rejected. A total that cannot be read
+    counts as nothing (it is flagged on its own document)."""
+    totals = session.execute(
+        select(DraftRow.data["gross_total"])
+        .join(CreditLinkRow, CreditLinkRow.document_id == DraftRow.document_id)
+        .join(DocumentRow, DocumentRow.id == DraftRow.document_id)
+        .where(
+            CreditLinkRow.invoice_document_id == invoice_document_id,
+            DocumentRow.tenant_id == document.tenant_id,
+            DocumentRow.id != document.id,
+            DocumentRow.review_state != ReviewState.REJECTED.value,
+            _received_before(document),
+        )
+    ).scalars()
+    credited = Decimal(0)
+    for total in totals:
+        try:
+            credited += Decimal(str(total)) if total is not None else Decimal(0)
+        except InvalidOperation:
+            continue
+    return credited
+
+
+def _store_credit_link(document: DocumentRow, link: CreditLink | None) -> None:
+    """Replace the document's link; none for anything but a credit note."""
+    if link is None:
+        document.credit_link = None
+        return
+    row = CreditLinkRow(
+        invoice_document_id=None if link.invoice is None else link.invoice.document_id,
+        basis=link.basis.value,
+        explanation=str(link.explanation),
+        explanation_text=said(link.explanation),
+    )
+    if document.credit_link is None:
+        document.credit_link = row
+    else:
+        for name in ("invoice_document_id", "basis", "explanation", "explanation_text"):
+            setattr(document.credit_link, name, getattr(row, name))
 
 
 def _same_seller(draft: InvoiceDraft, known: KnownInvoice) -> bool:
@@ -208,11 +275,18 @@ class Checker:
         answer raises ErpUnavailable instead of being noted."""
         known = _known_invoices(session, document)
         earlier = _known_invoices(session, document, earlier_only=True)
+        credit = link_credit(draft, known)
+        if credit is not None and credit.invoice is not None:
+            credit = replace(
+                credit,
+                credited_before=_credited_before(session, document, credit.invoice.document_id),
+            )
         if self.erp is None:
             return (
                 CheckContext(
                     master_data=MasterData.NOT_CONFIGURED,
                     known_invoices=earlier,
+                    credit=credit,
                     settings=self.settings,
                 ),
                 None,
@@ -221,6 +295,11 @@ class Checker:
             supplier = self.erp.find_supplier(draft.seller.vat_id, draft.seller.name)
             if supplier is None:
                 match = Match(explanation=(Text("match.no_supplier"),))
+                orders = []
+            elif credit is not None:
+                # A credit note answers to its invoice: no order, delivery or
+                # payment of its own (refunds and offsets: Stage 5, increment 4).
+                match = Match(supplier_id=supplier.id, explanation=(credit.explanation,))
                 orders = []
             else:
                 orders = self.erp.orders_of(supplier.id)
@@ -242,6 +321,7 @@ class Checker:
                     master_data=MasterData.UNAVAILABLE,
                     master_data_problem=str(exc),
                     known_invoices=earlier,
+                    credit=credit,
                     settings=self.settings,
                 ),
                 None,
@@ -265,6 +345,7 @@ class Checker:
                 known_invoices=earlier,
                 delivery_id=match.delivery_id,
                 delivery_billed_by=_billed_before(session, document, match),
+                credit=credit,
                 settings=self.settings,
             ),
             match,
@@ -296,6 +377,7 @@ class Checker:
         draft = InvoiceDraft.model_validate(document.draft.data)
         context, match = self.context(session, document, draft, erp_must_answer=erp_must_answer)
         _store_match(session, document, match)
+        _store_credit_link(document, context.credit)
         findings = run_checks(draft, context)
         document.findings = [
             FindingRow(

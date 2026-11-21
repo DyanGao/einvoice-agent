@@ -37,7 +37,7 @@ from app.extract import BaselineExtractor
 from app.queue import JobQueue
 from app.settings import OidcConfig, Settings
 from app.tenants import create_tenant
-from eval.generators.canonical import XRECHNUNG
+from eval.generators.canonical import XRECHNUNG, credit_note_for
 from eval.generators.world import PAID_ONCE, PO_EXACT, build_world
 from eval.generators.xrechnung import render_cii, render_ubl
 from eval.match import erp_for
@@ -64,6 +64,10 @@ ADMIN = ("admin@example.test", "Ada Admin", Role.ADMIN, "ui-test-admin-password"
 VIEWER = ("viewer@example.test", "Vera Viewer", Role.VIEWER, "ui-test-viewer-password")
 # Signs in through the stand-in identity provider only; FakeProvider's default email.
 ANNA = ("anna@example.com", "Anna Example", Role.REVIEWER, None)
+
+
+# The credit note's own number (ui/e2e/review.spec.ts uses the same).
+CREDIT_NUMBER = "GS-2026-00001"
 
 
 # A second company, with ADMIN in it too, for the company switcher.
@@ -208,6 +212,10 @@ def main() -> None:
     # The same e-invoice sent again as CII: a plain copy for "reject all duplicates".
     (args.sample.parent / f"{args.sample.stem}-copy.xml").write_bytes(
         render_cii(entry.invoice, XRECHNUNG)
+    )
+    # A credit note taking the e-invoice back, naming it (v1.0 Stage 5).
+    (args.sample.parent / f"{args.sample.stem}-credit.xml").write_bytes(
+        render_ubl(credit_note_for(entry.invoice, CREDIT_NUMBER), XRECHNUNG)
     )
     # Other bytes than the sample, so it is a new document and not a duplicate.
     (args.sample.parent / f"{HOLD_PREFIX}{args.sample.name}").write_bytes(PDF + b"%held\n")

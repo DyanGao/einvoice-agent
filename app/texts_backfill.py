@@ -204,8 +204,10 @@ class Report:
 
 # Which codes may stand where.
 # An order matched by content or with a slip is a finding whose message is its order note.
-FINDINGS = ("finding.", "order_note.")
-MATCHES = ("match.", "order_note.")
+# Findings about a credit note's invoice say what the link says (credit.*).
+FINDINGS = ("finding.", "order_note.", "credit.")
+# A credit note's match explains the invoice it corrects (app/checks/credit.py).
+MATCHES = ("match.", "order_note.", "credit.")
 REASONS = ("reason.",)
 DELIVERIES = ("delivery.",)
 

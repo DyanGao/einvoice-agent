@@ -12,6 +12,8 @@ const XML = path.join(__dirname, ".tmp", "rechnung.xml");
 const WAITING = path.join(__dirname, ".tmp", "waiting-rechnung.pdf");
 const AGAIN = path.join(__dirname, ".tmp", "again-rechnung.pdf");
 const XML_COPY = path.join(__dirname, ".tmp", "rechnung-copy.xml");
+const CREDIT = path.join(__dirname, ".tmp", "rechnung-credit.xml");
+const CREDIT_NUMBER = "GS-2026-00001";
 const NUMBER = "RE-2026-17234";
 
 // Every test in the browser's language; the texts come from the UI's catalogue (./language.ts).
@@ -183,6 +185,26 @@ test("a valid e-invoice needs no review and has no page to show", async ({ page 
   await expect(checked).toHaveCount(checksBefore + 1);
   await expect(page.getByRole("link", { name: t("doc.download") })).toBeVisible();
   await expect(page.getByRole("button", { name: t("doc.approve"), exact: true })).toHaveCount(0);
+});
+
+test("a credit note shows the invoice it takes back, and the invoice shows it", async ({
+  page,
+}) => {
+  await upload(page, CREDIT);
+  await page.getByRole("button", { name: new RegExp(t("queue.toReview")) }).click();
+  await page.getByRole("link", { name: CREDIT_NUMBER }).click();
+  const matching = page.getByRole("region", { name: t("doc.match.region") });
+  await expect(matching.getByText(t("doc.credit.for"))).toBeVisible();
+  await expect(matching.getByText(t("basis.exact_reference"))).toBeVisible();
+  // Nothing was credited before: all of the invoice is left.
+  await expect(matching.getByText(t("doc.credit.left"))).toBeVisible();
+  // A credit note is looked at by a person (until it can be booked, Stage 5).
+  await expect(page.getByText(t("finding.credit_note")).first()).toBeVisible();
+
+  await matching.getByRole("link").first().click();
+  const invoice = page.getByRole("region", { name: t("doc.match.region") });
+  await expect(invoice.getByText(t("doc.credits"))).toBeVisible();
+  await expect(invoice.getByRole("link", { name: CREDIT_NUMBER })).toBeVisible();
 });
 
 test("an unknown document says so instead of showing an empty form", async ({ page }) => {

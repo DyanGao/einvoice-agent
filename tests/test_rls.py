@@ -66,6 +66,7 @@ def document(tenant_id: str, key: str) -> db.DocumentRow:
             next_attempt_at=datetime.now(UTC),
         )
     )
+    row.credit_link = db.CreditLinkRow(basis="none", explanation="no invoice fits")
     row.invoice = db.InvoiceRow(
         number=f"RE-{key}",
         issue_date=date(2026, 11, 1),

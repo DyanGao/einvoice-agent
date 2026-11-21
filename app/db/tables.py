@@ -104,6 +104,16 @@ class DocumentRow(Base):
     deliveries: Mapped[list["DeliveryRow"]] = relationship(
         back_populates="document", order_by="DeliveryRow.connector"
     )
+    # For a credit note: the invoice it corrects (Stage 5).
+    credit_link: Mapped["CreditLinkRow | None"] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        foreign_keys="CreditLinkRow.document_id",
+    )
+    # For an invoice: the credit notes linked to it.
+    credited_by: Mapped[list["CreditLinkRow"]] = relationship(
+        foreign_keys="CreditLinkRow.invoice_document_id", viewonly=True
+    )
 
     __table_args__ = (UniqueConstraint("tenant_id", "sha256"),)
 
@@ -194,6 +204,29 @@ class FindingRow(Base):
     detail: Mapped[dict[str, Any]] = mapped_column(Json)
 
     document: Mapped[DocumentRow] = relationship(back_populates="findings")
+
+
+class CreditLinkRow(Base):
+    """The invoice a credit note corrects, as the checks found it, or why none
+    was (app/checks/credit.py). Replaced every time the checks run; how much of
+    an invoice is credited adds up its links."""
+
+    __tablename__ = "credit_links"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), unique=True)
+    # None: not found, or several fit.
+    invoice_document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id"), index=True)
+    basis: Mapped[str] = mapped_column(String(20))
+    explanation: Mapped[str]
+    explanation_text: Mapped[dict[str, Any] | None] = mapped_column(Json)
+
+    document: Mapped[DocumentRow] = relationship(
+        back_populates="credit_link", foreign_keys=[document_id]
+    )
+    invoice: Mapped[DocumentRow | None] = relationship(
+        foreign_keys=[invoice_document_id], viewonly=True
+    )
 
 
 class MatchRow(Base):

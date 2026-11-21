@@ -8,7 +8,7 @@ and run `make german-texts`.
 
 `{name}` is filled in when the text is shown: an amount, a date, a field's label, another text.
 
-484 texts.
+498 texts.
 
 ## Glossary
 
@@ -39,16 +39,16 @@ words in the third column.
 - Sign-in (19)
 - Queue (incoming invoices) (40)
 - Document states (19)
-- Review page (74)
+- Review page (79)
 - Rejection reasons (4)
-- Findings and causes (32)
+- Findings and causes (34)
 - History (21)
 - Invoice fields (40)
 - Mail page (22)
 - Admin page (62)
 - Written by the server: check (6)
 - Written by the server: delivery (18)
-- Written by the server: finding (20)
+- Written by the server: finding (21)
 - Written by the server: grounds (3)
 - Written by the server: match (19)
 - Written by the server: order_note (3)
@@ -60,6 +60,7 @@ words in the third column.
 - Written by the server: members (4)
 - Written by the server: review (14)
 - Written by the server: role (3)
+- Written by the server: credit (6)
 
 ## Masthead and pages
 
@@ -233,6 +234,11 @@ words in the third column.
 | `doc.reopen.why` | Why it is reopened | Warum er wieder geöffnet wird |
 | `doc.reopen.submit` | Reopen for review | Zur Prüfung wieder öffnen |
 | `doc.history` | History | Verlauf |
+| `doc.credit.for` | Credits invoice | Gutschrift zu Rechnung |
+| `doc.credit.notFound` | None found | Keine gefunden |
+| `doc.credit.credited` | Credited before | Bereits gutgeschrieben |
+| `doc.credit.left` | Left to credit | Noch gutzuschreiben |
+| `doc.credits` | Credit notes | Gutschriften |
 | `hint.sure` | {percent} sure | {percent} sicher |
 | `hint.derived` | Filled in by a rule, not read from the document | Durch eine Regel ergänzt, nicht aus dem Beleg ausgelesen |
 | `hint.needed` | Needed for approval | Für die Freigabe nötig |
@@ -284,6 +290,8 @@ words in the third column.
 | `finding.quantity_deviation` | Quantity above order | Menge über Bestellung |
 | `finding.master_data_not_checked` | Not checked against the ERP | Nicht mit dem ERP abgeglichen |
 | `finding.po_not_quoted` | Order found, not quoted correctly | Bestellung gefunden, nicht korrekt angegeben |
+| `finding.credit_not_linked` | Credited invoice not found | Gutgeschriebene Rechnung nicht gefunden |
+| `finding.credit_exceeds_invoice` | Credit above invoice | Gutschrift über Rechnungsbetrag |
 | `cause.not_read` | Not validated or read | Nicht validiert oder ausgelesen |
 | `cause.missing_fields` | Fields missing | Felder fehlen |
 | `cause.assumed_value` | Value assumed | Wert angenommen |
@@ -524,6 +532,7 @@ words in the third column.
 | `server.finding.vat_id_invalid` | {party} VAT ID {vat_id}: {problem} | USt-IdNr. {vat_id} ({party}): {problem} |
 | `server.finding.vat_rate_category` | VAT category {category} cannot carry a rate of {rate} % | Steuerkategorie {category} kann keinen Satz von {rate} % tragen |
 | `server.finding.vat_rate_not_german` | {rate} % is not a German VAT rate | {rate} % ist kein deutscher Umsatzsteuersatz |
+| `server.finding.credit_exceeds_invoice` | credit of {credit_amount} is more than the {open_amount} of invoice {number} not yet credited ({credited_amount} credited before) | Gutschrift über {credit_amount} ist mehr als die {open_amount} der Rechnung {number}, die noch nicht gutgeschrieben sind (bereits gutgeschrieben: {credited_amount}) |
 
 ## Written by the server: grounds
 
@@ -669,3 +678,14 @@ words in the third column.
 | `server.role.admin` | admin | Administrator |
 | `server.role.reviewer` | reviewer | Prüfer |
 | `server.role.viewer` | viewer | Leser |
+
+## Written by the server: credit
+
+| Key | English | Deutsch |
+| --- | --- | --- |
+| `server.credit.ambiguous` | several invoices of this supplier fit this credit note: {numbers} | mehrere Rechnungen dieses Lieferanten passen zu dieser Gutschrift: {numbers} |
+| `server.credit.by_lines` | credit note for invoice {number}: it names none, found by supplier and the lines it credits | Gutschrift zur Rechnung {number}: sie nennt keine, gefunden über Lieferant und die gutgeschriebenen Positionen |
+| `server.credit.by_total` | credit note for invoice {number}: it names none, found by supplier and the same total | Gutschrift zur Rechnung {number}: sie nennt keine, gefunden über Lieferant und denselben Betrag |
+| `server.credit.not_found` | no invoice of this supplier on file fits this credit note | keine erfasste Rechnung dieses Lieferanten passt zu dieser Gutschrift |
+| `server.credit.reference` | credit note for invoice {number}, which it names | Gutschrift zur Rechnung {number}, die sie nennt |
+| `server.credit.reference_not_found` | the credit note names invoice {number}, which is not on file for this supplier | die Gutschrift nennt Rechnung {number}, die für diesen Lieferanten nicht erfasst ist |

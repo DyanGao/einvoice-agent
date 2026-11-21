@@ -11,6 +11,7 @@ from app.checks.context import CheckContext, KnownInvoice, MasterData
 from app.checks.finding import Finding, FindingType, Severity
 from app.extract.complete import ZERO_RATE_CATEGORIES
 from app.extract.draft import InvoiceDraft
+from app.models.invoice import CREDIT_NOTE
 from app.texts import Text
 
 Check = Callable[[InvoiceDraft, CheckContext], list[Finding]]
@@ -192,6 +193,12 @@ def edit_distance(a: str, b: str) -> int:
     return previous[-1]
 
 
+def _same_kind(draft: InvoiceDraft, known: KnownInvoice) -> bool:
+    """A credit note is compared with credit notes, an invoice with invoices:
+    a full credit has its invoice's total, and is not a copy of it."""
+    return (draft.type_code == CREDIT_NOTE) == (known.type_code == CREDIT_NOTE)
+
+
 def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
     """The same invoice again (same supplier and number); one that looks like
     it (same supplier, amount and date — a re-sent, re-scanned or retyped
@@ -207,7 +214,7 @@ def duplicates(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
     findings = []
     reported = set()
     for known in context.known_invoices:
-        if not _same_seller(draft, known):
+        if not _same_seller(draft, known) or not _same_kind(draft, known):
             continue
         detail = {"document_id": known.document_id, "number": known.number}
         if number and number == _key(known.number):
@@ -332,7 +339,8 @@ def _share_above(actual: Decimal, ordered: Decimal) -> Decimal | None:
 
 
 def purchase_order(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
-    if context.master_data is not MasterData.AVAILABLE:
+    # A credit note answers to its invoice (credit_link), not to an order.
+    if context.master_data is not MasterData.AVAILABLE or draft.type_code == CREDIT_NOTE:
         return []
     settings = context.settings
     order = context.purchase_order
@@ -419,11 +427,52 @@ def purchase_order(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
     return findings
 
 
+def credit_link(draft: InvoiceDraft, context: CheckContext) -> list[Finding]:
+    """A credit note whose invoice was not found, or that takes back more than
+    is left of it (app/checks/credit.py)."""
+    link = context.credit
+    if link is None:
+        return []
+    if link.invoice is None:
+        return [
+            Finding(
+                type=FindingType.CREDIT_NOT_LINKED,
+                severity=Severity.REVIEW,
+                message=link.explanation,
+                fields=("preceding_ref",),
+                detail={"basis": link.basis.value, "preceding_ref": draft.preceding_ref},
+            )
+        ]
+    left = link.open_amount
+    if left is None or draft.gross_total is None or draft.gross_total <= left:
+        return []
+    return [
+        Finding(
+            type=FindingType.CREDIT_EXCEEDS_INVOICE,
+            severity=Severity.REVIEW,
+            message=Text(
+                "finding.credit_exceeds_invoice",
+                credit_amount=draft.gross_total,
+                open_amount=left,
+                number=link.invoice.number,
+                credited_amount=link.credited_before,
+            ),
+            fields=("gross_total",),
+            detail={
+                "invoice_document_id": link.invoice.document_id,
+                "open": str(left),
+                "credited_before": str(link.credited_before),
+            },
+        )
+    ]
+
+
 ALL_CHECKS: tuple[Check, ...] = (
     totals,
     vat_rates,
     vat_ids,
     document_type,
+    credit_link,
     duplicates,
     master_data,
     supplier_and_iban,

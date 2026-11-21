@@ -14,6 +14,7 @@ import {
   rejectDocument,
   reopenDocument,
   type AuditEvent,
+  type Credit,
   type Delivery,
   type Detail,
   type RejectReason,
@@ -197,6 +198,36 @@ function auditText(i18n: Translator, event: AuditEvent): string {
   if (typeof detail.trigger !== "string") return text;
   const trigger = i18n.server(detail.trigger_text as Said | null | undefined, detail.trigger);
   return t("audit.again", { event: text, trigger });
+}
+
+/** A credit note's invoice: which, found how, and what is left of it to credit. */
+function CreditRows({ credit, currency }: { credit: Credit; currency: string | null }) {
+  const i18n = useI18n();
+  const { t } = i18n;
+  const invoice = credit.invoice;
+  return (
+    <dl className="match">
+      <dt>{t("doc.credit.for")}</dt>
+      <dd>
+        {invoice ? (
+          <Link href={`/documents/${invoice.document_id}`}>
+            {invoice.number ?? invoice.document_id}
+          </Link>
+        ) : (
+          t("doc.credit.notFound")
+        )}{" "}
+        <span className="basis">{basisLabel(i18n, credit.basis)}</span>
+      </dd>
+      {invoice && (
+        <>
+          <dt>{t("doc.credit.credited")}</dt>
+          <dd>{i18n.money(invoice.credited_by_others, currency)}</dd>
+          <dt>{t("doc.credit.left")}</dt>
+          <dd>{i18n.money(invoice.left, currency)}</dd>
+        </>
+      )}
+    </dl>
+  );
 }
 
 export default function ReviewPage() {
@@ -468,34 +499,60 @@ export default function ReviewPage() {
           </section>
         )}
 
-        {detail.match && (
+        {(detail.match || detail.credit) && (
           <section className="group" aria-label={t("doc.match.region")}>
             <h2>{t("doc.match.title")}</h2>
-            <dl className="match">
-              <dt>{t("doc.match.order")}</dt>
-              <dd>
-                {detail.match.po_number ?? t("doc.match.none")}{" "}
-                <span className="basis">{basisLabel(i18n, detail.match.po_basis)}</span>
-              </dd>
-              <dt>{t("doc.match.delivery")}</dt>
-              <dd>{detail.match.delivery_id ?? t("doc.match.none")}</dd>
-              <dt>{t("doc.match.payments")}</dt>
-              <dd>
-                {detail.match.payments.length === 0
-                  ? t("doc.match.none")
-                  : detail.match.payments
-                      .map(
-                        (payment) =>
-                          `${payment.bank_transaction_id} (${i18n.money(payment.amount, null)})`,
-                      )
-                      .join(", ")}{" "}
-                <span className="basis">{basisLabel(i18n, detail.match.payment_basis)}</span>
-              </dd>
-            </dl>
+            {detail.credit ? (
+              <CreditRows credit={detail.credit} currency={detail.currency} />
+            ) : detail.match ? (
+              <dl className="match">
+                <dt>{t("doc.match.order")}</dt>
+                <dd>
+                  {detail.match.po_number ?? t("doc.match.none")}{" "}
+                  <span className="basis">{basisLabel(i18n, detail.match.po_basis)}</span>
+                </dd>
+                <dt>{t("doc.match.delivery")}</dt>
+                <dd>{detail.match.delivery_id ?? t("doc.match.none")}</dd>
+                <dt>{t("doc.match.payments")}</dt>
+                <dd>
+                  {detail.match.payments.length === 0
+                    ? t("doc.match.none")
+                    : detail.match.payments
+                        .map(
+                          (payment) =>
+                            `${payment.bank_transaction_id} (${i18n.money(payment.amount, null)})`,
+                        )
+                        .join(", ")}{" "}
+                  <span className="basis">{basisLabel(i18n, detail.match.payment_basis)}</span>
+                </dd>
+                {detail.credits.length > 0 && (
+                  <>
+                    <dt>{t("doc.credits")}</dt>
+                    <dd>
+                      {detail.credits.map((credit, index) => (
+                        <span key={credit.document_id}>
+                          {index > 0 && ", "}
+                          <Link href={`/documents/${credit.document_id}`}>
+                            {credit.number ?? credit.document_id}
+                          </Link>{" "}
+                          ({i18n.money(credit.gross_total, detail.currency)})
+                        </span>
+                      ))}
+                    </dd>
+                  </>
+                )}
+              </dl>
+            ) : null}
             <ul className="match-why">
-              {detail.match.explanation.map((line, index) => (
-                <li key={index}>{i18n.server(detail.match?.explanation_texts?.[index], line)}</li>
-              ))}
+              {detail.match
+                ? detail.match.explanation.map((line, index) => (
+                    <li key={index}>
+                      {i18n.server(detail.match?.explanation_texts?.[index], line)}
+                    </li>
+                  ))
+                : detail.credit && (
+                    <li>{i18n.server(detail.credit.explanation_text, detail.credit.explanation)}</li>
+                  )}
             </ul>
             {!approved && !rejected && (
               <button

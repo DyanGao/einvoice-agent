@@ -9,6 +9,10 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 from enum import StrEnum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.checks.credit import CreditLink
 
 
 class MasterData(StrEnum):
@@ -45,8 +49,16 @@ class PurchaseOrder:
 
 
 @dataclass(frozen=True)
+class KnownLine:
+    description: str
+    quantity: Decimal
+    unit_price: Decimal
+
+
+@dataclass(frozen=True)
 class KnownInvoice:
-    """An invoice already on file, as far as duplicate detection needs it."""
+    """A document already on file, as far as duplicate detection and the link
+    of a credit note to its invoice need it."""
 
     document_id: str
     seller_name: str | None
@@ -54,6 +66,11 @@ class KnownInvoice:
     number: str | None
     issue_date: date | None
     gross_total: Decimal | None
+    # 380 for an invoice, 381 for a credit note; None if it was not read.
+    type_code: str | None = None
+    # A person rejected it: not an invoice a credit note can correct.
+    rejected: bool = False
+    lines: tuple[KnownLine, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -88,4 +105,6 @@ class CheckContext:
     # were matched to the same one.
     delivery_id: str | None = None
     delivery_billed_by: tuple[KnownInvoice, ...] = ()
+    # For a credit note: the invoice it corrects, or why none was found.
+    credit: "CreditLink | None" = None
     settings: CheckSettings = field(default_factory=CheckSettings)
