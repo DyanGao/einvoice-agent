@@ -36,10 +36,11 @@ def test_stored_invoice_round_trips_to_the_same_model(session_factory, accepting
     assert stored == process_structured(XML, accepting).invoice
 
 
-def test_gross_total_column_is_exact(session_factory, accepting):
+def test_the_invoice_of_record_keeps_its_amounts_exact(session_factory, accepting):
     document_id = store(session_factory, accepting)
     with session_factory() as session:
-        assert session.get(db.DocumentRow, document_id).invoice.gross_total == Decimal("336.9")
+        data = session.get(db.DocumentRow, document_id).invoice.data
+    assert Decimal(data["gross_total"]) == Decimal("336.9")
 
 
 def test_violations_are_stored(session_factory, rejecting):

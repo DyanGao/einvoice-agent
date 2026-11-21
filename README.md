@@ -82,7 +82,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 ## Data & privacy
 - Repo contains **only synthetic or fully anonymized** invoices
 - E-invoices (XRechnung, ZUGFeRD) are parsed and validated on the machine; no model sees them
-- Stored originals are encrypted at rest with a key per company, wrapped by a master key kept only in `.env` (`make master-key`); the invoice data read from them is not encrypted yet
+- Stored invoices — the originals and the data read from them — are encrypted at rest with a key per company, wrapped by a master key kept only in `.env` (`make master-key`)
 - PDFs and scans are sent to the Anthropic API to be read (`EXTRACTOR=llm`, the default). To keep every document on the machine, set `EXTRACTOR=baseline` (rule-based, far less accurate: see Results) or `EXTRACTOR=none` (PDFs and scans are not read; they are marked "extraction failed: no extractor configured"). Or read them with a local vision model through Ollama, `EXTRACTOR_MODEL=ollama/qwen2.5vl:7b`: nothing leaves the machine, but it reads about 91 % of fields against Opus's 100 %, and its misreads are not held back by the decision engine, so everything it reads goes to a person, enforced ([comparison](docs/eval-report.md#hosted-vs-local-model-held-out-split))
 - Not tax advice; archiving rules (GoBD) are out of scope for v1 and documented as such
 

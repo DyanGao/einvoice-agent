@@ -54,10 +54,15 @@ migrate:
 db-check: migrate
 	uv run alembic check
 
+# The database password: POSTGRES_PASSWORD from .env, else the development
+# default; URL-encoded. Used without echoing the command that holds it.
+PG_PASSWORD = $(shell uv run $(ENV_FILE) python -c "import os, urllib.parse; print(urllib.parse.quote(os.environ.get('POSTGRES_PASSWORD') or 'einvoice', safe=''))")
+
 # Same test suite against Postgres instead of in-memory SQLite.
 test-pg:
 	docker compose exec -T postgres psql -U einvoice -d einvoice -qc "DROP DATABASE IF EXISTS einvoice_test" -c "CREATE DATABASE einvoice_test"
-	TEST_DATABASE_URL=postgresql+psycopg://einvoice:einvoice@127.0.0.1:5433/einvoice_test \
+	@echo "pytest against postgresql+psycopg://einvoice:***@127.0.0.1:5433/einvoice_test"
+	@TEST_DATABASE_URL=postgresql+psycopg://einvoice:$(PG_PASSWORD)@127.0.0.1:5433/einvoice_test \
 		TEST_REDIS_URL=redis://127.0.0.1:6380/15 uv run pytest
 
 # Real sample files through the running validator (make up).

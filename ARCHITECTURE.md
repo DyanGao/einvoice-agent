@@ -69,8 +69,7 @@ tenant_keys(id, tenant_id, version, wrapped, master_id, created_at)
 documents(id, tenant_id, sha256, filename, format, status, error, content, review_state,
           created_at)                             # sha256 unique per tenant; content sealed
 drafts(document_id, original, data, updated_at)   # what was read, and with the reviewer's corrections
-invoices(document_id, number, issue_date, seller_name, seller_vat_id, currency,
-         gross_total, data)                       # the invoice of record: parsed, or approved
+invoices(document_id, data)                       # the invoice of record: parsed, or approved
 validation_results(document_id, valid, scenario, violations, created_at)
 findings(document_id, position, type, severity, message, fields, detail)
 matches(document_id, supplier_id, po_number, po_basis, delivery_id,
@@ -264,8 +263,19 @@ Built and tested:
   master key (`ENCRYPTION=off` for development only); tests, evals, the demo and the UI test server use
   a throwaway key in memory. Originals stored before are read as they are and sealed by `einvoice seal
   --apply`; a downgrade of the migration refuses while anything is sealed. A dump of the database shows
-  no original (tested). The invoice data read from it (drafts, findings, …) is not sealed yet
-  (increment 2).
+  no original (tested).
+- **Invoice data encrypted at rest (increment 2).** Every column that holds what an invoice says is
+  sealed the same way (`app/db/sealed.py`, a column type): drafts, the invoice of record, validation
+  messages, findings, match explanations and payments, the matched order number, decisions, credit
+  links, bookings and delivery errors, audit details, file names and errors, mail sender, subject,
+  date and parts. The tenant whose key seals a value is the one the session acts for (`act_for`),
+  handed to the column type right before each flush or statement on the same thread; reading needs no
+  tenant. Plain stay what is searched by or says nothing of the invoice: ids, states, types, dates of
+  storage, the SHA-256, the ERP's supplier and delivery ids, field names, the mail's Message-ID. The
+  invoice table's plain copies of number, seller and totals are gone (nothing searched by them). A
+  dump of a database with a processed, matched and booked invoice and the mail it came in shows none
+  of its number, names, VAT ID, IBAN, line text, order, total, sender or subject (tested, with a
+  control without encryption).
 - **Data in git**: synthetic only; real invoice data (`data/private/`, browser logs in `data/browser/`)
   is ignored.
 
@@ -303,10 +313,8 @@ Built and tested:
 Not built:
 - **Local setups run `AUTH=off`**, where the reviewer's name in the audit trail is typed into the UI and
   recorded as unverified.
-- **Encryption at rest covers the originals only so far**: the data read from them (drafts, invoices,
-  findings, matches, decisions, deliveries, audit details, mail headers, file names) is still stored
-  plain (v1.0 Stage 6, increment 2). No key rotation yet (increment 3), no retention settings
-  (increment 5).
+- **No key rotation yet** (v1.0 Stage 6, increment 3), no tamper check (4), no retention settings
+  (5). The ERP's ids, the mail's Message-ID and user accounts are not encrypted.
 - **PDFs and scans leave the machine** for the Anthropic API unless `EXTRACTOR=baseline` or `none`.
 
 ## 7. Repo layout
