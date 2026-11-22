@@ -24,6 +24,7 @@ const CATALOGUES: Record<Locale, Record<MessageKey, string>> = { de, en };
 const INTL: Record<Locale, string> = { de: "de-DE", en: "en-GB" };
 const STORAGE_KEY = "einvoice.language";
 const DECIMAL = /^-?\d+(\.\d+)?$/;
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function fill(text: string, params?: Params): string {
   if (!params) return text;
@@ -43,6 +44,9 @@ export type Translator = {
   /** A decimal string in this language's notation, for a field to edit: "1234.5" → "1234,5".
    * The digits stay exactly as they are (no float, no grouping); anything else is returned unchanged. */
   decimal: (value: string) => string;
+  /** A date ("2026-01-29") for a field to edit, as this language writes it: "29.01.2026" in German,
+   * the same ISO date in English (a browser's own date field follows its system, not the page). */
+  dateField: (value: string) => string;
   /** An amount from its decimal string, never through a float: "1234.5" → "1.234,50 €". */
   money: (amount: string | null, currency: string | null) => string;
   /** A timestamp from the API (UTC) in local time. */
@@ -71,6 +75,10 @@ export function translator(locale: Locale): Translator {
     t,
     tx,
     decimal: (value) => (locale === "de" && DECIMAL.test(value) ? value.replace(".", ",") : value),
+    dateField: (value) => {
+      const iso = ISO_DATE.exec(value);
+      return locale === "de" && iso ? `${iso[3]}.${iso[2]}.${iso[1]}` : value;
+    },
     tn: (key, count, params) =>
       tx(`${key}.${count === 1 ? "one" : "other"}`, key, { count, ...params }),
     money: (amount, currency) => {

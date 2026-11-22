@@ -30,6 +30,7 @@ import {
   kindAt,
   labelFor,
   LOW_CONFIDENCE,
+  shownAs,
   TABLES,
   valueAt,
   type FormState,
@@ -70,9 +71,9 @@ function marksFor(detail: Detail, path: string) {
   const derived = (detail.fields?.derived_fields as string[] | undefined) ?? [];
   // What was read before the reviewer changed it; null when unchanged.
   // `text` null: nothing was read there.
-  const was: { text: string | null; amount: boolean } | null =
+  const was: { text: string | null; kind: Kind } | null =
     detail.original !== null && JSON.stringify(original) !== JSON.stringify(current)
-      ? { text: shown(original), amount: kindAt(path) === "amount" }
+      ? { text: shown(original), kind: kindAt(path) }
       : null;
   return {
     // What the checks say about this field, if anything.
@@ -85,9 +86,9 @@ function marksFor(detail: Detail, path: string) {
   };
 }
 
-function wasText(i18n: Translator, was: { text: string | null; amount: boolean }): string {
+function wasText(i18n: Translator, was: { text: string | null; kind: Kind }): string {
   if (was.text === null) return i18n.t("hint.nothingRead");
-  return i18n.t("hint.readAs", { value: was.amount ? i18n.decimal(was.text) : was.text });
+  return i18n.t("hint.readAs", { value: shownAs(i18n, was.text, was.kind) });
 }
 
 function Hints({ marks }: { marks: ReturnType<typeof marksFor> }) {
@@ -119,8 +120,10 @@ function cellTitle(i18n: Translator, marks: ReturnType<typeof marksFor>): string
   return notes.length > 0 ? notes.join("\n") : undefined;
 }
 
-function inputProps(kind: Kind) {
-  if (kind === "date") return { type: "date" } as const;
+function inputProps(i18n: Translator, kind: Kind) {
+  // A text field, not the browser's date field: that one writes the date as the
+  // computer's system is set, whatever the page's language.
+  if (kind === "date") return { type: "text", placeholder: i18n.t("field.dateFormat") } as const;
   if (kind === "amount") return { type: "text", inputMode: "decimal" } as const;
   return { type: "text" } as const;
 }
@@ -174,10 +177,10 @@ function auditText(i18n: Translator, event: AuditEvent): string {
   const detail = event.detail ?? {};
   if (event.event === "field_corrected") {
     const field = String(detail.field);
-    // An amount the way the reader writes it ("7864,76" in German).
+    // An amount or a date the way the reader writes it ("7864,76", "29.01.2026" in German).
     const value = (raw: unknown) => {
       const text = said(i18n, raw);
-      return kindAt(field) === "amount" && typeof raw === "string" ? i18n.decimal(text) : text;
+      return typeof raw === "string" ? shownAs(i18n, text, kindAt(field)) : text;
     };
     return t("audit.field_corrected", {
       field: labelFor(i18n, field),
@@ -633,7 +636,7 @@ export default function ReviewPage() {
                         <label htmlFor={`f-${field.path}`}>{t(field.label)}</label>
                         <input
                           id={`f-${field.path}`}
-                          {...inputProps(field.kind)}
+                          {...inputProps(i18n, field.kind)}
                           className={field.kind === "amount" ? "number" : undefined}
                           value={form.scalars[field.path] ?? ""}
                           onChange={(event) => setScalar(field.path, event.target.value)}
@@ -700,7 +703,7 @@ export default function ReviewPage() {
                                   >
                                     <input
                                       aria-label={labelFor(i18n, path)}
-                                      {...inputProps(column.kind)}
+                                      {...inputProps(i18n, column.kind)}
                                       className={column.kind === "amount" ? "number" : undefined}
                                       value={row[column.key] ?? ""}
                                       onChange={(event) =>
