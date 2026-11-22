@@ -84,7 +84,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 - E-invoices (XRechnung, ZUGFeRD) are parsed and validated on the machine; no model sees them
 - Stored invoices — the originals and the data read from them — are encrypted at rest with a key per company, wrapped by a master key kept only in `.env` (`make master-key`)
 - PDFs and scans are sent to the Anthropic API to be read (`EXTRACTOR=llm`, the default). To keep every document on the machine, set `EXTRACTOR=baseline` (rule-based, far less accurate: see Results) or `EXTRACTOR=none` (PDFs and scans are not read; they are marked "extraction failed: no extractor configured"). Or read them with a local vision model through Ollama, `EXTRACTOR_MODEL=ollama/qwen2.5vl:7b`: nothing leaves the machine, but it reads about 91 % of fields against Opus's 100 %, and its misreads are not held back by the decision engine, so everything it reads goes to a person, enforced ([comparison](docs/eval-report.md#hosted-vs-local-model-held-out-split))
-- Not tax advice. Retention and deletion follow § 147 AO as read here (8 years, legal hold, an append-only deletion log; to be confirmed with a tax adviser); GoBD certification is not claimed
+- Not tax advice. Retention and deletion follow § 147 AO as read here (8 years, legal hold, an append-only deletion log; to be confirmed with a tax adviser); a tax audit gets a period's documents with `einvoice export`; a [Verfahrensdokumentation template](docs/verfahrensdokumentation.md) describes the software for the operator to complete; GoBD certification is not claimed
 
 ## Roadmap
 - [x] v0.1 structured path: parse + validate XRechnung/ZUGFeRD

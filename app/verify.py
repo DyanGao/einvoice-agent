@@ -58,7 +58,7 @@ class Report:
     digest: str = ""
 
 
-def _problems(document: DocumentRow, tenant: str) -> tuple[list[Problem], int, int]:
+def problems_of(document: DocumentRow, tenant: str) -> tuple[list[Problem], int, int]:
     """The document's breaks, its events and how many are not chained yet."""
     found: list[Problem] = []
 
@@ -118,7 +118,7 @@ def verify(session_factory: sessionmaker[Session]) -> Report:
         for document_id in _document_ids(session_factory, tenant_id):
             with tenant_transaction(session_factory, tenant_id) as session:
                 document = session.get(DocumentRow, document_id)
-                found, events, unchained = _problems(document, slug)
+                found, events, unchained = problems_of(document, slug)
                 heads.update(f"{document_id}:{document.audit_head}\n".encode())
             report.documents += 1
             report.events += events
@@ -146,7 +146,7 @@ def chain_older(session_factory: sessionmaker[Session], *, apply: bool) -> Chain
         for document_id in _document_ids(session_factory, tenant_id):
             with tenant_transaction(session_factory, tenant_id) as session:
                 document = session.get(DocumentRow, document_id)
-                found, _, unchained = _problems(document, slug)
+                found, _, unchained = problems_of(document, slug)
                 if not unchained:
                     continue
                 if found:

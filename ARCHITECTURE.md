@@ -314,6 +314,15 @@ Built and tested:
   when and by whom. The log is append-only: the tenant role may only read and add its own, and on
   Postgres a trigger refuses UPDATE, DELETE and TRUNCATE for every role (the ORM refuses them too);
   the migration's downgrade refuses while the log holds anything.
+- **Audit export and Verfahrensdokumentation (increment 6).** `einvoice export DIR --from --to
+  [--tenant]` writes a tenant's documents of a period (by invoice date, else received date) for a tax
+  audit: each original as received, CSV tables of the documents, their lines, their whole histories
+  with the hash chain and the deletions of the period (semicolons, decimal comma, DD.MM.YYYY, UTF-8),
+  `index.xml` describing them as the GDPdU description standard has it (not checked with an
+  auditor's tool), a manifest with the chain check and digest, and `checksums.sha256` for every file.
+  Into a new or empty folder only; it is not encrypted, and says so. `docs/verfahrensdokumentation.md`
+  is the German template of the Verfahrensdokumentation: what the software does, written to the code,
+  and marked gaps for what only the operator knows.
 - **Data in git**: synthetic only; real invoice data (`data/private/`, browser logs in `data/browser/`)
   is ignored.
 
