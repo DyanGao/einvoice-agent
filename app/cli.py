@@ -24,6 +24,9 @@ einvoice key-rotate-master [--apply]
                              master key to MASTER_KEY_PREVIOUS (app/rotation.py)
 einvoice key-rotate-tenant SLUG [--apply]
                              a new data key for a company, its data sealed again with it
+einvoice export DIR --from DATE --to DATE
+                             a tenant's documents of a period for a tax audit: originals,
+                             CSV tables, GDPdU index, checksums (app/export.py)
 einvoice verify              every original against its SHA-256, every history against its
                              hash chain (app/verify.py); exits 1 on a break
 einvoice chain [--apply]     chain the history events stored before the chain existed
@@ -54,6 +57,7 @@ import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import auth, crypto, db, retention, rotation, tenants, verify
+from app import export as audit_export
 from app.db.engine import database_engine
 from app.db.rls import tenant_transaction
 from app.ingest import requeue_received, scan_folder
@@ -109,6 +113,11 @@ def main(
     hold_command.add_argument("--reason", required=True)
     hold_command.add_argument("--release", action="store_true", help="take the hold off")
     _tenant_option(hold_command)
+    export_command = commands.add_parser("export", help="a period's documents for a tax audit")
+    export_command.add_argument("folder", type=Path, help="a new, or empty, folder")
+    export_command.add_argument("--from", dest="start", required=True, type=date.fromisoformat)
+    export_command.add_argument("--to", dest="end", required=True, type=date.fromisoformat)
+    _tenant_option(export_command)
     commands.add_parser("verify", help="check every original and every history for changes")
     chain = commands.add_parser("chain", help="chain the history events stored before")
     chain.add_argument("--apply", action="store_true", help="write (without: only count)")
@@ -169,6 +178,23 @@ def main(
                 return 2
         print(f"{args.document}: legal hold {'off' if args.release else 'on'}")
         return 0
+    if args.command == "export":
+        session_factory = session_factory or _database(settings)
+        try:
+            done = audit_export.export(
+                session_factory, settings, args.tenant, args.start, args.end, args.folder
+            )
+        except ValueError as exc:
+            print(exc, file=sys.stderr)
+            return 2
+        print(
+            f"{done.documents} documents, {done.lines} lines, {done.events} history events, "
+            f"{done.deletions} deletions written to {done.folder}"
+        )
+        for problem in done.problems:
+            print(f"    break: {problem}")
+        print("not encrypted: hand it over on an encrypted medium, and delete it afterwards")
+        return 1 if done.problems else 0
     if args.command == "verify":
         session_factory = session_factory or _database(settings)
         found = verify.verify(session_factory)
