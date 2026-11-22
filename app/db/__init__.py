@@ -1,3 +1,4 @@
+from app.db import chain as _chain  # noqa: F401 - chains every history written
 from app.db.review import (
     NotReviewable,
     RejectReason,

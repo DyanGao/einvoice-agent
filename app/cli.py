@@ -24,6 +24,9 @@ einvoice key-rotate-master [--apply]
                              master key to MASTER_KEY_PREVIOUS (app/rotation.py)
 einvoice key-rotate-tenant SLUG [--apply]
                              a new data key for a company, its data sealed again with it
+einvoice verify              every original against its SHA-256, every history against its
+                             hash chain (app/verify.py); exits 1 on a break
+einvoice chain [--apply]     chain the history events stored before the chain existed
 einvoice seal [--apply] [--open]
                              seal the originals and invoice data stored before encryption
                              (app/sealing.py);
@@ -44,7 +47,7 @@ from pathlib import Path
 import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import auth, crypto, db, rotation, tenants
+from app import auth, crypto, db, rotation, tenants, verify
 from app.db.engine import database_engine
 from app.db.rls import tenant_transaction
 from app.ingest import requeue_received, scan_folder
@@ -91,6 +94,9 @@ def main(
     )
     rotate_tenant.add_argument("slug")
     rotate_tenant.add_argument("--apply", action="store_true", help="write (without: only count)")
+    commands.add_parser("verify", help="check every original and every history for changes")
+    chain = commands.add_parser("chain", help="chain the history events stored before")
+    chain.add_argument("--apply", action="store_true", help="write (without: only count)")
     seal = commands.add_parser("seal", help="seal the originals stored before encryption")
     seal.add_argument("--apply", action="store_true", help="write (without: only count)")
     seal.add_argument("--open", action="store_true", help="store them plain again instead")
@@ -126,6 +132,29 @@ def main(
     if args.command == "seal":
         session_factory = session_factory or _database(settings)
         return _seal(session_factory, apply=args.apply, open_all=args.open)
+    if args.command == "verify":
+        session_factory = session_factory or _database(settings)
+        found = verify.verify(session_factory)
+        print(
+            f"{found.documents} documents, {found.events} history events checked; "
+            f"{len(found.problems)} breaks; {found.unchained} events from before the chain"
+        )
+        for problem in found.problems:
+            print(f"    {problem}")
+        if found.unchained:
+            print("chain them with: einvoice chain --apply")
+        print(f"digest {found.digest}")
+        return 1 if found.problems else 0
+    if args.command == "chain":
+        session_factory = session_factory or _database(settings)
+        done = verify.chain_older(session_factory, apply=args.apply)
+        verb = "chained" if args.apply else "to chain"
+        print(f"{done.events} events of {done.documents} documents {verb}")
+        for problem in done.refused:
+            print(f"    left as it is, its chain is broken: {problem}")
+        if not args.apply and done.events:
+            print("nothing written; run again with --apply to write")
+        return 1 if done.refused else 0
     if args.command == "key-rotate-master":
         if session_factory is None:
             _database(settings)  # the keyring, from MASTER_KEY and MASTER_KEY_PREVIOUS
