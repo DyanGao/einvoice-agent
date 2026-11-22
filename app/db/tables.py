@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     event,
+    false,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -106,6 +107,8 @@ class DocumentRow(Base):
     review_state: Mapped[str] = mapped_column(String(20), index=True, default="pending")
     # The newest hash of its history's chain (app/db/chain.py); None before it.
     audit_head: Mapped[str | None] = mapped_column(String(64))
+    # Kept whatever its retention end (app/retention.py); why is in its history.
+    legal_hold: Mapped[bool] = mapped_column(default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     invoice: Mapped["InvoiceRow | None"] = relationship(back_populates="document")
@@ -349,6 +352,33 @@ class DeliveryRow(Base):
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     document: Mapped[DocumentRow] = relationship(back_populates="deliveries")
+
+
+class DeletionLogRow(Base):
+    """A document deleted after its retention end (app/retention.py): what it
+    was (its original's SHA-256, its history's newest hash and length), when
+    it could go and when it went. Append-only: the tenant role may read and
+    add, and on Postgres a trigger refuses every change; here too."""
+
+    __tablename__ = "deletion_log"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey("tenants.id"), index=True)
+    # No foreign key: the document is gone.
+    document_id: Mapped[str] = mapped_column(String(32))
+    sha256: Mapped[str] = mapped_column(String(64))
+    audit_head: Mapped[str | None] = mapped_column(String(64))
+    events: Mapped[int]
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    retention_end: Mapped[date]
+    deleted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    deleted_by: Mapped[str] = mapped_column(String(100))
+
+
+@event.listens_for(DeletionLogRow, "before_update")
+@event.listens_for(DeletionLogRow, "before_delete")
+def _append_only(mapper, connection, target: DeletionLogRow) -> None:
+    raise ValueError("the deletion log is append-only")
 
 
 class SeenBankTransactionRow(Base):

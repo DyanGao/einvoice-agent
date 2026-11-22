@@ -27,6 +27,11 @@ einvoice key-rotate-tenant SLUG [--apply]
 einvoice verify              every original against its SHA-256, every history against its
                              hash chain (app/verify.py); exits 1 on a break
 einvoice chain [--apply]     chain the history events stored before the chain existed
+einvoice retention [--apply]
+                             what is past its retention end and not held (app/retention.py);
+                             --apply deletes it where the tenant's deletion_enabled is on
+einvoice hold DOCUMENT --reason TEXT [--release]
+                             a legal hold on a document, or off again
 einvoice seal [--apply] [--open]
                              seal the originals and invoice data stored before encryption
                              (app/sealing.py);
@@ -42,12 +47,13 @@ import json
 import sys
 import time
 from collections.abc import Callable, Sequence
+from datetime import date
 from pathlib import Path
 
 import httpx
 from sqlalchemy.orm import Session, sessionmaker
 
-from app import auth, crypto, db, rotation, tenants, verify
+from app import auth, crypto, db, retention, rotation, tenants, verify
 from app.db.engine import database_engine
 from app.db.rls import tenant_transaction
 from app.ingest import requeue_received, scan_folder
@@ -94,6 +100,15 @@ def main(
     )
     rotate_tenant.add_argument("slug")
     rotate_tenant.add_argument("--apply", action="store_true", help="write (without: only count)")
+    retention_command = commands.add_parser("retention", help="what is past its retention end")
+    retention_command.add_argument(
+        "--apply", action="store_true", help="delete it, where the tenant allows deleting"
+    )
+    hold_command = commands.add_parser("hold", help="a legal hold on a document")
+    hold_command.add_argument("document")
+    hold_command.add_argument("--reason", required=True)
+    hold_command.add_argument("--release", action="store_true", help="take the hold off")
+    _tenant_option(hold_command)
     commands.add_parser("verify", help="check every original and every history for changes")
     chain = commands.add_parser("chain", help="chain the history events stored before")
     chain.add_argument("--apply", action="store_true", help="write (without: only count)")
@@ -132,6 +147,28 @@ def main(
     if args.command == "seal":
         session_factory = session_factory or _database(settings)
         return _seal(session_factory, apply=args.apply, open_all=args.open)
+    if args.command == "retention":
+        session_factory = session_factory or _database(settings)
+        return _retention(session_factory, settings, apply=args.apply)
+    if args.command == "hold":
+        session_factory = session_factory or _database(settings)
+        tenant_id = _tenant_id(session_factory, args.tenant)
+        if tenant_id is None:
+            return 2
+        with tenant_transaction(session_factory, tenant_id) as session:
+            document = session.get(db.DocumentRow, args.document)
+            if document is None or document.tenant_id != tenant_id:
+                print(f"no document {args.document} in {args.tenant}", file=sys.stderr)
+                return 2
+            try:
+                retention.set_hold(
+                    session, document, on=not args.release, reason=args.reason, actor="operator"
+                )
+            except ValueError as exc:
+                print(exc, file=sys.stderr)
+                return 2
+        print(f"{args.document}: legal hold {'off' if args.release else 'on'}")
+        return 0
     if args.command == "verify":
         session_factory = session_factory or _database(settings)
         found = verify.verify(session_factory)
@@ -224,6 +261,24 @@ def _database(settings: Settings) -> sessionmaker[Session]:
     engine = database_engine(settings.database_url)
     crypto.configure_from_env(engine)
     return sessionmaker(engine)
+
+
+def _retention(session_factory: sessionmaker[Session], settings: Settings, *, apply: bool) -> int:
+    report = retention.run(session_factory, settings, date.today(), apply=apply, actor="operator")
+    for slug, found in report.tenants.items():
+        print(
+            f"{slug}: {found.documents} documents, {found.kept} within their retention, "
+            f"{found.held} past it but held, {found.due} past it"
+            + (f", {found.deleted} deleted" if apply else "")
+        )
+        if found.due and found.deletion_off:
+            print(f"    kept: deletion is off for {slug} (einvoice tenant-set {slug} "
+                  "deletion_enabled=true)")  # fmt: skip
+        if found.next_end is not None:
+            print(f"    the next may go after {found.next_end.isoformat()}")
+    if not apply and any(f.due and not f.deletion_off for f in report.tenants.values()):
+        print("nothing deleted; run again with --apply to delete")
+    return 0
 
 
 def _seal(session_factory: sessionmaker[Session], *, apply: bool, open_all: bool) -> int:

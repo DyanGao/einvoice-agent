@@ -25,7 +25,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 A, B = db.DEFAULT_TENANT_ID, "acme"
-TABLES = (*rls.TENANT_TABLES, *rls.DOCUMENT_TABLES)
+TABLES = (*rls.TENANT_TABLES, *rls.DOCUMENT_TABLES, *rls.APPEND_ONLY_TABLES)
 
 
 def document(tenant_id: str, key: str) -> db.DocumentRow:
@@ -102,6 +102,20 @@ def seeded(session_factory):
                     subject="s",
                     sent="",
                     parts=[],
+                )
+                for t in (A, B)
+            ]
+        )
+        session.add_all(
+            [
+                db.DeletionLogRow(
+                    tenant_id=t,
+                    document_id=f"gone-{t}",
+                    sha256="0" * 64,
+                    events=1,
+                    received_at=datetime(2016, 1, 1, tzinfo=UTC),
+                    retention_end=date(2024, 12, 31),
+                    deleted_by="retention",
                 )
                 for t in (A, B)
             ]
