@@ -67,7 +67,7 @@ tenants(id, slug, name, created_at)               # the companies one installati
 tenant_keys(id, tenant_id, version, wrapped, master_id, created_at)
                                                   # each tenant's data key, wrapped (Stage 6)
 documents(id, tenant_id, sha256, filename, format, status, error, content, review_state,
-          created_at)                             # sha256 unique per tenant; content sealed
+          created_at, audit_head)                 # sha256 unique per tenant; content sealed
 drafts(document_id, original, data, updated_at)   # what was read, and with the reviewer's corrections
 invoices(document_id, data)                       # the invoice of record: parsed, or approved
 validation_results(document_id, valid, scenario, violations, created_at)
@@ -79,7 +79,8 @@ credit_links(document_id, invoice_document_id, basis, explanation, explanation_t
                                                   # a credit note's invoice (Stage 5)
 deliveries(document_id, connector, idempotency_key, status, booking, attempts,
            next_attempt_at, external_ref, last_error, created_at, delivered_at)
-audit_events(seq, document_id, event, actor, actor_user_id, detail, created_at)
+audit_events(seq, document_id, event, actor, actor_user_id, detail, created_at,
+             prev_hash, hash)                     # a hash chain per document (Stage 6)
 seen_bank_transactions(tenant_id, id, booking_date, seen_at)  # what the bank watch has handled
 users(id, email, display_name, password_hash, disabled, oidc_issuer, oidc_subject, created_at)
 memberships(user_id, tenant_id, role)             # a person's role in each company
@@ -286,6 +287,18 @@ Built and tested:
   (it reseals every value not under its tenant's current key). Older versions are kept: deleting one
   makes what it sealed unreadable. A backup restores with its master key, and with no other (tested
   on a copied database file, also across a master rotation).
+- **Tamper evidence (increment 4).** Each document's history is a hash chain (`app/db/chain.py`): an
+  event's hash covers the hash before it and what the event says (document, event, actor, verified
+  user, detail as it reads, when); the first one's "before" is the original's SHA-256, and the
+  document keeps the newest hash. Chained right before each write in the order the events were made,
+  with the head read again under a row lock, so two writers cannot fork it; re-sealing under a new key
+  leaves it whole. `einvoice verify` checks every original against its SHA-256 and every chain, and
+  names each break: original changed or unreadable, event changed, unreadable or added past the chain,
+  chain broken (an event removed, put in between, or changed with its own hash), history cut short at
+  its end; it exits 1 on any, and prints a digest of all heads to keep outside the database.
+  `einvoice chain --apply` chains events stored before, only where the rest verifies. What it cannot
+  show: someone who can write to the database can build a whole new consistent chain; the digest kept
+  elsewhere, or the audit export (increment 6), is what shows that.
 - **Data in git**: synthetic only; real invoice data (`data/private/`, browser logs in `data/browser/`)
   is ignored.
 
@@ -323,8 +336,9 @@ Built and tested:
 Not built:
 - **Local setups run `AUTH=off`**, where the reviewer's name in the audit trail is typed into the UI and
   recorded as unverified.
-- **No tamper check yet** (v1.0 Stage 6, increment 4), no retention settings (5); old data key
-  versions are never deleted. The ERP's ids, the mail's Message-ID and user accounts are not encrypted.
+- **No retention settings yet** (v1.0 Stage 6, increment 5); old data key versions are never
+  deleted. Drafts, findings and matches change during review and are not chained; what a person did to
+  them is, as history events. The ERP's ids, the mail's Message-ID and user accounts are not encrypted.
 - **PDFs and scans leave the machine** for the Anthropic API unless `EXTRACTOR=baseline` or `none`.
 
 ## 7. Repo layout

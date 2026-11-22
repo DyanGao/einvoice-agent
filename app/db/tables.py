@@ -104,6 +104,8 @@ class DocumentRow(Base):
     sealed_content: Mapped[bytes] = mapped_column("content", LargeBinary)
     # pending | approved | not_required (see app.db.review.ReviewState)
     review_state: Mapped[str] = mapped_column(String(20), index=True, default="pending")
+    # The newest hash of its history's chain (app/db/chain.py); None before it.
+    audit_head: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     invoice: Mapped["InvoiceRow | None"] = relationship(back_populates="document")
@@ -224,6 +226,10 @@ class AuditEventRow(Base):
     actor_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
     detail: Mapped[dict[str, Any]] = mapped_column(Sealed("audit_events.detail"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    # The hash chain over the document's history (app/db/chain.py): the hash
+    # before this one, and this event's. None for events from before the chain.
+    prev_hash: Mapped[str | None] = mapped_column(String(64))
+    hash: Mapped[str | None] = mapped_column(String(64))
 
     document: Mapped[DocumentRow] = relationship(back_populates="audit_events")
 
