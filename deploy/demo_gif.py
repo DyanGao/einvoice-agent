@@ -5,7 +5,7 @@ README's story with a browser: the five files in sample_invoices/ are dropped
 on the review UI, four are booked without review, one is flagged for its
 price, a person approves it; then the first invoice arrives again in another
 file, is held as a duplicate and rejected, and the mock ERP holds five
-bookings, each once. Each step
+bookings, each once; last, the flagged invoice's review page in German. Each step
 is a screenshot with a caption; Pillow joins them into docs/demo.gif.
 
 Needs the whole application on an empty database (`make stack` on a fresh
@@ -17,6 +17,7 @@ adds invoices to a database in use.
 
 import argparse
 import io
+import re
 import sys
 import tempfile
 import time
@@ -80,6 +81,7 @@ def record(ui: str, erp: str) -> list[tuple[Image.Image, float]]:
 
             page.get_by_role("link", name=FLAGGED).click()
             expect(page.get_by_text("Why a person needs to look")).to_be_visible()
+            flagged_page = page.url
             page.get_by_text("Price above order").scroll_into_view_if_needed()
             frames.append(_shot(page, "Its price is 12 % above the purchase order", 4.0))
 
@@ -116,6 +118,16 @@ def record(ui: str, erp: str) -> list[tuple[Image.Image, float]]:
             # The ERP's screens are plain, small HTML: enlarged so the five rows read.
             page.evaluate("document.body.style.zoom = '2'")
             frames.append(_shot(page, "Five bookings in the ERP, each exactly once", 4.0))
+
+            # The same review page in a German reader's browser, switched to German.
+            page = browser.new_context(viewport=VIEWPORT, locale="de-DE").new_page()
+            page.set_default_timeout(30_000)
+            page.goto(flagged_page)
+            # A German browser may open it in German already: the switch is then "Sprache".
+            page.get_by_role("combobox", name=re.compile("Language|Sprache")).select_option("de")
+            expect(page.get_by_label("Sprache")).to_be_visible()
+            expect(page.get_by_text("Freigegeben", exact=False).first).to_be_visible()
+            frames.append(_shot(page, "The whole review UI also in German", 3.5))
         finally:
             browser.close()
     return frames

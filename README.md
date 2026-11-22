@@ -13,9 +13,9 @@ Since 2025 every German business must be able to receive e-invoices; issuing bec
 **Why this one:** structured-first pipeline (validate XML before any LLM), confidence-based human review, browser-automation fallback for legacy systems, and an eval on a labeled document set.
 
 ## Demo
-![Five invoices dropped on the review UI: four booked without review, one flagged because its price is 12 % above the purchase order and approved by a reviewer; the first invoice arrives again in another file, is held as a duplicate and rejected; the mock ERP holds five bookings, each once](docs/demo.gif)
+![Five invoices dropped on the review UI: four booked without review, one flagged because its price is 12 % above the purchase order and approved by a reviewer; the first invoice arrives again in another file, is held as a duplicate and rejected; the mock ERP holds five bookings, each once; the review page in German](docs/demo.gif)
 
-Drop 5 invoices → 4 matched and booked without review, 1 flagged (price +12 % vs. the order) → a reviewer approves → the first invoice arrives again in another file, is held as a duplicate and rejected → 5 bookings in the mock ERP, each once. Recorded from the running application with `make demo-gif`; synthetic data.
+Drop 5 invoices → 4 matched and booked without review, 1 flagged (price +12 % vs. the order) → a reviewer approves → the first invoice arrives again in another file, is held as a duplicate and rejected → 5 bookings in the mock ERP, each once → the same review page in German. Recorded from the running application with `make demo-gif`; synthetic data.
 
 ## Results
 <!-- eval:results:start -->
@@ -36,7 +36,7 @@ Synthetic data only, held-out split; 3 model runs, mean ± sample standard devia
 On a third-party synthetic set, 40 photographed and scanned invoices from [Belege](https://zenodo.org/records/22182045) (Immineal, 2026), `claude-haiku-5-5` read 98.0 % of labelled fields; every wrong value failed a checksum or left a field empty ([details](docs/eval-report.md#third-party-set-belege-sample-immineal-2026)).
 
 ## Features
-- [ ] Ingest: email inbox (IMAP), folder watch, upload UI, API _(built: folder watch, upload in the review UI, `POST /documents`; IMAP is not built)_
+- [x] Ingest: email inbox (IMAP), folder watch, upload UI, API _(each company's own mailbox, with a password or OAuth2 for Microsoft 365 and Gmail; every attachment once, also across crashes and restarts; what is not an invoice is refused with a reason)_
 - [x] Format detection: XRechnung (UBL/CII), ZUGFeRD/Factur-X (PDF/A-3 with embedded XML), plain PDF, scan
 - [x] Structured path: parse + validate (KoSIT validator / Mustang) — no LLM needed _(KoSIT only so far: ZUGFeRD profiles outside EN 16931 and PDF/A-3 conformance are not validated)_
 - [x] Unstructured path: OCR + vision LLM → schema-constrained extraction (EN 16931 fields) _(the model transcribes, rules fill only what is not printed and mark it — e.g. VAT 0 for reverse-charge (§13b) and small-business (§19) invoices from their printed category or note; per-field confidence from checks and OCR grounding)_
@@ -45,7 +45,13 @@ On a third-party synthetic set, 40 photographed and scanned invoices from [Beleg
 - [x] Human-in-the-loop review UI for low-confidence fields and exceptions _(upload, queue, "why a person needs to look", unsure fields marked, correct, approve or reject with a reason (and reopen a mistaken rejection), reject plain duplicates together, history, where each document was booked)_
 - [x] Decision engine: books an invoice without a person only when it was read with confidence, nothing was assumed and no check raised a finding _(75 % of held-out documents on synthetic data; ≤ 1 % error not yet shown, see Results)_
 - [x] Output connectors: CSV/DATEV-style export, REST webhook, mock ERP via API, Playwright fallback for UI-only systems _(each invoice delivered once per connector, retried with backoff; the browser connector reads every booking back)_
-- [x] Audit trail per document (source, extracted values, who approved or rejected and why) _(with `AUTH=on` every API request is a signed-in user or an API token and the trail records the verified user; the review UI signs people in with a password or through an identity provider such as Entra ID, Google or Keycloak; local setups run `AUTH=off`, which answers only requests to localhost and records the typed name as unverified)_
+- [x] Sign-in and roles _(viewer, reviewer, admin; a password for the built-in admin, or an identity provider such as Entra ID, Google or Keycloak; API tokens for scripts. Local setups run `AUTH=off`, which answers only requests to localhost and records the typed name as unverified)_
+- [x] Several companies per installation _(each with its own ERP, connectors, mailbox and settings, and an admin page; kept apart by Postgres row-level security, so a query that forgets its filter still sees only its company)_
+- [x] German and English review UI _(every text the server writes too, in the reader's language; German amounts and dates)_
+- [x] Credit notes _(read, linked to the invoice they correct — by its number, else by supplier, amount and lines — checked against what is still open, booked as a credit in every connector, and matched to the refund or offset that settled them; the model does not read the invoice reference yet)_
+- [x] Audit trail per document (source, extracted values, who approved or rejected and why) _(every action names the verified user; each document's history is a hash chain from the original's SHA-256 on, and `einvoice verify` names any change)_
+- [x] Encryption at rest _(originals and everything read from them, with a key per company wrapped by a master key kept outside the database; both keys can be rotated; a database dump shows no invoice content)_
+- [x] Retention and tax audits _(kept 8 years per § 147 AO, legal holds, deletion only after that and only when switched on, an append-only deletion log; `einvoice export` writes a period's documents for a tax audit with a GDPdU index and checksums)_
 - [x] Eval harness: labeled synthetic sets, rule-based baseline, held-out split, 3 recorded model runs, CI gates — `make eval-full` _(no real invoices yet; a third-party synthetic set, [Belege](docs/eval-report.md#third-party-set-belege-sample-immineal-2026), is measured locally)_
 - [x] Running it: one bank watch and one delivery loop per database, stuck documents re-queued, a page limit before any model call, configurable database password with a warning on the development default
 
@@ -64,12 +70,25 @@ PDFs and scans are read by a model: put `ANTHROPIC_API_KEY` in `.env` (see `.env
 The database password `einvoice` is a local development default (every port is bound to localhost): set `POSTGRES_PASSWORD` in `.env` before running this anywhere else. It applies when the database is first created; the services log a warning while the default is used on a database that is not on this machine.
 Reseed the mock ERP: `docker compose run --rm mock-erp python -m mock_erp.seed --out /tmp/world`.
 
+Sign-in is off in Compose for local use. To require it, set `AUTH=on` in `.env` and add an admin first: `docker compose exec api einvoice user-add you@example.com --name "Your Name" --role admin --password`.
+
+Operating it, with `docker compose exec api einvoice …` (or `uv run einvoice …` from source):
+
+| Command | Does |
+|---|---|
+| `user-add`, `token-create`, `token-revoke` | people and API tokens |
+| `tenant-add`, `tenant-set`, `tenant-show` | companies and their settings (ERP, connectors, mailbox, retention) |
+| `verify` | every original against its SHA-256 and every history against its hash chain |
+| `export DIR --from … --to …` | a period's documents for a tax audit |
+| `retention [--apply]`, `hold DOCUMENT --reason …` | what is past its retention end; legal holds |
+| `seal`, `key-rotate-master`, `key-rotate-tenant` | encryption at rest: seal older data, rotate keys |
+
 For development, the same runs from source with uv and pnpm (stop the compose app services first, they use the same ports):
 
 ```bash
 make up && make migrate       # postgres, redis, validator
 make seed && make erp         # optional: mock ERP on http://127.0.0.1:8100
-make api                      # http://127.0.0.1:8000, no authentication: localhost only
+make api                      # http://127.0.0.1:8000; reads .env (AUTH=off there: localhost only)
                               # with ERP_URL=http://127.0.0.1:8100 for supplier and order checks
 make worker
 make watch && make deliver    # optional: re-matching on new transfers, delivery to the ERP
@@ -92,10 +111,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md).
 - [x] v0.3 matching + checks + decision engine _(rule-based matching instead of a model agent)_
 - [x] v0.4 connectors (export, webhook, mock ERP, Playwright fallback) and the whole stack in Docker
 - [x] v0.5 eval report published _([docs/eval-report.md](docs/eval-report.md): 3-run variance, OCR-text and hosted vs. local ablations, third-party set, hardening; synthetic data only, and it says so)_
-- [ ] v1.0 sign-in, multi-tenant, IMAP ingest, German/English UI _(in progress: sign-in with roles, API tokens and OIDC; several companies per installation, kept apart by Postgres row-level security, each with its own ERP and settings and an admin page)_
+- [ ] v1.0 sign-in, multi-tenant, IMAP ingest, German/English UI, credit notes, encryption at rest, retention _(all built and tested on synthetic data; open: the model reading a credit note's invoice reference, which needs every recorded model answer recorded again)_
 
 ## Tech stack
-Python 3.12 (FastAPI, Pydantic, SQLAlchemy + Alembic, lxml) · KoSIT validator (Java, in a container) · factur-x / pypdf · Tesseract OCR + Claude (vision, structured output), or a local vision model through Ollama (`qwen2.5vl:7b`, measured, every reading reviewed) · PostgreSQL · Redis + RQ · Playwright (browser connector and UI tests) · Next.js / React / TypeScript review UI · Docker Compose · pytest, ruff, uv
+Python 3.12 (FastAPI, Pydantic, SQLAlchemy + Alembic, lxml, cryptography: AES-256-GCM) · KoSIT validator (Java, in a container) · factur-x / pypdf · Tesseract OCR + Claude (vision, structured output), or a local vision model through Ollama (`qwen2.5vl:7b`, measured, every reading reviewed) · PostgreSQL · Redis + RQ · Playwright (browser connector and UI tests) · Next.js / React / TypeScript review UI · Docker Compose · pytest, ruff, uv
 
 ## References
 - German e-invoicing mandate (Wachstumschancengesetz, §14 UStG); EN 16931

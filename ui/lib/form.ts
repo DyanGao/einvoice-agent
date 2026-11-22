@@ -124,9 +124,22 @@ function rowsOf(fields: Fields | null, path: string): Record<string, unknown>[] 
   return Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
 }
 
-/** A value for its field: an amount in the reader's notation ("7864,76" in German). */
-function shownAs(i18n: Translator, value: unknown, kind: Kind): string {
-  return kind === "amount" ? i18n.decimal(text(value)) : text(value);
+/** A value for its field in the reader's notation: "7864,76" and "29.01.2026" in German. */
+export function shownAs(i18n: Translator, value: unknown, kind: Kind): string {
+  if (kind === "amount") return i18n.decimal(text(value));
+  if (kind === "date") return i18n.dateField(text(value));
+  return text(value);
+}
+
+/** "29.01.2026", "29.1.2026" or "2026-01-29" → "2026-01-29"; anything else as typed, for the
+ * server to refuse with its reason. */
+function isoDate(value: string): string {
+  const german = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(value);
+  if (german) {
+    const [, day = "", month = "", year = ""] = german;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+  return value;
 }
 
 export function formFrom(fields: Fields | null, i18n: Translator): FormState {
@@ -152,6 +165,7 @@ export function formFrom(fields: Fields | null, i18n: Translator): FormState {
 export function parseInput(raw: string, kind: Kind): string | null {
   const value = raw.trim();
   if (value === "") return null;
+  if (kind === "date") return isoDate(value);
   if (kind !== "amount") return value;
   // Either notation, whatever the UI's language: the last of comma and dot is
   // the decimal sign and the other only groups thousands ("1.234,56", "1,234.56").
@@ -174,10 +188,10 @@ export function kindAt(path: string): Kind {
   return column?.kind ?? "text";
 }
 
-/** The form with every amount written again in the reader's notation (after a language switch). */
+/** The form with every amount and date written again in the reader's notation (after a language switch). */
 export function inNotation(form: FormState, i18n: Translator): FormState {
   const again = (raw: string, kind: Kind) =>
-    kind === "amount" ? i18n.decimal(parseInput(raw, kind) ?? "") : raw;
+    kind === "text" ? raw : shownAs(i18n, parseInput(raw, kind) ?? "", kind);
   const scalars = { ...form.scalars };
   for (const group of GROUPS) {
     for (const field of group.fields) {

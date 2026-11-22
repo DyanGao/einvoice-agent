@@ -332,6 +332,43 @@ test("amounts in the fields are written the reader's way, also after a switch", 
   await expect(gross).toHaveValue(value);
 });
 
+test("dates in the fields are written the reader's way, and saved as the same day", async ({
+  page,
+}) => {
+  const there = translator(OTHER);
+  const shape = (locale: string) =>
+    locale === "de" ? /^\d{2}\.\d{2}\.\d{4}$/ : /^\d{4}-\d{2}-\d{2}$/;
+  // The same day the other way: "29.01.2026" ↔ "2026-01-29".
+  const otherWay = (value: string) =>
+    LOCALE === "de" ? value.split(".").reverse().join("-") : value.split("-").reverse().join(".");
+  await page.goto("/");
+  await page.getByRole("button", { name: new RegExp(t("queue.toReview")) }).click();
+  await page.getByRole("link", { name: CREDIT_NUMBER }).click();
+  const issued = page.getByLabel(t("field.issue_date"));
+  await expect(issued).toHaveValue(shape(LOCALE));
+  const value = await issued.inputValue();
+
+  // Typed the other way it is the same day: nothing to save.
+  await issued.fill(otherWay(value));
+  await expect(page.getByRole("button", { name: t("doc.saveNone") })).toBeVisible();
+  await issued.fill(value);
+
+  // In the other language the field is written its way.
+  await page.getByLabel(t("language.label")).selectOption(OTHER);
+  await expect(page.getByLabel(there.t("field.issue_date"))).toHaveValue(shape(OTHER));
+  await page.getByLabel(there.t("language.label")).selectOption(LOCALE);
+  await expect(issued).toHaveValue(value);
+
+  // A new day typed the reader's way is saved as that day, and the history says so.
+  const day = LOCALE === "de" ? "02.03.2026" : "2026-03-02";
+  await issued.fill(day);
+  await page.getByPlaceholder(t("reviewer.placeholder")).fill("anna");
+  await page.getByRole("button", { name: tn("doc.save", 1) }).click();
+  await expect(page.getByText(day).first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel(t("field.issue_date"))).toHaveValue(day);
+});
+
 test.describe("no English on a German page", () => {
   test.skip(LOCALE !== "de", "the scan reads German pages");
   // What the pages show from the invoices and mails themselves: data, not the UI's text.

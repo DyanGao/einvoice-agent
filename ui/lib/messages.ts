@@ -15,6 +15,7 @@ export const en = {
   "nav.invoices": "Invoices",
   "nav.mail": "Mail",
   "language.label": "Language",
+  "field.dateFormat": "YYYY-MM-DD",
   "api.unreachable": 'The API at {url} is not reachable. Start it with "make api".',
 
   // Who is reviewing
@@ -574,6 +575,7 @@ export const de: Record<MessageKey, string> = {
   "nav.invoices": "Rechnungen",
   "nav.mail": "Post",
   "language.label": "Sprache",
+  "field.dateFormat": "TT.MM.JJJJ",
   "api.unreachable": "Die API unter {url} ist nicht erreichbar. Starten Sie sie mit „make api“.",
 
   "reviewer.label": "Prüfung durch",

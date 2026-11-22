@@ -5,11 +5,11 @@
 **Non-goals (v1):** issuing invoices, GoBD-certified archiving, being a full ERP.
 
 ## 2. System overview
-As built (v0.5). Planned parts that are not built are listed under the diagram.
+As built (v1.0). Planned parts that are not built are listed under the diagram.
 
 ```mermaid
 flowchart TD
-  IN[Ingest<br/>folder watch / upload / API] --> Q[Queue: RQ on Redis] --> DET[Format detector]
+  IN[Ingest<br/>mailbox / folder watch / upload / API] --> Q[Queue: RQ on Redis] --> DET[Format detector]
   DET -->|XRechnung / ZUGFeRD| SP[Structured parser]
   SP --> VAL[Validator<br/>KoSIT, in a container]
   DET -->|PDF / scan| EX[Vision model<br/>transcribes, schema = EN 16931 subset]
@@ -31,17 +31,17 @@ flowchart TD
   OUT --> E2[Signed webhook]
   OUT --> E3[ERP booking API]
   OUT --> E4[Playwright on the ERP's screens<br/>allowlisted host:port only, read back]
-  ALL[(Postgres: documents, drafts, invoices,<br/>findings, matches, decisions, deliveries, audit)]
+  ALL[(Postgres, row-level security per company:<br/>documents, drafts, invoices, findings, matches,<br/>decisions, deliveries, hash-chained history —<br/>sealed with a key per company)]
 ```
 
-Planned and not built: IMAP ingest (v1.0), a model-based matching agent (dropped, D11), Mustang
-validation of ZUGFeRD profiles outside EN 16931 and of PDF/A-3 (D2), a local vision model behind the
-extractor interface.
+Planned and not built: a model-based matching agent (dropped, D11), Mustang validation of ZUGFeRD
+profiles outside EN 16931 and of PDF/A-3 (D2). Every request comes from a signed-in user or an API
+token of one company (sign-in, tenants: §6).
 
 ## 3. Components
 | Component | Responsibility | Where | Notes |
 |---|---|---|---|
-| Ingest | Take files from a watched folder, the review UI's upload or `POST /documents`; deduplicate by SHA-256 | `app/ingest.py`, `app/api` | IMAP not built |
+| Ingest | Take files from each company's mailbox (IMAP, password or OAuth2 for Microsoft 365 and Gmail), a watched folder, the review UI's upload or `POST /documents`; deduplicate by SHA-256 per company | `app/ingest.py`, `app/mailbox.py`, `app/mailbox_oauth.py`, `app/api` | every attachment once, also across crashes; what is not an invoice refused with a reason |
 | Worker | Run the pipeline for each document off the queue; every 2 minutes, queue again any document stuck in "received" for 15 minutes with no job waiting or running | `app/worker.py`, `app/pipeline` | the pipeline is a plain function (D3); RQ only wraps it (D4); one job per document at a time |
 | Format detector | Identify UBL/CII XML, PDF/A-3 with embedded XML, text PDF, image | `app/detect` | magic bytes + XML namespace |
 | Structured parser | Map XML → `Invoice` Pydantic model | `app/parse` | no model; hardened XML parsing (`app/safe_xml.py`: no entities, DTDs or network) |
@@ -54,9 +54,16 @@ extractor interface.
 | Rule checks | Deterministic business rules, each a small tested function | `app/checks` | findings with severity; compared with the ERP's supplier and order |
 | Decision engine | Combine confidence, assumed values, values printed but not read (Leitweg-ID, IBAN, German VAT ID with valid check digits) and findings → auto / review, with every reason | `app/decide` | threshold fitted on the eval set (3); version stored with each decision |
 | Review UI | Document beside its fields, unsure fields marked, why it needs a person, correct, approve, reject with a reason (never delivered, checked again or matched to payments unless reopened with a note), reject plain duplicates together (`app/db/duplicates.py`), history, delivery status | `ui/` (Next.js) | corrections are kept as future eval cases in `data/private/feedback/` (outside git) |
-| Delivery outbox | Deliver approved or auto-decided invoices once per connector; frozen booking, idempotency key, backoff | `app/delivery.py`, `app/deliver.py` | only type 380 (D9); one delivery loop per database, enforced like the bank watch |
+| Delivery outbox | Deliver approved or auto-decided invoices once per connector; frozen booking, idempotency key, backoff | `app/delivery.py`, `app/deliver.py` | invoices (380) and credit notes (381, with their sign, D13); other types by hand; one delivery loop per database, enforced like the bank watch |
 | Connectors | CSV/DATEV-style export, signed webhook, ERP booking API, ERP screens with a browser | `app/connectors` | the browser runs only on allowlisted host and port, logs every action, reads every booking back (4) |
 | Mock ERP | Suppliers, orders, deliveries, bank transfers, bookings; API and German HTML screens | `mock_erp/` | the eval world's data; seeds itself in Docker |
+| Sign-in | Sessions, API tokens, roles, OIDC; the verified user on every audit event | `app/auth`, `ui/components/SignIn.tsx` | §6 |
+| Tenants | Companies, memberships, each company's settings; row-level security in Postgres | `app/tenants.py`, `app/db/rls.py` | §4; RLS, not a schema per company (the owner chose it) |
+| Texts | Every text for people as a code with parameters, shown in German or English by the UI | `app/texts.py`, `ui/lib/messages.ts` | `docs/german-texts.md` |
+| Credit notes | Link to the invoice corrected, what is left open, refunds and offsets | `app/checks/credit.py`, `app/matching` | D13 |
+| Encryption at rest | Data keys per company wrapped by the master key; sealed columns; rotation | `app/crypto.py`, `app/db/sealed.py`, `app/rotation.py`, `app/sealing.py` | D14 |
+| Tamper evidence | Hash chain over each history; `einvoice verify` | `app/db/chain.py`, `app/verify.py` | §6 |
+| Retention and export | Retention end, legal hold, deletion log; the tax audit export | `app/retention.py`, `app/export.py` | `docs/verfahrensdokumentation.md` |
 | Matching agent | _Planned: tool-calling loop over ERP data for what the rules leave open_ | – | not built (D11) |
 
 ## 4. Core data model
@@ -100,7 +107,7 @@ booking through the API or the screens), CSV export folder, webhook, page limit,
 found by content alone may be booked on. The default tenant without a row keeps using `.env`, so a
 one-company installation runs unchanged. Secrets are never stored there: a tenant names the
 environment variable that holds its webhook secret (`webhook_secret_env`, `TENANT_…`), and the value
-stays in `.env` until Stage 6 brings encryption at rest. The model and its calibrated threshold stay
+stays in `.env` (the owner's decision; encryption at rest covers invoice data, not settings). The model and its calibrated threshold stay
 installation-wide. `einvoice tenant-add`, `tenant-set`, `tenant-show` manage them; the worker, API,
 bank watch and delivery loop build each tenant's checker and connectors from them, and one tenant's
 broken settings (a missing secret) only stop that tenant's deliveries.
@@ -368,14 +375,15 @@ Not built:
 
 ## 7. Repo layout
 ```
-app/       ingest, detect, parse, validate, extract, checks, matching, decide,
-           delivery + connectors, api, worker, watch, db
+app/       ingest, mailbox, detect, parse, validate, extract, checks, matching, decide,
+           delivery + connectors, api, worker, watch, auth, tenants, texts, db,
+           crypto + sealing + rotation, verify, retention, export
 ui/        review UI (Next.js) and its browser tests
 mock_erp/  the mock ERP: API, HTML screens, seed
 eval/      generators, runners, scorers, report, recordings of model answers
 tests/     unit and integration tests, third-party sample files (D10)
 deploy/    Dockerfiles (app, UI, validator) and the full-stack check
-docs/      eval-report.md
+docs/      eval-report.md, german-texts.md, sign-in-keycloak.md, verfahrensdokumentation.md
 migrations/, sample_invoices/, data/ (local only: private data, mock ERP, logs)
 ```
 
