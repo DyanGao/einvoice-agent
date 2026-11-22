@@ -109,6 +109,15 @@ class TenantConfig(BaseModel):
     imap_oauth_refresh_env: str | None = None
     # Where tokens come from, if not the provider's own endpoint (a test one).
     imap_oauth_token_url: str | None = None
+    # Retention (v1.0 Stage 6, app/retention.py): years kept after the end of
+    # the year an invoice is from, received in or booked in, whichever is last
+    # (§ 147 AO: 8 since 2025 — to be confirmed with a tax adviser). Never fewer.
+    retention_years: int = Field(default=8, ge=8, le=30)
+    # Documents past their retention end are deleted only with this on.
+    deletion_enabled: bool = False
+    # Every document of the tenant kept, whatever its retention end (a tax
+    # audit, a dispute, a court's order).
+    legal_hold: bool = False
 
     @field_validator("erp_url", "erp_ui_url", "webhook_url", "imap_oauth_token_url")
     @classmethod

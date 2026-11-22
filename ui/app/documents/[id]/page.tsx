@@ -193,6 +193,9 @@ function auditText(i18n: Translator, event: AuditEvent): string {
       : t("audit.rejected", { reason });
   }
   if (event.event === "reopened") return t("audit.reopened", { note: String(detail.note) });
+  if (event.event === "legal_hold") return t("audit.legal_hold", { reason: String(detail.reason) });
+  if (event.event === "legal_hold_released")
+    return t("audit.legal_hold_released", { reason: String(detail.reason) });
   const name = event.event.replaceAll("_", " ");
   const text = i18n.tx(`audit.${event.event}`, name.charAt(0).toUpperCase() + name.slice(1));
   // A re-match says what set it off: a later invoice or a new bank transfer.

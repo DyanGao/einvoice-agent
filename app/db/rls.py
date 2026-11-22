@@ -44,6 +44,9 @@ TENANT_TABLES = (
     "mailbox_state",
     "mails",
 )
+# Written once, never changed: the tenant role may read and add, and a
+# trigger refuses UPDATE, DELETE and TRUNCATE for every role (v1.0 Stage 6).
+APPEND_ONLY_TABLES = ("deletion_log",)
 DOCUMENT_TABLES = (
     "invoices",
     "drafts",
@@ -84,6 +87,30 @@ def statements() -> list[str]:
     for table in DOCUMENT_TABLES:
         rule = f"EXISTS (SELECT 1 FROM documents d WHERE d.id = {table}.document_id)"  # noqa: S608
         out.append(f"CREATE POLICY tenant_isolation ON {table} USING ({rule}) WITH CHECK ({rule})")
+    return out + append_only_statements()
+
+
+def append_only_statements() -> list[str]:
+    """The append-only tables: the tenant's rows only, read and added; and
+    no change of any row by anyone."""
+    out = [
+        """CREATE OR REPLACE FUNCTION einvoice_append_only() RETURNS trigger AS $$
+        BEGIN
+            RAISE EXCEPTION '% is append-only', TG_TABLE_NAME;
+        END $$ LANGUAGE plpgsql""",
+    ]
+    rule = f"tenant_id = {_CURRENT}"
+    for table in APPEND_ONLY_TABLES:
+        out += [
+            f"GRANT SELECT, INSERT ON {table} TO {TENANT_ROLE}",
+            f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
+            f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY",
+            f"CREATE POLICY tenant_isolation ON {table} USING ({rule}) WITH CHECK ({rule})",
+            f"CREATE TRIGGER {table}_append_only BEFORE UPDATE OR DELETE ON {table}"
+            " FOR EACH ROW EXECUTE FUNCTION einvoice_append_only()",
+            f"CREATE TRIGGER {table}_no_truncate BEFORE TRUNCATE ON {table}"
+            " FOR EACH STATEMENT EXECUTE FUNCTION einvoice_append_only()",
+        ]
     return out
 
 

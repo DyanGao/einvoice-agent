@@ -67,7 +67,7 @@ tenants(id, slug, name, created_at)               # the companies one installati
 tenant_keys(id, tenant_id, version, wrapped, master_id, created_at)
                                                   # each tenant's data key, wrapped (Stage 6)
 documents(id, tenant_id, sha256, filename, format, status, error, content, review_state,
-          created_at, audit_head)                 # sha256 unique per tenant; content sealed
+          created_at, audit_head, legal_hold)     # sha256 unique per tenant; content sealed
 drafts(document_id, original, data, updated_at)   # what was read, and with the reviewer's corrections
 invoices(document_id, data)                       # the invoice of record: parsed, or approved
 validation_results(document_id, valid, scenario, violations, created_at)
@@ -82,6 +82,8 @@ deliveries(document_id, connector, idempotency_key, status, booking, attempts,
 audit_events(seq, document_id, event, actor, actor_user_id, detail, created_at,
              prev_hash, hash)                     # a hash chain per document (Stage 6)
 seen_bank_transactions(tenant_id, id, booking_date, seen_at)  # what the bank watch has handled
+deletion_log(tenant_id, document_id, sha256, audit_head, events, received_at, retention_end,
+             deleted_at, deleted_by)              # append-only (Stage 6)
 users(id, email, display_name, password_hash, disabled, oidc_issuer, oidc_subject, created_at)
 memberships(user_id, tenant_id, role)             # a person's role in each company
 api_tokens(id, user_id, tenant_id, name, token_hash, ...)   # a token acts in one tenant
@@ -299,6 +301,19 @@ Built and tested:
   `einvoice chain --apply` chains events stored before, only where the rest verifies. What it cannot
   show: someone who can write to the database can build a whole new consistent chain; the digest kept
   elsewhere, or the audit export (increment 6), is what shows that.
+- **Retention and legal hold (increment 5, O5).** A document is kept `retention_years` (8: § 147 AO
+  since 2025, to be confirmed with a tax adviser; fewer is refused) after the end of the latest of the
+  year it is dated in, received in and approved or booked in, and may go from the following 1 January,
+  never before (a seeded property test over 20,000 random dates, leap days and year ends among them).
+  A legal hold on a document (`einvoice hold`, its reason in the chained history) or on the tenant
+  (`legal_hold`) keeps it whatever its end. Nothing is deleted by itself: `einvoice retention` says
+  what is due, `--apply` deletes it only where the tenant's `deletion_enabled` is on (operator
+  settings, `einvoice tenant-set`; never the tenant admin's). A deletion removes the document and all
+  of its rows; a credit note correcting it keeps itself, without the link. Each leaves an entry in
+  `deletion_log`: id, the original's SHA-256, the history's newest hash and length, retention end,
+  when and by whom. The log is append-only: the tenant role may only read and add its own, and on
+  Postgres a trigger refuses UPDATE, DELETE and TRUNCATE for every role (the ORM refuses them too);
+  the migration's downgrade refuses while the log holds anything.
 - **Data in git**: synthetic only; real invoice data (`data/private/`, browser logs in `data/browser/`)
   is ignored.
 
@@ -336,8 +351,9 @@ Built and tested:
 Not built:
 - **Local setups run `AUTH=off`**, where the reviewer's name in the audit trail is typed into the UI and
   recorded as unverified.
-- **No retention settings yet** (v1.0 Stage 6, increment 5); old data key versions are never
-  deleted. Drafts, findings and matches change during review and are not chained; what a person did to
+- **Old data key versions are never deleted** (crypto-shredding is not used; documents are
+  deleted row by row). A superuser can drop the log's trigger: the append-only guarantee is against
+  the application and the tenant role, not against the database's owner. Drafts, findings and matches change during review and are not chained; what a person did to
   them is, as history events. The ERP's ids, the mail's Message-ID and user accounts are not encrypted.
 - **PDFs and scans leave the machine** for the Anthropic API unless `EXTRACTOR=baseline` or `none`.
 
